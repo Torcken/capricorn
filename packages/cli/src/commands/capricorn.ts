@@ -45,6 +45,7 @@ import {
 } from '../config/settingsSchema.js';
 import { isWorkspaceTrusted } from '../config/trustedFolders.js';
 import { exitCli } from './utils.js';
+import { defer } from '../deferred.js';
 import {
   createRuntimeClient,
   formatGiB,
@@ -437,10 +438,10 @@ export const capricornModelsCommand: CommandModule = {
   describe: 'List, inspect, pull and select local Gemma 4 models.',
   builder: (y) =>
     asCommand(y)
-      .command(modelsListCommand)
-      .command(modelsInfoCommand)
-      .command(modelsPullCommand)
-      .command(modelsUseCommand)
+      .command(defer(modelsListCommand, 'models'))
+      .command(defer(modelsInfoCommand, 'models'))
+      .command(defer(modelsPullCommand, 'models'))
+      .command(defer(modelsUseCommand, 'models'))
       .version(false),
   handler: () => {},
 };
@@ -572,95 +573,113 @@ export const configCommand: CommandModule = {
     'Show or change Capricorn settings (values are schema-validated; secrets are redacted).',
   builder: (y) =>
     asCommand(y)
-      .command({
-        command: 'list',
-        describe: 'Show the effective (merged) settings.',
-        builder: (yy) => yy.option('json', { type: 'boolean' }),
-        handler: async (argv) => {
-          const flat = flattenSettings(loadSettings().merged);
-          const entries = Object.entries(flat)
-            .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, redact(k, v)] as const)
-            .sort(([a], [b]) => a.localeCompare(b));
-          out(
-            argv['json']
-              ? JSON.stringify(Object.fromEntries(entries), null, 2)
-              : entries
-                  .map(([k, v]) => `${k} = ${JSON.stringify(v)}`)
-                  .join('\n'),
-          );
-          await exitCli(CapricornExit.OK);
-        },
-      })
-      .command({
-        command: 'get <key>',
-        describe: 'Read one effective setting.',
-        builder: (yy) =>
-          yy.positional('key', { type: 'string', demandOption: true }),
-        handler: async (argv) => {
-          const key = String(argv['key']);
-          const flat = flattenSettings(loadSettings().merged);
-          const direct = getByPath(loadSettings().merged, key);
-          if (
-            !(key in flat) &&
-            direct === undefined &&
-            !findSettingDefinition(key)
-          ) {
-            err(`Unknown setting "${key}".`);
-            return exitCli(CapricornExit.USAGE);
-          }
-          out(JSON.stringify(redact(key, direct), null, 2) ?? 'undefined');
-          return exitCli(CapricornExit.OK);
-        },
-      })
-      .command({
-        command: 'set <key> <value>',
-        describe: 'Validate and write a setting (default scope: user).',
-        builder: (yy) =>
-          yy
-            .positional('key', { type: 'string', demandOption: true })
-            .positional('value', { type: 'string', demandOption: true })
-            .option('scope', {
-              choices: ['user', 'workspace'] as const,
-              default: 'user',
-            }),
-        handler: async (argv) => {
-          const key = String(argv['key']);
-          const scope =
-            argv['scope'] === 'workspace'
-              ? SettingScope.Workspace
-              : SettingScope.User;
-          const def = findSettingDefinition(key);
-          if (!def || def.type === 'object') {
-            err(
-              def
-                ? `"${key}" is a group; set one of its fields instead.`
-                : `Unknown setting "${key}".`,
-            );
-            return exitCli(CapricornExit.USAGE);
-          }
-          if (scope === SettingScope.Workspace && USER_SCOPE_ONLY.has(key)) {
-            err(
-              `"${key}" is security-sensitive and can only be set in user settings.`,
-            );
-            return exitCli(CapricornExit.USAGE);
-          }
-          let value: unknown;
-          try {
-            value = parseSettingValue(def, String(argv['value']));
-          } catch (e) {
-            err(
-              `Invalid value for ${key}: ${e instanceof Error ? e.message : String(e)}`,
-            );
-            return exitCli(CapricornExit.USAGE);
-          }
-          loadSettings().setValue(scope, key, value);
-          out(
-            `${key} = ${JSON.stringify(redact(key, value))} (${scope === SettingScope.User ? 'user' : 'workspace'} settings)`,
-          );
-          return exitCli(CapricornExit.OK);
-        },
-      })
+      .command(
+        defer(
+          {
+            command: 'list',
+            describe: 'Show the effective (merged) settings.',
+            builder: (yy) => yy.option('json', { type: 'boolean' }),
+            handler: async (argv) => {
+              const flat = flattenSettings(loadSettings().merged);
+              const entries = Object.entries(flat)
+                .filter(([, v]) => v !== undefined)
+                .map(([k, v]) => [k, redact(k, v)] as const)
+                .sort(([a], [b]) => a.localeCompare(b));
+              out(
+                argv['json']
+                  ? JSON.stringify(Object.fromEntries(entries), null, 2)
+                  : entries
+                      .map(([k, v]) => `${k} = ${JSON.stringify(v)}`)
+                      .join('\n'),
+              );
+              await exitCli(CapricornExit.OK);
+            },
+          },
+          'config',
+        ),
+      )
+      .command(
+        defer(
+          {
+            command: 'get <key>',
+            describe: 'Read one effective setting.',
+            builder: (yy) =>
+              yy.positional('key', { type: 'string', demandOption: true }),
+            handler: async (argv) => {
+              const key = String(argv['key']);
+              const flat = flattenSettings(loadSettings().merged);
+              const direct = getByPath(loadSettings().merged, key);
+              if (
+                !(key in flat) &&
+                direct === undefined &&
+                !findSettingDefinition(key)
+              ) {
+                err(`Unknown setting "${key}".`);
+                return exitCli(CapricornExit.USAGE);
+              }
+              out(JSON.stringify(redact(key, direct), null, 2) ?? 'undefined');
+              return exitCli(CapricornExit.OK);
+            },
+          },
+          'config',
+        ),
+      )
+      .command(
+        defer(
+          {
+            command: 'set <key> <value>',
+            describe: 'Validate and write a setting (default scope: user).',
+            builder: (yy) =>
+              yy
+                .positional('key', { type: 'string', demandOption: true })
+                .positional('value', { type: 'string', demandOption: true })
+                .option('scope', {
+                  choices: ['user', 'workspace'] as const,
+                  default: 'user',
+                }),
+            handler: async (argv) => {
+              const key = String(argv['key']);
+              const scope =
+                argv['scope'] === 'workspace'
+                  ? SettingScope.Workspace
+                  : SettingScope.User;
+              const def = findSettingDefinition(key);
+              if (!def || def.type === 'object') {
+                err(
+                  def
+                    ? `"${key}" is a group; set one of its fields instead.`
+                    : `Unknown setting "${key}".`,
+                );
+                return exitCli(CapricornExit.USAGE);
+              }
+              if (
+                scope === SettingScope.Workspace &&
+                USER_SCOPE_ONLY.has(key)
+              ) {
+                err(
+                  `"${key}" is security-sensitive and can only be set in user settings.`,
+                );
+                return exitCli(CapricornExit.USAGE);
+              }
+              let value: unknown;
+              try {
+                value = parseSettingValue(def, String(argv['value']));
+              } catch (e) {
+                err(
+                  `Invalid value for ${key}: ${e instanceof Error ? e.message : String(e)}`,
+                );
+                return exitCli(CapricornExit.USAGE);
+              }
+              loadSettings().setValue(scope, key, value);
+              out(
+                `${key} = ${JSON.stringify(redact(key, value))} (${scope === SettingScope.User ? 'user' : 'workspace'} settings)`,
+              );
+              return exitCli(CapricornExit.OK);
+            },
+          },
+          'config',
+        ),
+      )
       .demandCommand(1)
       .version(false),
   handler: () => {},

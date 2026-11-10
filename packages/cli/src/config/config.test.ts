@@ -780,6 +780,21 @@ describe('parseArguments', () => {
     expect(argv.isCommand).toBe(true);
   });
 
+  // Regression guard: subcommand handlers must be deferred until main()
+  // has loaded settings; parsing alone must never touch the file system
+  // (an earlier version created CAPRICORN.md in the test's cwd).
+  it.each([['init'], ['doctor'], ['config', 'set', 'ollama.numCtx', '9000']])(
+    'parsing %s has no side effects',
+    async (...cmd) => {
+      const fsMod = await import('node:fs');
+      const writeSpy = vi.spyOn(fsMod.default, 'writeFileSync');
+      process.argv = ['node', 'script.js', ...cmd];
+      await parseArguments(createTestMergedSettings());
+      expect(writeSpy).not.toHaveBeenCalled();
+      writeSpy.mockRestore();
+    },
+  );
+
   it('maps `run "<task>"` to a headless prompt', async () => {
     process.argv = ['node', 'script.js', 'run', 'fix the tests'];
     const argv = await parseArguments(createTestMergedSettings());

@@ -1,5 +1,0 @@
-{
-  // Project-level Capricorn settings (JSON with comments).
-  // See docs/CONFIGURATION.md. Security-sensitive keys such as
-  // ollama.allowRemoteHost are ignored here and honoured only in user settings.
-}

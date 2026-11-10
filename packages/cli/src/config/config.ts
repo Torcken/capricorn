@@ -21,6 +21,7 @@ import {
   statusCommand,
 } from '../commands/capricorn.js';
 import { rewriteCapricornAliases } from '../capricorn/argAliases.js';
+import { defer } from '../deferred.js';
 import {
   setGeminiMdFilename as setServerGeminiMdFilename,
   resetGeminiMdFilename,
@@ -297,10 +298,10 @@ export async function parseArguments(
   yargsInstance.command(skillsCommand);
   yargsInstance.command(hooksCommand);
   yargsInstance.command(capricornModelsCommand);
-  yargsInstance.command(doctorCommand);
-  yargsInstance.command(statusCommand);
+  yargsInstance.command(defer(doctorCommand));
+  yargsInstance.command(defer(statusCommand));
   yargsInstance.command(configCommand);
-  yargsInstance.command(initCommand);
+  yargsInstance.command(defer(initCommand));
 
   yargsInstance
     .command('$0 [query..]', 'Launch Capricorn', (yargsInstance) =>
