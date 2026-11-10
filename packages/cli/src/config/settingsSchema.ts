@@ -258,8 +258,9 @@ const SETTINGS_SCHEMA = {
         label: 'Enable Auto Update',
         category: 'General',
         requiresRestart: false,
-        default: true,
-        description: 'Enable automatic updates.',
+        default: false,
+        description:
+          'Enable automatic updates. Disabled in Capricorn: no update polling is performed.',
         showInDialog: true,
       },
       enableAutoUpdateNotification: {
@@ -267,8 +268,9 @@ const SETTINGS_SCHEMA = {
         label: 'Enable Auto Update Notification',
         category: 'General',
         requiresRestart: false,
-        default: true,
-        description: 'Enable update notification prompts.',
+        default: false,
+        description:
+          'Enable update notification prompts. Disabled in Capricorn: no update polling is performed.',
         showInDialog: false,
       },
       enableNotifications: {
@@ -972,8 +974,9 @@ const SETTINGS_SCHEMA = {
         label: 'Enable Usage Statistics',
         category: 'Privacy',
         requiresRestart: true,
-        default: true,
-        description: 'Enable collection of usage statistics',
+        default: false,
+        description:
+          'Upstream Google usage statistics. Always disabled in Capricorn; this setting has no effect.',
         showInDialog: false,
       },
     },
@@ -1059,6 +1062,85 @@ const SETTINGS_SCHEMA = {
     },
   },
 
+  // Capricorn: local inference provider settings. See docs/CONFIGURATION.md.
+  ollama: {
+    type: 'object',
+    label: 'Ollama',
+    category: 'Model',
+    requiresRestart: true,
+    default: {},
+    description:
+      'Local Ollama inference settings. Capricorn only runs verified Gemma 4 models on a local Ollama daemon.',
+    showInDialog: false,
+    properties: {
+      endpoint: {
+        type: 'string',
+        label: 'Ollama Endpoint',
+        category: 'Model',
+        requiresRestart: true,
+        default: 'http://127.0.0.1:11434',
+        description:
+          'Ollama daemon URL (OLLAMA_HOST style). Only loopback hosts are accepted unless ollama.allowRemoteHost is enabled in user settings. Env: CAPRICORN_OLLAMA_HOST, OLLAMA_HOST.',
+        showInDialog: false,
+      },
+      allowRemoteHost: {
+        type: 'boolean',
+        label: 'Allow Remote Ollama Host',
+        category: 'Model',
+        requiresRestart: true,
+        default: false,
+        description:
+          'Opt in to a non-loopback Ollama endpoint. Prompts and file contents will then leave this machine. Honoured only in user-level settings, never in project settings.',
+        showInDialog: false,
+      },
+      numCtx: {
+        type: 'number',
+        label: 'Context Window (num_ctx)',
+        category: 'Model',
+        requiresRestart: true,
+        default: 32768,
+        description:
+          'Context window to allocate on the daemon, in tokens (minimum 8192). Larger values need substantially more memory for the KV cache.',
+        showInDialog: true,
+      },
+      think: {
+        type: 'enum',
+        label: 'Thinking Mode',
+        category: 'Model',
+        requiresRestart: false,
+        default: 'auto',
+        description:
+          "Gemma 4 thinking channel: 'auto' follows the agent's request, 'on' forces it, 'off' disables it (faster).",
+        showInDialog: true,
+        options: [
+          { value: 'auto', label: 'Auto' },
+          { value: 'on', label: 'On' },
+          { value: 'off', label: 'Off' },
+        ],
+      },
+      keepAlive: {
+        type: 'string',
+        label: 'Keep Alive',
+        category: 'Model',
+        requiresRestart: true,
+        default: '10m',
+        description:
+          'How long Ollama keeps the model loaded after a request (Ollama keep_alive, e.g. "10m", "1h", "0").',
+        showInDialog: false,
+      },
+      requestTimeoutMs: {
+        type: 'number',
+        label: 'Request Timeout (ms)',
+        category: 'Model',
+        requiresRestart: true,
+        default: 300000,
+        description:
+          'Maximum wait for the first byte of a response, including model load time.',
+        showInDialog: false,
+      },
+    },
+  },
+
   model: {
     type: 'object',
     label: 'Model',
@@ -1074,7 +1156,8 @@ const SETTINGS_SCHEMA = {
         category: 'Model',
         requiresRestart: false,
         default: undefined as string | undefined,
-        description: 'The Gemini model to use for conversations.',
+        description:
+          'The local Gemma 4 model tag to use (e.g. gemma4:12b). Must be installed in Ollama and verified as Gemma 4.',
         showInDialog: true,
       },
       maxSessionTurns: {

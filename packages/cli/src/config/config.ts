@@ -32,6 +32,7 @@ import {
   getVersion,
   coreEvents,
   GEMINI_MODEL_ALIAS_AUTO,
+  DEFAULT_GEMMA4_MODEL,
   getAdminErrorMessage,
   isHeadlessMode,
   Config,
@@ -850,9 +851,14 @@ export async function loadCliConfig(
     interactive,
   );
 
-  const defaultModel = GEMINI_MODEL_ALIAS_AUTO;
+  // Capricorn: the model is always an Ollama tag. Precedence: --model >
+  // CAPRICORN_MODEL > settings `model.name` > candidate default (gemma4:12b).
+  // GEMINI_MODEL is deliberately ignored. Upstream Gemini aliases left in old
+  // settings ("auto", "gemini-2.5-pro") resolve to the default; the tag is
+  // verified as Gemma 4 against Ollama metadata before any inference.
+  const defaultModel = DEFAULT_GEMMA4_MODEL;
   const rawModel =
-    argv.model || process.env['GEMINI_MODEL'] || settings.model?.name;
+    argv.model || process.env['CAPRICORN_MODEL'] || settings.model?.name;
 
   // Ensure specifiedModel is a string (e.g. if yargs parsed multiple --model as an array)
   const specifiedModel = Array.isArray(rawModel)
@@ -862,9 +868,11 @@ export async function loadCliConfig(
       : String(rawModel ?? '').trim() || '';
 
   const resolvedModel =
-    specifiedModel === GEMINI_MODEL_ALIAS_AUTO
+    !specifiedModel ||
+    specifiedModel === GEMINI_MODEL_ALIAS_AUTO ||
+    /^(gemini-|auto-)/i.test(specifiedModel)
       ? defaultModel
-      : specifiedModel || defaultModel;
+      : specifiedModel;
   const sandboxConfig = await loadSandboxConfig(settings, argv);
   if (sandboxConfig) {
     const existingPaths = sandboxConfig.allowedPaths || [];
@@ -1041,6 +1049,22 @@ export async function loadCliConfig(
       process.env['https_proxy'] ||
       process.env['HTTP_PROXY'] ||
       process.env['http_proxy'],
+    ollama: {
+      // Environment overrides settings, following the OLLAMA_HOST convention.
+      endpoint:
+        process.env['CAPRICORN_OLLAMA_HOST'] ||
+        process.env['OLLAMA_HOST'] ||
+        settings.ollama?.endpoint,
+      // Security: the remote-host opt-in is read from *user* settings only.
+      // A project's .capricorn/settings.json is repository content and must
+      // not be able to redirect prompts and code off this machine.
+      allowRemoteHost:
+        loadedSettings?.user.settings.ollama?.allowRemoteHost === true,
+      numCtx: settings.ollama?.numCtx,
+      think: settings.ollama?.think,
+      keepAlive: settings.ollama?.keepAlive,
+      requestTimeoutMs: settings.ollama?.requestTimeoutMs,
+    },
     cwd,
     fileDiscoveryService: fileService,
     bugCommand: settings.advanced?.bugCommand,

@@ -25,6 +25,10 @@ import {
   type ContentGeneratorConfig,
   type VertexAiRoutingConfig,
 } from '../core/contentGenerator.js';
+import {
+  resolveOllamaSettings,
+  type OllamaSettings,
+} from '../providers/ollama/settings.js';
 import type { OverageStrategy } from '../billing/billing.js';
 import { PromptRegistry } from '../prompts/prompt-registry.js';
 import { ResourceRegistry } from '../resources/resource-registry.js';
@@ -645,6 +649,11 @@ export interface ConfigParameters {
   };
   checkpointing?: boolean;
   proxy?: string;
+  /**
+   * Capricorn: local Ollama provider settings (endpoint, model, context
+   * window, thinking). Missing fields take the documented defaults.
+   */
+  ollama?: Partial<OllamaSettings>;
   cwd: string;
   fileDiscoveryService?: FileDiscoveryService;
   includeDirectories?: string[];
@@ -838,6 +847,7 @@ export class Config implements McpContext, AgentLoopContext {
   private gitService: GitService | undefined = undefined;
   private readonly checkpointing: boolean;
   private readonly proxy: string | undefined;
+  private readonly ollamaSettings: OllamaSettings;
   private readonly cwd: string;
   private readonly bugCommand: BugCommandSettings | undefined;
   private model: string;
@@ -1135,6 +1145,7 @@ export class Config implements McpContext, AgentLoopContext {
     };
     this.checkpointing = params.checkpointing ?? false;
     this.proxy = params.proxy;
+    this.ollamaSettings = resolveOllamaSettings(params.ollama);
     this.cwd = params.cwd ?? process.cwd();
     this.env = params.env;
     this.fileDiscoveryService = params.fileDiscoveryService ?? null;
@@ -3043,6 +3054,11 @@ export class Config implements McpContext, AgentLoopContext {
 
   getProxy(): string | undefined {
     return this.proxy;
+  }
+
+  /** Capricorn: resolved Ollama provider settings for this session. */
+  getOllamaSettings(): OllamaSettings {
+    return this.ollamaSettings;
   }
 
   getWorkingDir(): string {

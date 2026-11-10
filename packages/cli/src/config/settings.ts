@@ -278,7 +278,7 @@ export function mergeSettings(
   // 4. Workspace Settings
   // 5. System Settings (as overrides)
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-  return customDeepMerge(
+  const merged = customDeepMerge(
     getMergeStrategyForPath,
     schemaDefaults,
     systemDefaults,
@@ -286,6 +286,31 @@ export function mergeSettings(
     safeWorkspace,
     system,
   ) as MergedSettings;
+  return applyCapricornInvariants(merged);
+}
+
+/**
+ * Capricorn: settings that no settings file (user, workspace or system) may
+ * override, because they would contradict the local-only product contract.
+ *
+ * - Inference back-end is always the local Ollama provider. Values such as
+ *   "oauth-personal" or "gemini-api-key" from an imported upstream config are
+ *   replaced rather than honoured; there is no Google login path.
+ * - Google usage statistics (Clearcut) are always off.
+ * - Automatic update checks are off: they contact a package registry.
+ *
+ * Applied after merging so it holds regardless of scope precedence.
+ */
+export function applyCapricornInvariants(
+  merged: MergedSettings,
+): MergedSettings {
+  merged.security.auth.selectedType = AuthType.OLLAMA;
+  merged.security.auth.enforcedType = undefined;
+  merged.security.auth.useExternal = false;
+  merged.privacy.usageStatisticsEnabled = false;
+  merged.general.enableAutoUpdate = false;
+  merged.general.enableAutoUpdateNotification = false;
+  return merged;
 }
 
 /**

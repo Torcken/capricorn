@@ -51,6 +51,25 @@ import {
   type McpProgressPayload,
 } from '../utils/events.js';
 import { GeminiCliOperation } from '../telemetry/constants.js';
+import { MALFORMED_ARGS_MARKER } from '../providers/ollama/converter.js';
+
+/**
+ * Capricorn: throws if the provider flagged the call's arguments as
+ * malformed, or if the arguments are not a plain object at all. The thrown
+ * error becomes an INVALID_TOOL_PARAMS result returned to the model; the tool
+ * itself is never built or executed.
+ */
+function assertWellFormedToolArgs(args: unknown): void {
+  if (typeof args !== 'object' || args === null || Array.isArray(args)) {
+    throw new Error('Tool arguments must be a JSON object.');
+  }
+  if (MALFORMED_ARGS_MARKER in args) {
+    const reason = (args as Record<string, unknown>)[MALFORMED_ARGS_MARKER];
+    throw new Error(
+      `Malformed tool call arguments rejected: ${String(reason)} Re-issue the call with a JSON object matching the tool schema.`,
+    );
+  }
+}
 
 interface SchedulerQueueItem {
   requests: ToolCallRequestInfo[];
@@ -432,6 +451,12 @@ export class Scheduler {
       },
       () => {
         try {
+          // Capricorn security check (trust boundary: model output). The
+          // Ollama converter marks calls whose arguments were not a JSON
+          // object. Reject them here, before `build`, because a tool whose
+          // schema has no required fields would otherwise accept `{}` and run
+          // an action the model never coherently requested.
+          assertWellFormedToolArgs(request.args);
           const invocation = tool.build(request.args);
           if (!request.display) {
             request.display = populateToolDisplay({
