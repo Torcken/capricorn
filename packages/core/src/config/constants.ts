@@ -34,7 +34,8 @@ export const DEFAULT_FILE_FILTERING_OPTIONS: FileFilteringOptions = {
 };
 
 // Generic exclusion file name
-export const GEMINI_IGNORE_FILE_NAME = '.geminiignore';
+// Capricorn: per-project ignore file (gitignore syntax) for agent file access.
+export const GEMINI_IGNORE_FILE_NAME = '.capricornignore';
 
 // Extension integrity constants
 export const INTEGRITY_FILENAME = 'extension_integrity.json';

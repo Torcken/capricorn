@@ -1,0 +1,41 @@
+{
+  // Example ~/.capricorn/settings.json (JSON with comments).
+  // Every key is optional; see docs/CONFIGURATION.md.
+
+  "model": {
+    // Any installed, verified Gemma 4 tag. `capricorn models list` shows them.
+    "name": "gemma4:12b",
+    // Stop one prompt's agent loop after 20 minutes.
+    "maxRunMinutes": 20
+  },
+
+  "ollama": {
+    // Loopback only by default. A remote daemon requires
+    // "allowRemoteHost": true here (user settings), and is flagged in the UI.
+    "endpoint": "http://127.0.0.1:11434",
+    // Larger windows need more memory for the KV cache.
+    "numCtx": 32768,
+    // "off" is faster; "auto" lets the agent request thinking.
+    "think": "auto",
+    "keepAlive": "10m"
+  },
+
+  "general": {
+    // "default" asks before edits and commands; "auto_edit" applies edits.
+    "defaultApprovalMode": "default"
+  },
+
+  "security": {
+    "network": {
+      // External hosts Capricorn itself may contact (e.g. a remote MCP
+      // server). Empty = loopback only.
+      "allowedHosts": []
+    }
+  },
+
+  "tools": {
+    // Run tools in an OS sandbox (macOS Seatbelt, or a locally built
+    // container image `capricorn-sandbox:local`).
+    "sandbox": false
+  }
+}

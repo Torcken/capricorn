@@ -1,0 +1,32 @@
+# Roadmap
+
+Planned work. **Nothing on this page is implemented** unless it also appears as
+complete in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md). The original
+product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
+
+## Before 1.0
+
+- **Hardware-aware onboarding:** first-run wizard that detects RAM/VRAM and
+  recommends a Gemma 4 variant and `num_ctx`.
+- **Local web fetch tool:** a `web_fetch` replacement that downloads a page
+  locally (opt-in, allowlisted hosts, approval per request) instead of
+  upstream's hosted URL-context path.
+- **Prompt tuning with an eval suite:** fixed task set (exploration, edit,
+  test-fix, refusal) run against each Gemma 4 preset; publish results.
+- **Remove unreachable Google code** (Code Assist, Google OAuth, Clearcut) and
+  its tests, module by module.
+- **Platform coverage:** CI runs on macOS and Windows exist; manual real-model
+  validation on each still needed. Windows sandbox story.
+- **Context management:** calibrated budgets per model, smarter selection of
+  repository context, compaction quality checks.
+- **Startup time:** profile and trim inherited initialization.
+- **npm publication** once the package name and repository are confirmed.
+
+## After 1.0
+
+- VS Code companion extension (the upstream companion is retained but not
+  adapted).
+- Optional local embeddings with a verified Gemma-family embedding model, if one
+  becomes available under the product contract.
+- Multi-agent workflows on top of the existing sub-agent support.
+- Signed release artifacts and reproducible-build verification.

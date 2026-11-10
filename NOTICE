@@ -1,0 +1,26 @@
+Capricorn
+Copyright 2026 Capricorn Contributors
+
+This product is a fork of, and includes software from, Gemini CLI
+(https://github.com/google-gemini/gemini-cli), developed by Google LLC and
+licensed under the Apache License, Version 2.0.
+Copyright 2025-2026 Google LLC.
+
+Fork base: Gemini CLI v0.67.0
+(commit dc6602cec4a6e823aa33937144245dc421e5165f). Files retained from
+upstream keep their original copyright headers; files written for Capricorn
+carry "Copyright 2026 Capricorn Contributors". Modifications to upstream files
+are marked with a "Capricorn modification" or "Capricorn:" comment. See
+docs/UPSTREAM.md for the list of major changes.
+
+Capricorn is an independent project. It is not affiliated with, endorsed by,
+or sponsored by Google LLC. "Google", "Gemini" and "Gemma" are trademarks of
+Google LLC and are used only to identify the upstream project and the
+compatible model family.
+
+Gemma 4 model weights are not part of this distribution. They are downloaded
+separately through Ollama and are subject to their own terms of use.
+
+Third-party components bundled with this product are listed, with their
+licenses, in the third_party/ directory and in the license fields of the
+dependencies recorded in package-lock.json.

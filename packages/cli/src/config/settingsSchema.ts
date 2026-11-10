@@ -2391,7 +2391,9 @@ const SETTINGS_SCHEMA = {
         label: 'Extension Registry URI',
         category: 'Experimental',
         requiresRestart: true,
-        default: 'https://geminicli.com/extensions.json',
+        // Capricorn: no hosted extension gallery; set explicitly to opt in
+        // (the host must also be in security.network.allowedHosts).
+        default: '',
         description:
           'The URI (web URL or local file path) of the extension registry.',
         showInDialog: false,

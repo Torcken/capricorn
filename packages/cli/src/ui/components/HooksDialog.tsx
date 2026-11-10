@@ -151,9 +151,7 @@ export const HooksDialog: React.FC<HooksDialogProps> = ({
           <Box marginBottom={1}>
             <Text wrap="wrap">
               Learn more:{' '}
-              <Text color={theme.text.link}>
-                https://geminicli.com/docs/hooks
-              </Text>
+              <Text color={theme.text.link}>docs/CONFIGURATION.md (Hooks)</Text>
             </Text>
           </Box>
 

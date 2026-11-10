@@ -26,6 +26,8 @@ vi.mock('@google/gemini-cli-core', async (importOriginal) => {
   return {
     ...actual,
     fetchWithTimeout: vi.fn(),
+    // Capricorn: avoid a real DNS lookup (upstream resolved geminicli.com).
+    isPrivateIp: vi.fn(async () => false),
   };
 });
 
@@ -96,13 +98,16 @@ const mockExtensions: RegistryExtension[] = [
   },
 ];
 
+// Capricorn: there is no default hosted registry, so tests configure one.
+const TEST_REGISTRY_URL = 'https://registry.example.com/extensions.json';
+
 describe('ExtensionRegistryClient', () => {
   let client: ExtensionRegistryClient;
   let fetchMock: Mock;
 
   beforeEach(() => {
     ExtensionRegistryClient.resetCache();
-    client = new ExtensionRegistryClient();
+    client = new ExtensionRegistryClient(TEST_REGISTRY_URL);
     fetchMock = fetchWithTimeout as Mock;
     fetchMock.mockReset();
   });
@@ -123,10 +128,7 @@ describe('ExtensionRegistryClient', () => {
     expect(result.extensions[1].id).toBe('ext2'); // rank 2
     expect(result.total).toBe(3);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://geminicli.com/extensions.json',
-      10000,
-    );
+    expect(fetchMock).toHaveBeenCalledWith(TEST_REGISTRY_URL, 10000);
   });
 
   it('should return extensions sorted alphabetically', async () => {
@@ -215,8 +217,8 @@ describe('ExtensionRegistryClient', () => {
       json: async () => mockExtensions,
     });
 
-    const client1 = new ExtensionRegistryClient();
-    const client2 = new ExtensionRegistryClient();
+    const client1 = new ExtensionRegistryClient(TEST_REGISTRY_URL);
+    const client2 = new ExtensionRegistryClient(TEST_REGISTRY_URL);
 
     await client1.getExtensions();
     await client2.getExtensions();
@@ -316,5 +318,17 @@ describe('ExtensionRegistryClient', () => {
       resolveToRealPath(fileUrl),
       'utf-8',
     );
+  });
+});
+
+describe('ExtensionRegistryClient without configuration (Capricorn)', () => {
+  it('does not contact any hosted gallery and explains how to install', async () => {
+    ExtensionRegistryClient.resetCache();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    await expect(new ExtensionRegistryClient().getExtensions()).rejects.toThrow(
+      /No extension registry is configured/,
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 });

@@ -34,8 +34,12 @@ export interface RegistryExtension {
 }
 
 export class ExtensionRegistryClient {
-  static readonly DEFAULT_REGISTRY_URL =
-    'https://geminicli.com/extensions.json';
+  /**
+   * Capricorn: there is no default (hosted) extension gallery. Upstream
+   * fetched a registry from geminicli.com; Capricorn only queries a registry
+   * the user configured explicitly.
+   */
+  static readonly DEFAULT_REGISTRY_URL = '';
   private static readonly FETCH_TIMEOUT_MS = 10000; // 10 seconds
 
   private static fetchPromise: Promise<RegistryExtension[]> | null = null;
@@ -109,6 +113,12 @@ export class ExtensionRegistryClient {
     }
 
     const uri = this.registryURI;
+    if (!uri) {
+      throw new Error(
+        'No extension registry is configured. Capricorn has no hosted extension gallery; ' +
+          'install extensions from a local path or git URL with `capricorn extensions install <source>`.',
+      );
+    }
     ExtensionRegistryClient.fetchPromise = (async () => {
       try {
         if (uri.startsWith('http')) {

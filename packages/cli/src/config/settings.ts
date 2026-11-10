@@ -104,21 +104,29 @@ export function sanitizeEnvVar(value: string): string {
 }
 
 export function getSystemSettingsPath(): string {
-  if (process.env['GEMINI_CLI_SYSTEM_SETTINGS_PATH']) {
-    return process.env['GEMINI_CLI_SYSTEM_SETTINGS_PATH'];
+  // Capricorn: system-wide (administrator) settings live in Capricorn's own
+  // locations; a Gemini CLI system config is never read implicitly.
+  const override =
+    process.env['CAPRICORN_SYSTEM_SETTINGS_PATH'] ||
+    process.env['GEMINI_CLI_SYSTEM_SETTINGS_PATH'];
+  if (override) {
+    return override;
   }
   if (platform() === 'darwin') {
-    return '/Library/Application Support/GeminiCli/settings.json';
+    return '/Library/Application Support/Capricorn/settings.json';
   } else if (platform() === 'win32') {
-    return 'C:\\ProgramData\\gemini-cli\\settings.json';
+    return 'C:\\ProgramData\\capricorn\\settings.json';
   } else {
-    return '/etc/gemini-cli/settings.json';
+    return '/etc/capricorn/settings.json';
   }
 }
 
 export function getSystemDefaultsPath(): string {
-  if (process.env['GEMINI_CLI_SYSTEM_DEFAULTS_PATH']) {
-    return process.env['GEMINI_CLI_SYSTEM_DEFAULTS_PATH'];
+  const override =
+    process.env['CAPRICORN_SYSTEM_DEFAULTS_PATH'] ||
+    process.env['GEMINI_CLI_SYSTEM_DEFAULTS_PATH'];
+  if (override) {
+    return override;
   }
   return path.join(
     path.dirname(getSystemSettingsPath()),
