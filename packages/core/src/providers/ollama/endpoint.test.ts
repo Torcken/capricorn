@@ -66,7 +66,9 @@ describe('resolveOllamaEndpoint', () => {
 
   // Threat: a project-level setting pointing inference at an attacker server.
   it('refuses remote hosts without explicit opt-in', () => {
-    expect(() => resolveOllamaEndpoint('http://evil.example.com:11434')).toThrow(
+    expect(() =>
+      resolveOllamaEndpoint('http://evil.example.com:11434'),
+    ).toThrow(
       expect.objectContaining({ kind: OllamaErrorKind.ENDPOINT_NOT_ALLOWED }),
     );
   });

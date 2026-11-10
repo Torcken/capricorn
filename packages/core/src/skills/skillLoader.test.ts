@@ -272,19 +272,13 @@ description: Test sanitization
     expect(skills[0].name).toBe('gke-prs-troubleshooter');
   });
 
-  it('should load real built-in antigravity-support skill successfully', async () => {
+  // Capricorn: the upstream antigravity-support built-in skill was removed
+  // (Google product support content); only skill-creator remains built in.
+  it('should load the remaining built-in skills', async () => {
     const { fileURLToPath } = await import('node:url');
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    const builtinDir = path.resolve(__dirname, 'builtin');
-    const skills = await loadSkillsFromDir(builtinDir);
-    const antigravitySkill = skills.find(
-      (s) => s.name === 'antigravity-support',
-    );
-    expect(antigravitySkill).toBeDefined();
-    expect(antigravitySkill!.description).toContain('Antigravity CLI');
-    expect(antigravitySkill!.body).toContain(
-      'https://antigravity.google/docs/cli-getting-started',
-    );
+    const skills = await loadSkillsFromDir(path.resolve(__dirname, 'builtin'));
+    expect(skills.map((s) => s.name)).toEqual(['skill-creator']);
   });
 
   it('should handle UTF-8 BOM in SKILL.md', async () => {

@@ -3,6 +3,7 @@
  * Copyright 2026 Google LLC
  * SPDX-License-Identifier: Apache-2.0
  */
+import { GEMINI_DIR } from '../utils/paths.js';
 
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -793,12 +794,12 @@ async function buildExistingSkillsSummary(
 
       if (globalSkills.length > 0) {
         sections.push(
-          `## Global Skills (~/.gemini/skills — do NOT duplicate)\n${globalSkills.join('\n')}`,
+          `## Global Skills (~/${GEMINI_DIR}/skills — do NOT duplicate)\n${globalSkills.join('\n')}`,
         );
       }
       if (workspaceSkills.length > 0) {
         sections.push(
-          `## Workspace Skills (.gemini/skills — do NOT duplicate)\n${workspaceSkills.join('\n')}`,
+          `## Workspace Skills (${GEMINI_DIR}/skills — do NOT duplicate)\n${workspaceSkills.join('\n')}`,
         );
       }
       if (extensionSkills.length > 0) {

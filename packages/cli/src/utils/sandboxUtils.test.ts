@@ -31,7 +31,7 @@ vi.mock('@google/gemini-cli-core', () => ({
     log: vi.fn(),
     warn: vi.fn(),
   },
-  GEMINI_DIR: '.gemini',
+  GEMINI_DIR: '.capricorn',
   homedir: vi.fn(() => os.homedir()),
   resolveToRealPath: vi.fn((p: string) => path.resolve(p)),
 }));
@@ -128,7 +128,7 @@ describe('sandboxUtils', () => {
     it('should source sandbox.bashrc if exists', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       const args = entrypoint('/work', ['node', 'gemini', 'arg1']);
-      expect(args[2]).toContain('source .gemini/sandbox.bashrc');
+      expect(args[2]).toContain('source .capricorn/sandbox.bashrc');
     });
 
     it('should include socat commands for ports', () => {
@@ -263,13 +263,13 @@ describe('sandboxUtils', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
     });
 
-    it('should detect ~/.gemini directory path', () => {
+    it('should detect ~/.capricorn directory path', () => {
       vi.mocked(os.homedir).mockReturnValue('/home/testuser');
-      expect(isSensitiveHostPath('/home/testuser/.gemini')).toBe(true);
-      expect(isSensitiveHostPath('/home/testuser/.gemini/settings.json')).toBe(
-        true,
-      );
-      expect(isSensitiveHostPath('~/.gemini')).toBe(true);
+      expect(isSensitiveHostPath('/home/testuser/.capricorn')).toBe(true);
+      expect(
+        isSensitiveHostPath('/home/testuser/.capricorn/settings.json'),
+      ).toBe(true);
+      expect(isSensitiveHostPath('~/.capricorn')).toBe(true);
     });
 
     it('should detect user home directory and its parent directories', () => {
@@ -320,7 +320,7 @@ describe('sandboxUtils', () => {
           (os.platform() === 'win32' &&
             resolvedP.toLowerCase() === symlinkGemini.toLowerCase())
         ) {
-          return path.join(homeDir, '.gemini');
+          return path.join(homeDir, '.capricorn');
         }
         if (
           resolvedP === symlinkHome ||
@@ -342,7 +342,7 @@ describe('sandboxUtils', () => {
         throw new Error('Unrecoverable resolution error');
       });
 
-      expect(isSensitiveHostPath('/home/testuser/.gemini')).toBe(true);
+      expect(isSensitiveHostPath('/home/testuser/.capricorn')).toBe(true);
       expect(isSensitiveHostPath('/workspace/safe-path')).toBe(true);
     });
 
@@ -355,7 +355,9 @@ describe('sandboxUtils', () => {
       );
 
       expect(
-        isSensitiveHostPath(path.join(homeDir, '.gemini', 'non-existent-sub')),
+        isSensitiveHostPath(
+          path.join(homeDir, '.capricorn', 'non-existent-sub'),
+        ),
       ).toBe(true);
       expect(isSensitiveHostPath(path.join(safeDir, 'non-existent-sub'))).toBe(
         false,
@@ -379,17 +381,19 @@ describe('sandboxUtils', () => {
       });
 
       expect(
-        isSensitiveHostPath(path.join(homeDir, '.gemini', 'non-existent-sub')),
+        isSensitiveHostPath(
+          path.join(homeDir, '.capricorn', 'non-existent-sub'),
+        ),
       ).toBe(true);
       expect(isSensitiveHostPath(path.join(safeDir, 'non-existent-sub'))).toBe(
         false,
       );
     });
 
-    it('should detect broken symlinks pointing into ~/.gemini as sensitive', () => {
+    it('should detect broken symlinks pointing into ~/.capricorn as sensitive', () => {
       const homeDir = path.resolve('/home/testuser');
       const brokenSymlink = path.resolve('/workspace/broken_symlink');
-      const targetFile = path.join(homeDir, '.gemini', 'trusted_hooks.json');
+      const targetFile = path.join(homeDir, '.capricorn', 'trusted_hooks.json');
 
       vi.mocked(os.homedir).mockReturnValue(homeDir);
 
@@ -488,14 +492,14 @@ describe('sandboxUtils', () => {
       vi.mocked(os.homedir).mockReturnValue('');
 
       expect(isSensitiveHostPath(process.cwd())).toBe(false);
-      expect(isSensitiveHostPath(path.join(process.cwd(), '.gemini'))).toBe(
+      expect(isSensitiveHostPath(path.join(process.cwd(), '.capricorn'))).toBe(
         false,
       );
       expect(isSensitiveHostPath('/workspace/safe-project')).toBe(false);
 
       // Still blocks ~ notations and sensitive credential files
       expect(isSensitiveHostPath('~')).toBe(true);
-      expect(isSensitiveHostPath('~/.gemini')).toBe(true);
+      expect(isSensitiveHostPath('~/.capricorn')).toBe(true);
       expect(isSensitiveHostPath('/workspace/.env')).toBe(true);
       expect(isSensitiveHostPath('/workspace/oauth_creds.json')).toBe(true);
       expect(isSensitiveHostPath('/workspace/google_accounts.json')).toBe(true);
@@ -593,91 +597,109 @@ describe('sandboxUtils', () => {
 
     it('should identify known credential and auth filenames as sensitive', () => {
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/oauth_creds.json'),
-      ).toBe(true);
-      expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/google_accounts.json'),
+        isCredentialOrSensitivePath('/home/user/.capricorn/oauth_creds.json'),
       ).toBe(true);
       expect(
         isCredentialOrSensitivePath(
-          '/home/user/.gemini/gemini-credentials.json',
+          '/home/user/.capricorn/google_accounts.json',
         ),
       ).toBe(true);
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/mcp-oauth-tokens.json'),
+        isCredentialOrSensitivePath(
+          '/home/user/.capricorn/gemini-credentials.json',
+        ),
       ).toBe(true);
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/a2a-oauth-tokens.json'),
+        isCredentialOrSensitivePath(
+          '/home/user/.capricorn/mcp-oauth-tokens.json',
+        ),
       ).toBe(true);
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/trusted_hooks.json'),
+        isCredentialOrSensitivePath(
+          '/home/user/.capricorn/a2a-oauth-tokens.json',
+        ),
       ).toBe(true);
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/trustedFolders.json'),
+        isCredentialOrSensitivePath('/home/user/.capricorn/trusted_hooks.json'),
       ).toBe(true);
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/trustedfolders.json'),
+        isCredentialOrSensitivePath(
+          '/home/user/.capricorn/trustedFolders.json',
+        ),
       ).toBe(true);
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/policy_integrity.json'),
+        isCredentialOrSensitivePath(
+          '/home/user/.capricorn/trustedfolders.json',
+        ),
+      ).toBe(true);
+      expect(
+        isCredentialOrSensitivePath(
+          '/home/user/.capricorn/policy_integrity.json',
+        ),
       ).toBe(true);
     });
 
     it('should identify tokens, credentials, and sensitive directories', () => {
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/custom-tokens.json'),
+        isCredentialOrSensitivePath('/home/user/.capricorn/custom-tokens.json'),
       ).toBe(true);
-      expect(isCredentialOrSensitivePath('/home/user/.gemini/token.json')).toBe(
+      expect(
+        isCredentialOrSensitivePath('/home/user/.capricorn/token.json'),
+      ).toBe(true);
+      expect(
+        isCredentialOrSensitivePath('/home/user/.capricorn/github-token'),
+      ).toBe(true);
+      expect(
+        isCredentialOrSensitivePath('/home/user/.capricorn/api.credentials'),
+      ).toBe(true);
+      expect(
+        isCredentialOrSensitivePath('/home/user/.capricorn/user_creds.json'),
+      ).toBe(true);
+      expect(
+        isCredentialOrSensitivePath('/home/user/.capricorn/user_cred.json'),
+      ).toBe(true);
+      expect(isCredentialOrSensitivePath('/home/user/.capricorn/.env')).toBe(
         true,
       );
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/github-token'),
+        isCredentialOrSensitivePath('/home/user/.capricorn/private.key'),
       ).toBe(true);
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/api.credentials'),
+        isCredentialOrSensitivePath('/home/user/.capricorn/cert.pem'),
       ).toBe(true);
-      expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/user_creds.json'),
-      ).toBe(true);
-      expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/user_cred.json'),
-      ).toBe(true);
-      expect(isCredentialOrSensitivePath('/home/user/.gemini/.env')).toBe(true);
-      expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/private.key'),
-      ).toBe(true);
-      expect(isCredentialOrSensitivePath('/home/user/.gemini/cert.pem')).toBe(
-        true,
-      );
       expect(
         isCredentialOrSensitivePath(
-          '/home/user/.gemini/service-account-key.json',
+          '/home/user/.capricorn/service-account-key.json',
         ),
       ).toBe(true);
-      expect(isCredentialOrSensitivePath('/home/user/.gemini/history')).toBe(
+      expect(isCredentialOrSensitivePath('/home/user/.capricorn/history')).toBe(
         true,
       );
-      expect(isCredentialOrSensitivePath('/home/user/.gemini/tmp')).toBe(true);
-      expect(isCredentialOrSensitivePath('/home/user/.gemini/bin')).toBe(true);
+      expect(isCredentialOrSensitivePath('/home/user/.capricorn/tmp')).toBe(
+        true,
+      );
+      expect(isCredentialOrSensitivePath('/home/user/.capricorn/bin')).toBe(
+        true,
+      );
     });
 
     it('should allow non-sensitive configuration files and directories', () => {
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/settings.json'),
+        isCredentialOrSensitivePath('/home/user/.capricorn/settings.json'),
       ).toBe(false);
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/keybindings.json'),
+        isCredentialOrSensitivePath('/home/user/.capricorn/keybindings.json'),
       ).toBe(false);
-      expect(isCredentialOrSensitivePath('/home/user/.gemini/commands')).toBe(
+      expect(
+        isCredentialOrSensitivePath('/home/user/.capricorn/commands'),
+      ).toBe(false);
+      expect(isCredentialOrSensitivePath('/home/user/.capricorn/skills')).toBe(
         false,
       );
-      expect(isCredentialOrSensitivePath('/home/user/.gemini/skills')).toBe(
-        false,
-      );
-      expect(isCredentialOrSensitivePath('/home/user/.gemini/policies')).toBe(
-        false,
-      );
-      expect(isCredentialOrSensitivePath('/home/user/.gemini/agents')).toBe(
+      expect(
+        isCredentialOrSensitivePath('/home/user/.capricorn/policies'),
+      ).toBe(false);
+      expect(isCredentialOrSensitivePath('/home/user/.capricorn/agents')).toBe(
         false,
       );
     });
@@ -685,47 +707,55 @@ describe('sandboxUtils', () => {
     it('should not false-positive on user scripts containing credential in filename', () => {
       expect(
         isCredentialOrSensitivePath(
-          '/home/user/.gemini/commands/setup-credentials.sh',
+          '/home/user/.capricorn/commands/setup-credentials.sh',
         ),
       ).toBe(false);
       expect(
         isCredentialOrSensitivePath(
-          '/home/user/.gemini/skills/credential-helper.js',
+          '/home/user/.capricorn/skills/credential-helper.js',
         ),
       ).toBe(false);
     });
 
     it('should not false-positive on words sharing sensitive substrings without separators', () => {
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/monkey.json'),
+        isCredentialOrSensitivePath('/home/user/.capricorn/monkey.json'),
       ).toBe(false);
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/sacred.json'),
+        isCredentialOrSensitivePath('/home/user/.capricorn/sacred.json'),
       ).toBe(false);
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/commands/tokenized.js'),
+        isCredentialOrSensitivePath(
+          '/home/user/.capricorn/commands/tokenized.js',
+        ),
       ).toBe(false);
     });
 
     it('should not false-positive on nested bin or tmp directories inside commands or skills', () => {
-      const rootDir = '/home/user/.gemini';
+      const rootDir = '/home/user/.capricorn';
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/commands/bin', rootDir),
+        isCredentialOrSensitivePath(
+          '/home/user/.capricorn/commands/bin',
+          rootDir,
+        ),
       ).toBe(false);
       expect(
-        isCredentialOrSensitivePath('/home/user/.gemini/skills/tmp', rootDir),
+        isCredentialOrSensitivePath(
+          '/home/user/.capricorn/skills/tmp',
+          rootDir,
+        ),
       ).toBe(false);
     });
 
     it('should not filter out the root directory itself', () => {
-      const rootDir = '/home/user/.gemini';
+      const rootDir = '/home/user/.capricorn';
       expect(isCredentialOrSensitivePath(rootDir, rootDir)).toBe(false);
     });
   });
 
   describe('prepareIsolatedSettingsDir', () => {
     it('should create an isolated directory and copy files with credential filter', () => {
-      const fakeHostSettingsDir = '/home/user/.gemini';
+      const fakeHostSettingsDir = '/home/user/.capricorn';
       const fakeIsolatedDir = '/tmp/gemini-sandbox-settings-xyz';
 
       vi.mocked(fs.existsSync).mockReturnValue(true);
@@ -749,7 +779,7 @@ describe('sandboxUtils', () => {
     });
 
     it('should return isolated directory even if source settings directory does not exist', () => {
-      const fakeHostSettingsDir = '/home/user/.gemini';
+      const fakeHostSettingsDir = '/home/user/.capricorn';
       const fakeIsolatedDir = '/tmp/gemini-sandbox-settings-xyz';
 
       vi.mocked(fs.existsSync).mockReturnValue(false);

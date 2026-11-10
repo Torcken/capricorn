@@ -1,4 +1,5 @@
 # CAPRICORN
+
 ## Product Requirements & Engineering Roadmap
 
 **Version:** 1.0 — Initial planning document  
@@ -12,13 +13,19 @@
 
 # 1. Executive Summary
 
-Capricorn is a local-first, open-source AI coding agent operating directly in a developer's terminal.
+Capricorn is a local-first, open-source AI coding agent operating directly in a
+developer's terminal.
 
-Built from the Gemini CLI architecture, Capricorn replaces Google-hosted inference with Gemma 4 running locally through Ollama.
+Built from the Gemini CLI architecture, Capricorn replaces Google-hosted
+inference with Gemma 4 running locally through Ollama.
 
-Capricorn will be able to understand software repositories, explain code, generate implementations, modify multiple files, execute approved commands, run tests, debug failures and manage multi-step development workflows.
+Capricorn will be able to understand software repositories, explain code,
+generate implementations, modify multiple files, execute approved commands, run
+tests, debug failures and manage multi-step development workflows.
 
-The project's objective is to deliver the capabilities of a modern agentic coding assistant without requiring a cloud AI subscription or sending repository content to an external inference provider.
+The project's objective is to deliver the capabilities of a modern agentic
+coding assistant without requiring a cloud AI subscription or sending repository
+content to an external inference provider.
 
 ### Product promise
 
@@ -27,10 +34,14 @@ The project's objective is to deliver the capabilities of a modern agentic codin
 ### Five principles
 
 1. **Local-first:** All inference takes place through a local Ollama instance.
-2. **Open source:** Transparent implementation, permissive licensing and community contributions.
-3. **Developer-centric:** A professional terminal interface built for real software engineering workflows.
-4. **Secure by design:** Explicit permissions, sandboxing, auditable operations and no mandatory telemetry.
-5. **Gemma-native:** Optimised specifically for Gemma 4 rather than supporting an unlimited collection of AI providers.
+2. **Open source:** Transparent implementation, permissive licensing and
+   community contributions.
+3. **Developer-centric:** A professional terminal interface built for real
+   software engineering workflows.
+4. **Secure by design:** Explicit permissions, sandboxing, auditable operations
+   and no mandatory telemetry.
+5. **Gemma-native:** Optimised specifically for Gemma 4 rather than supporting
+   an unlimited collection of AI providers.
 
 ### Primary users
 
@@ -51,7 +62,8 @@ Capricorn v1.0 should:
 - Support multiple local Gemma 4 variants.
 - Preserve confirmation and sandboxing safeguards.
 - Publish reproducible performance and reliability benchmarks.
-- Operate on supported macOS, Linux and Windows configurations, with unsupported combinations clearly labelled.
+- Operate on supported macOS, Linux and Windows configurations, with unsupported
+  combinations clearly labelled.
 
 ---
 
@@ -61,27 +73,29 @@ Capricorn v1.0 should:
 
 The MVP must establish the complete coding-agent loop.
 
-| Capability | Priority |
-|---|---|
-| Interactive terminal interface | P0 |
-| Detect local Ollama service | P0 |
-| Discover installed Gemma 4 models | P0 |
-| Select and load Gemma 4 models | P0 |
-| Stream model output | P0 |
-| Read files and list directories | P0 |
-| Search repository content | P0 |
-| Create and edit files | P0 |
-| Execute approved shell commands | P0 |
-| Execute multi-step tool calls | P0 |
-| View proposed file changes | P0 |
-| Handle inference errors and cancellation | P0 |
-| Persist local conversation sessions | P1 |
-| Git status and diff integration | P1 |
-| Automatic context compaction | P1 |
-| MCP support | P2 |
-| VS Code extension | Post-v1 |
+| Capability                               | Priority |
+| ---------------------------------------- | -------- |
+| Interactive terminal interface           | P0       |
+| Detect local Ollama service              | P0       |
+| Discover installed Gemma 4 models        | P0       |
+| Select and load Gemma 4 models           | P0       |
+| Stream model output                      | P0       |
+| Read files and list directories          | P0       |
+| Search repository content                | P0       |
+| Create and edit files                    | P0       |
+| Execute approved shell commands          | P0       |
+| Execute multi-step tool calls            | P0       |
+| View proposed file changes               | P0       |
+| Handle inference errors and cancellation | P0       |
+| Persist local conversation sessions      | P1       |
+| Git status and diff integration          | P1       |
+| Automatic context compaction             | P1       |
+| MCP support                              | P2       |
+| VS Code extension                        | Post-v1  |
 
-**MVP definition:** A developer can ask Capricorn to inspect a project, implement a change, run its tests and present the resulting diff, without using a cloud AI API.
+**MVP definition:** A developer can ask Capricorn to inspect a project,
+implement a change, run its tests and present the resulting diff, without using
+a cloud AI API.
 
 ## 2.2 Explicit exclusions
 
@@ -106,9 +120,11 @@ Keeping these exclusions is essential to controlling development complexity.
 
 Capricorn will initially target a fork of `google-gemini/gemini-cli`.
 
-The project should use a tagged stable release, rather than an arbitrary commit from the upstream main branch.
+The project should use a tagged stable release, rather than an arbitrary commit
+from the upstream main branch.
 
-The exact upstream commit must be recorded in the initial architecture decision record (ADR).
+The exact upstream commit must be recorded in the initial architecture decision
+record (ADR).
 
 ### Components to preserve
 
@@ -139,7 +155,9 @@ The exact upstream commit must be recorded in the initial architecture decision 
 
 Google-specific dependencies must not be removed indiscriminately.
 
-The initial fork may retain internal Gemini request and response types temporarily while building the Ollama adapter. These should subsequently be migrated behind provider-independent interfaces.
+The initial fork may retain internal Gemini request and response types
+temporarily while building the Ollama adapter. These should subsequently be
+migrated behind provider-independent interfaces.
 
 This avoids breaking the agent loop during the first implementation stage.
 
@@ -147,9 +165,11 @@ This avoids breaking the agent loop during the first implementation stage.
 
 Qwen Code will be evaluated during week 1 as an alternative starting point.
 
-Its existing support for OpenAI-compatible endpoints could eliminate substantial provider integration work.
+Its existing support for OpenAI-compatible endpoints could eliminate substantial
+provider integration work.
 
-The foundation decision must follow a technical comparison rather than personal preference.
+The foundation decision must follow a technical comparison rather than personal
+preference.
 
 **Decision criteria:**
 
@@ -161,31 +181,36 @@ The foundation decision must follow a technical comparison rather than personal 
 - Security and maintenance burden.
 - Long-term feasibility of maintaining the fork.
 
-**Decision gate:** Choose the foundation demonstrating the lowest engineering risk by the end of week 1.
+**Decision gate:** Choose the foundation demonstrating the lowest engineering
+risk by the end of week 1.
 
-If the existing Qwen Code integration substantially outperforms the Gemini CLI proof of concept, the project may adopt Qwen Code as its foundation while retaining Capricorn's original product positioning.
+If the existing Qwen Code integration substantially outperforms the Gemini CLI
+proof of concept, the project may adopt Qwen Code as its foundation while
+retaining Capricorn's original product positioning.
 
 ---
 
 # 4. Target Software Architecture
 
-Capricorn should use a modular architecture with clear separation between inference, agent orchestration and system operations.
+Capricorn should use a modular architecture with clear separation between
+inference, agent orchestration and system operations.
 
 ## 4.1 Core modules
 
-| Module | Responsibility |
-|---|---|
-| `capricorn-cli` | Terminal UI, commands, configuration |
-| `capricorn-core` | Agent loop, task planning, execution lifecycle |
-| `capricorn-ollama` | Local inference provider integration |
-| `capricorn-models` | Model discovery, validation and configuration |
-| `capricorn-tools` | Filesystem, shell, Git and search tools |
-| `capricorn-context` | History, token budgets, summarisation |
-| `capricorn-security` | Permissions, sandboxing, policy enforcement |
-| `capricorn-mcp` | Optional MCP interoperability |
-| `capricorn-evals` | Model and agent benchmark framework |
+| Module               | Responsibility                                 |
+| -------------------- | ---------------------------------------------- |
+| `capricorn-cli`      | Terminal UI, commands, configuration           |
+| `capricorn-core`     | Agent loop, task planning, execution lifecycle |
+| `capricorn-ollama`   | Local inference provider integration           |
+| `capricorn-models`   | Model discovery, validation and configuration  |
+| `capricorn-tools`    | Filesystem, shell, Git and search tools        |
+| `capricorn-context`  | History, token budgets, summarisation          |
+| `capricorn-security` | Permissions, sandboxing, policy enforcement    |
+| `capricorn-mcp`      | Optional MCP interoperability                  |
+| `capricorn-evals`    | Model and agent benchmark framework            |
 
-Initially, modules can remain within the existing monorepo structure. New packages should only be extracted when there is a clear architectural benefit.
+Initially, modules can remain within the existing monorepo structure. New
+packages should only be extracted when there is a clear architectural benefit.
 
 ## 4.2 Inference pipeline
 
@@ -217,7 +242,8 @@ The primary execution path:
 - `docs/` — Technical and user documentation.
 - `.github/workflows/` — CI, release and security workflows.
 
-The exact directory structure should be adapted to the selected upstream repository rather than imposed through a disruptive initial refactor.
+The exact directory structure should be adapted to the selected upstream
+repository rather than imposed through a disruptive initial refactor.
 
 ---
 
@@ -227,7 +253,8 @@ This is the highest-priority engineering workstream.
 
 ## 5.1 Model provider implementation
 
-Create an `OllamaContentGenerator` implementing the inference contract used by the agent engine.
+Create an `OllamaContentGenerator` implementing the inference contract used by
+the agent engine.
 
 Core responsibilities:
 
@@ -243,23 +270,28 @@ Core responsibilities:
 - Surface token usage when reported by Ollama.
 - Translate provider errors into actionable CLI messages.
 
-Initial implementation should evaluate Ollama's native `/api/chat` endpoint against its OpenAI-compatible `/v1/chat/completions` interface.
+Initial implementation should evaluate Ollama's native `/api/chat` endpoint
+against its OpenAI-compatible `/v1/chat/completions` interface.
 
-**Preferred final approach:** Native Ollama integration if it provides better control over context configuration, thinking parameters, model lifecycle and error handling.
+**Preferred final approach:** Native Ollama integration if it provides better
+control over context configuration, thinking parameters, model lifecycle and
+error handling.
 
 ## 5.2 Supported models
 
-| Model | Release classification |
-|---|---|
-| Gemma 4 E2B | Experimental |
-| Gemma 4 E4B | Lightweight |
-| Gemma 4 12B | Standard |
-| Gemma 4 26B A4B | Advanced |
-| Gemma 4 31B | High capability |
+| Model           | Release classification |
+| --------------- | ---------------------- |
+| Gemma 4 E2B     | Experimental           |
+| Gemma 4 E4B     | Lightweight            |
+| Gemma 4 12B     | Standard               |
+| Gemma 4 26B A4B | Advanced               |
+| Gemma 4 31B     | High capability        |
 
-Capricorn must not assume that the largest model is the fastest or the most appropriate for every operation.
+Capricorn must not assume that the largest model is the fastest or the most
+appropriate for every operation.
 
-Model choice must account for hardware, available memory, quantisation, context length and observed task performance.
+Model choice must account for hardware, available memory, quantisation, context
+length and observed task performance.
 
 ## 5.3 Model management
 
@@ -288,7 +320,8 @@ Build a compatibility layer handling:
 - Agent termination and iteration limits.
 - Recovery from interrupted sessions.
 
-The adapter must not assume that Gemma 4 always produces perfectly structured arguments.
+The adapter must not assume that Gemma 4 always produces perfectly structured
+arguments.
 
 Schema validation must take place before every tool execution.
 
@@ -319,7 +352,8 @@ Prompt tuning must be evidence-based and evaluated against a fixed task suite.
 
 **Week 1**
 
-**Objective:** Prove that the selected codebase can operate with Gemma 4 without hosted inference.
+**Objective:** Prove that the selected codebase can operate with Gemma 4 without
+hosted inference.
 
 ### Tasks
 
@@ -342,7 +376,8 @@ Prompt tuning must be evidence-based and evaluated against a fixed task suite.
 - Initial compatibility test results.
 - Prioritised engineering backlog.
 
-**Exit criteria:** A local Gemma 4 model can successfully invoke at least one existing coding tool through the selected agent framework.
+**Exit criteria:** A local Gemma 4 model can successfully invoke at least one
+existing coding tool through the selected agent framework.
 
 **Milestone M0:** Foundation validated.
 
@@ -390,7 +425,8 @@ Prompt tuning must be evidence-based and evaluated against a fixed task suite.
 
 **Capricorn v0.1.0-alpha**
 
-A command-line coding agent capable of inspecting, modifying and testing code using a local Gemma 4 model.
+A command-line coding agent capable of inspecting, modifying and testing code
+using a local Gemma 4 model.
 
 ### Alpha acceptance criteria
 
@@ -445,11 +481,13 @@ A command-line coding agent capable of inspecting, modifying and testing code us
 
 **Capricorn v0.2.0-alpha**
 
-A reliable local coding agent supporting multi-step repository changes and context management.
+A reliable local coding agent supporting multi-step repository changes and
+context management.
 
 ### Exit criteria
 
-The agent can complete a curated set of coding workflows covering repository exploration, code modification and test execution.
+The agent can complete a curated set of coding workflows covering repository
+exploration, code modification and test execution.
 
 **Milestone M2:** Core agent functionality stable.
 
@@ -459,7 +497,8 @@ The agent can complete a curated set of coding workflows covering repository exp
 
 **Weeks 8–10**
 
-**Objective:** Make Capricorn usable without specialised knowledge of its internal architecture.
+**Objective:** Make Capricorn usable without specialised knowledge of its
+internal architecture.
 
 ### Week 8 — Onboarding
 
@@ -498,7 +537,8 @@ The agent can complete a curated set of coding workflows covering repository exp
 
 **Capricorn v0.5.0-beta**
 
-A publicly installable coding agent with documented setup, local model management and useful developer workflows.
+A publicly installable coding agent with documented setup, local model
+management and useful developer workflows.
 
 ### Beta exit criteria
 
@@ -562,7 +602,8 @@ A publicly installable coding agent with documented setup, local model managemen
 
 - Security regression suite passes.
 - No unresolved critical or high-severity release blockers.
-- Privacy tests show no unexpected outbound traffic under the supported offline configuration.
+- Privacy tests show no unexpected outbound traffic under the supported offline
+  configuration.
 - Evaluation metrics meet the agreed release thresholds.
 
 **Milestone M4:** Release candidate approved.

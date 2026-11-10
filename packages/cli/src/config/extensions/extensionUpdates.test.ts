@@ -253,7 +253,7 @@ describe('extensionUpdates', () => {
       expect(coreEvents.emitFeedback).toHaveBeenCalledWith(
         'warning',
         expect.stringContaining(
-          'Please run "gemini extensions config test-ext [setting-name]"',
+          'Please run "capricorn extensions config test-ext [setting-name]"',
         ),
       );
     });

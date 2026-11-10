@@ -45,9 +45,9 @@ function sanitizeNotificationContent(
   const body = sanitizeForDisplay(content.body, MAX_NOTIFICATION_BODY_CHARS);
 
   return {
-    title: title || 'Gemini CLI',
+    title: title || 'Capricorn',
     subtitle: subtitle || undefined,
-    body: body || 'Open Gemini CLI for details.',
+    body: body || 'Open Capricorn for details.',
   };
 }
 
@@ -56,14 +56,14 @@ export function buildRunEventNotificationContent(
 ): RunEventNotificationContent {
   if (event.type === 'attention') {
     return sanitizeNotificationContent({
-      title: 'Gemini CLI needs your attention',
+      title: 'Capricorn needs your attention',
       subtitle: event.heading ?? 'Action required',
-      body: event.detail ?? 'Open Gemini CLI to continue.',
+      body: event.detail ?? 'Open Capricorn to continue.',
     });
   }
 
   return sanitizeNotificationContent({
-    title: 'Gemini CLI session complete',
+    title: 'Capricorn session complete',
     subtitle: 'Run finished',
     body: event.detail ?? 'The session finished successfully.',
   });

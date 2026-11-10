@@ -123,18 +123,18 @@ describe('macOS Seatbelt Gemini configuration isolation', () => {
   describe.each(ALL_PROFILES)('%s', (profile) => {
     const rules = readRules(profile);
 
-    it('does not allow writes to HOME_DIR/.gemini', () => {
+    it('does not allow writes to HOME_DIR/.capricorn', () => {
       const allowWriteMatch = rules.match(/\(allow file-write\*[\s\S]*?\n\)/);
       expect(allowWriteMatch).not.toBeNull();
       expect(allowWriteMatch![0]).not.toContain(
-        '(subpath (string-append (param "HOME_DIR") "/.gemini"))',
+        '(subpath (string-append (param "HOME_DIR") "/.capricorn"))',
       );
     });
 
     it('denies writing to Gemini configuration directory and sensitive files', () => {
       expect(rules).toContain('(deny file-write*');
       expect(rules).toContain(
-        '(subpath (string-append (param "HOME_DIR") "/.gemini"))',
+        '(subpath (string-append (param "HOME_DIR") "/.capricorn"))',
       );
       expect(rules).toContain('(regex #"/trustedFolders\\.json$")');
       expect(rules).toContain('(regex #"/policy_integrity\\.json$")');
@@ -142,28 +142,28 @@ describe('macOS Seatbelt Gemini configuration isolation', () => {
 
     it('denies reading sensitive credential and environment files', () => {
       expect(rules).toContain(
-        '(literal (string-append (param "HOME_DIR") "/.gemini/oauth_creds.json"))',
+        '(literal (string-append (param "HOME_DIR") "/.capricorn/oauth_creds.json"))',
       );
       expect(rules).toContain(
-        '(literal (string-append (param "HOME_DIR") "/.gemini/gemini-credentials.json"))',
+        '(literal (string-append (param "HOME_DIR") "/.capricorn/gemini-credentials.json"))',
       );
       expect(rules).toContain(
-        '(literal (string-append (param "HOME_DIR") "/.gemini/mcp-oauth-tokens.json"))',
+        '(literal (string-append (param "HOME_DIR") "/.capricorn/mcp-oauth-tokens.json"))',
       );
       expect(rules).toContain(
-        '(literal (string-append (param "HOME_DIR") "/.gemini/a2a-oauth-tokens.json"))',
+        '(literal (string-append (param "HOME_DIR") "/.capricorn/a2a-oauth-tokens.json"))',
       );
       expect(rules).toContain(
-        '(literal (string-append (param "HOME_DIR") "/.gemini/google_accounts.json"))',
+        '(literal (string-append (param "HOME_DIR") "/.capricorn/google_accounts.json"))',
       );
       expect(rules).toContain(
-        '(literal (string-append (param "HOME_DIR") "/.gemini/trusted_hooks.json"))',
+        '(literal (string-append (param "HOME_DIR") "/.capricorn/trusted_hooks.json"))',
       );
       expect(rules).toContain(
-        '(literal (string-append (param "HOME_DIR") "/.gemini/trustedFolders.json"))',
+        '(literal (string-append (param "HOME_DIR") "/.capricorn/trustedFolders.json"))',
       );
       expect(rules).toContain(
-        '(literal (string-append (param "HOME_DIR") "/.gemini/policy_integrity.json"))',
+        '(literal (string-append (param "HOME_DIR") "/.capricorn/policy_integrity.json"))',
       );
       expect(rules).toContain('(regex #"/google_accounts\\.json$")');
       expect(rules).toContain('(regex #"/trusted_hooks\\.json$")');
@@ -186,10 +186,10 @@ describe('macOS Seatbelt non-sensitive configuration read access', () => {
 
     it('allows reading settings.json and keybindings.json configuration files', () => {
       expect(rules).toContain(
-        '(literal (string-append (param "HOME_DIR") "/.gemini/settings.json"))',
+        '(literal (string-append (param "HOME_DIR") "/.capricorn/settings.json"))',
       );
       expect(rules).toContain(
-        '(literal (string-append (param "HOME_DIR") "/.gemini/keybindings.json"))',
+        '(literal (string-append (param "HOME_DIR") "/.capricorn/keybindings.json"))',
       );
     });
   });
@@ -204,11 +204,11 @@ describe('macOS Seatbelt strict profile scoped read access', () => {
   describe.each(STRICT_PROFILES)('%s', (profile) => {
     const rules = readRules(profile);
 
-    it('does not allow broad read access to ~/.gemini subpath', () => {
+    it('does not allow broad read access to ~/.capricorn subpath', () => {
       const allowReadMatch = rules.match(/\(allow file-read\*[\s\S]*?\n\)/);
       expect(allowReadMatch).not.toBeNull();
       expect(allowReadMatch![0]).not.toContain(
-        '(subpath (string-append (param "HOME_DIR") "/.gemini"))',
+        '(subpath (string-append (param "HOME_DIR") "/.capricorn"))',
       );
     });
   });
@@ -242,26 +242,26 @@ describe('BUILTIN_SEATBELT_PROFILE_CONTENTS consistency', () => {
         expect(embeddedContent).toBeDefined();
         expect(embeddedContent).toContain('(deny file-write*');
         expect(embeddedContent).toContain(
-          '(subpath (string-append (param "HOME_DIR") "/.gemini"))',
+          '(subpath (string-append (param "HOME_DIR") "/.capricorn"))',
         );
         expect(embeddedContent).toContain('(regex #"/trustedFolders\\.json$")');
         expect(embeddedContent).toContain(
           '(regex #"/policy_integrity\\.json$")',
         );
         expect(embeddedContent).toContain(
-          '(literal (string-append (param "HOME_DIR") "/.gemini/oauth_creds.json"))',
+          '(literal (string-append (param "HOME_DIR") "/.capricorn/oauth_creds.json"))',
         );
         expect(embeddedContent).toContain(
-          '(literal (string-append (param "HOME_DIR") "/.gemini/google_accounts.json"))',
+          '(literal (string-append (param "HOME_DIR") "/.capricorn/google_accounts.json"))',
         );
         expect(embeddedContent).toContain(
-          '(literal (string-append (param "HOME_DIR") "/.gemini/trusted_hooks.json"))',
+          '(literal (string-append (param "HOME_DIR") "/.capricorn/trusted_hooks.json"))',
         );
         expect(embeddedContent).toContain(
-          '(literal (string-append (param "HOME_DIR") "/.gemini/trustedFolders.json"))',
+          '(literal (string-append (param "HOME_DIR") "/.capricorn/trustedFolders.json"))',
         );
         expect(embeddedContent).toContain(
-          '(literal (string-append (param "HOME_DIR") "/.gemini/policy_integrity.json"))',
+          '(literal (string-append (param "HOME_DIR") "/.capricorn/policy_integrity.json"))',
         );
       });
 
@@ -277,15 +277,15 @@ describe('BUILTIN_SEATBELT_PROFILE_CONTENTS consistency', () => {
           const embeddedContent = BUILTIN_SEATBELT_PROFILE_CONTENTS[key];
           expect(embeddedContent).toBeDefined();
           expect(embeddedContent).toContain(
-            '(literal (string-append (param "HOME_DIR") "/.gemini/settings.json"))',
+            '(literal (string-append (param "HOME_DIR") "/.capricorn/settings.json"))',
           );
           expect(embeddedContent).toContain(
-            '(literal (string-append (param "HOME_DIR") "/.gemini/keybindings.json"))',
+            '(literal (string-append (param "HOME_DIR") "/.capricorn/keybindings.json"))',
           );
         }
       });
 
-      it('does not contain broad .gemini subpath read rule in embedded strict content', () => {
+      it('does not contain broad .capricorn subpath read rule in embedded strict content', () => {
         if (['strict-open', 'strict-proxied'].includes(key)) {
           const embeddedContent = BUILTIN_SEATBELT_PROFILE_CONTENTS[key];
           const allowReadMatch = embeddedContent.match(
@@ -293,7 +293,7 @@ describe('BUILTIN_SEATBELT_PROFILE_CONTENTS consistency', () => {
           );
           expect(allowReadMatch).not.toBeNull();
           expect(allowReadMatch![0]).not.toContain(
-            '(subpath (string-append (param "HOME_DIR") "/.gemini"))',
+            '(subpath (string-append (param "HOME_DIR") "/.capricorn"))',
           );
         }
       });

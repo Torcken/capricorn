@@ -304,12 +304,24 @@ export function mergeSettings(
 export function applyCapricornInvariants(
   merged: MergedSettings,
 ): MergedSettings {
-  merged.security.auth.selectedType = AuthType.OLLAMA;
-  merged.security.auth.enforcedType = undefined;
-  merged.security.auth.useExternal = false;
-  merged.privacy.usageStatisticsEnabled = false;
-  merged.general.enableAutoUpdate = false;
-  merged.general.enableAutoUpdateNotification = false;
+  // Partially-populated settings (tests, corrupt files) may lack these
+  // groups; spread over possibly-missing objects rather than crash, so the
+  // invariants always hold.
+  merged.security = {
+    ...merged.security,
+    auth: {
+      ...merged.security?.auth,
+      selectedType: AuthType.OLLAMA,
+      enforcedType: undefined,
+      useExternal: false,
+    },
+  };
+  merged.privacy = { ...merged.privacy, usageStatisticsEnabled: false };
+  merged.general = {
+    ...merged.general,
+    enableAutoUpdate: false,
+    enableAutoUpdateNotification: false,
+  };
   return merged;
 }
 

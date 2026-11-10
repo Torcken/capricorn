@@ -420,10 +420,13 @@ describe('SettingsSchema', () => {
       expect(setting).toBeDefined();
       expect(setting.type).toBe('boolean');
       expect(setting.category).toBe('Experimental');
-      expect(setting.default).toBe(true);
+      // Capricorn: sub-agents are opt-in (extra local inference turns).
+      expect(setting.default).toBe(false);
       expect(setting.requiresRestart).toBe(true);
       expect(setting.showInDialog).toBe(false);
-      expect(setting.description).toBe('Enable local and remote subagents.');
+      expect(setting.description).toContain(
+        'Enable local and remote subagents.',
+      );
     });
 
     it('should have skills setting enabled by default', () => {
@@ -504,7 +507,7 @@ describe('SettingsSchema', () => {
       expect(autoStartServer.requiresRestart).toBe(true);
       expect(autoStartServer.showInDialog).toBe(true);
       expect(autoStartServer.description).toBe(
-        'Automatically start the LiteRT-LM server when Gemini CLI starts and the Gemma router is enabled.',
+        'Unsupported in Capricorn (the LiteRT-LM router was removed; inference always uses Ollama).',
       );
 
       const binaryPath = gemmaModelRouter.properties.binaryPath;

@@ -1,7 +1,7 @@
 {
   "name": "@google/gemini-cli",
-  "version": "0.67.0",
-  "description": "Gemini CLI",
+  "version": "0.1.0-alpha.0",
+  "description": "Capricorn CLI (internal workspace; published as part of the capricorn-cli bundle)",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -10,7 +10,7 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "gemini": "dist/index.js"
+    "capricorn": "dist/index.js"
   },
   "scripts": {
     "build": "node ../../scripts/build_package.js",
@@ -26,9 +26,6 @@
   "files": [
     "dist"
   ],
-  "config": {
-    "sandboxImageUri": "us-docker.pkg.dev/gemini-code-dev/gemini-cli/sandbox:0.67.0"
-  },
   "dependencies": {
     "@agentclientprotocol/sdk": "0.16.1",
     "@google/gemini-cli-core": "file:../core",
@@ -87,5 +84,9 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "private": true,
+  "config": {
+    "sandboxImageUri": "capricorn-sandbox:local"
   }
 }

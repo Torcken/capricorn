@@ -35,8 +35,9 @@ vi.mock('./SettingsDialog.js', () => ({
 vi.mock('../auth/AuthInProgress.js', () => ({
   AuthInProgress: () => <Text>AuthInProgress</Text>,
 }));
-vi.mock('../auth/AuthDialog.js', () => ({
-  AuthDialog: () => <Text>AuthDialog</Text>,
+vi.mock('../auth/InferenceSetupDialog.js', () => ({
+  // Capricorn: the auth dialog slot renders the inference setup dialog.
+  InferenceSetupDialog: () => <Text>AuthDialog</Text>,
 }));
 vi.mock('../auth/ApiAuthDialog.js', () => ({
   ApiAuthDialog: () => <Text>ApiAuthDialog</Text>,
@@ -53,8 +54,8 @@ vi.mock('./ProQuotaDialog.js', () => ({
 vi.mock('./PermissionsModifyTrustDialog.js', () => ({
   PermissionsModifyTrustDialog: () => <Text>PermissionsModifyTrustDialog</Text>,
 }));
-vi.mock('./ModelDialog.js', () => ({
-  ModelDialog: () => <Text>ModelDialog</Text>,
+vi.mock('./CapricornModelDialog.js', () => ({
+  CapricornModelDialog: () => <Text>ModelDialog</Text>,
 }));
 vi.mock('./IdeTrustChangeDialog.js', () => ({
   IdeTrustChangeDialog: () => <Text>IdeTrustChangeDialog</Text>,

@@ -255,9 +255,11 @@ export async function handleMigrateFromClaude() {
   try {
     settings.setValue(SettingScope.Workspace, 'hooks', mergedHooks);
 
-    debugLogger.log('✓ Hooks successfully migrated to .gemini/settings.json');
     debugLogger.log(
-      '\nMigration complete! Please review the migrated hooks in .gemini/settings.json',
+      '✓ Hooks successfully migrated to .capricorn/settings.json',
+    );
+    debugLogger.log(
+      '\nMigration complete! Please review the migrated hooks in .capricorn/settings.json',
     );
   } catch (error) {
     debugLogger.error(`Error saving migrated hooks: ${getErrorMessage(error)}`);
@@ -266,7 +268,7 @@ export async function handleMigrateFromClaude() {
 
 export const migrateCommand: CommandModule = {
   command: 'migrate',
-  describe: 'Migrate hooks from Claude Code to Gemini CLI',
+  describe: 'Migrate hooks from Claude Code to Capricorn',
   builder: (yargs) =>
     yargs.option('from-claude', {
       describe: 'Migrate from Claude Code hooks',
@@ -280,7 +282,7 @@ export const migrateCommand: CommandModule = {
       await handleMigrateFromClaude();
     } else {
       debugLogger.log(
-        'Usage: gemini hooks migrate --from-claude\n\nMigrate hooks from Claude Code to Gemini CLI format.',
+        'Usage: capricorn hooks migrate --from-claude\n\nMigrate hooks from Claude Code to Capricorn format.',
       );
     }
     await exitCli();

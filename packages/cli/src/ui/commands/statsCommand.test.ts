@@ -62,7 +62,7 @@ describe('statsCommand', () => {
     expect(mockContext.ui.addItem).toHaveBeenCalledWith({
       type: MessageType.STATS,
       duration: expectedDuration,
-      selectedAuthType: '',
+      selectedAuthType: 'ollama-local', // Capricorn: always the local Ollama back-end
       tier: undefined,
       userEmail: 'mock@example.com',
       currentModel: undefined,
@@ -123,7 +123,7 @@ describe('statsCommand', () => {
 
     expect(mockContext.ui.addItem).toHaveBeenCalledWith({
       type: MessageType.MODEL_STATS,
-      selectedAuthType: '',
+      selectedAuthType: 'ollama-local', // Capricorn: always the local Ollama back-end
       tier: undefined,
       userEmail: 'mock@example.com',
       currentModel: undefined,

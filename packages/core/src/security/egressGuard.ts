@@ -61,7 +61,10 @@ export interface EgressGuardOptions {
 /** Error raised on a blocked socket. */
 export class EgressBlockedError extends Error {
   readonly code = 'EACCES';
-  constructor(readonly host: string, readonly port?: number) {
+  constructor(
+    readonly host: string,
+    readonly port?: number,
+  ) {
     super(
       `Capricorn blocked an outbound connection to ${host}${port ? `:${port}` : ''}. ` +
         'Only local connections are allowed by default; see `security.network.allowedHosts` in docs/SECURITY.md.',
@@ -86,9 +89,13 @@ let state: GuardState | undefined;
  * without wrapping `connect` twice.
  */
 export function installEgressGuard(options: EgressGuardOptions = {}): void {
-  const hosts = (options.allowHosts ?? []).map((h) => h.trim().toLowerCase()).filter(Boolean);
+  const hosts = (options.allowHosts ?? [])
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
   const allow = new Set(hosts.filter((h) => !h.startsWith('*.')));
-  const wildcard = hosts.filter((h) => h.startsWith('*.')).map((h) => h.slice(1));
+  const wildcard = hosts
+    .filter((h) => h.startsWith('*.'))
+    .map((h) => h.slice(1));
   if (state) {
     state.allow = allow;
     state.wildcard = wildcard;
@@ -96,7 +103,13 @@ export function installEgressGuard(options: EgressGuardOptions = {}): void {
     return;
   }
   const originalConnect = net.Socket.prototype.connect;
-  state = { originalConnect, allow, wildcard, onBlocked: options.onBlocked, blocked: [] };
+  state = {
+    originalConnect,
+    allow,
+    wildcard,
+    onBlocked: options.onBlocked,
+    blocked: [],
+  };
 
   // `connect` has many overloads: (options[, cb]), (port[, host][, cb]),
   // (path[, cb]). We only need to *read* the destination; the original
@@ -117,7 +130,14 @@ export function installEgressGuard(options: EgressGuardOptions = {}): void {
       process.nextTick(() => this.destroy(err));
       return this;
     }
-    return (originalConnect as (...a: unknown[]) => net.Socket).apply(this, args);
+    // Re-applying an overloaded method with its original arguments cannot be
+    // expressed without widening its type; the arguments are passed through
+    // unchanged, so this is type-safe at runtime.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+    return (originalConnect as (...a: unknown[]) => net.Socket).apply(
+      this,
+      args,
+    );
   };
   net.Socket.prototype.connect = guarded as typeof net.Socket.prototype.connect;
 }
@@ -149,7 +169,13 @@ export function isAllowed(host: string): boolean {
   if (isLoopbackHostname(h)) return true;
   if (!state) return true;
   if (state.allow.has(h)) return true;
-  return state.wildcard.some((suffix) => h.endsWith(suffix) && h.length > suffix.length);
+  return state.wildcard.some(
+    (suffix) => h.endsWith(suffix) && h.length > suffix.length,
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -157,17 +183,23 @@ export function isAllowed(host: string): boolean {
  * for IPC (Unix socket / Windows named pipe) connections, which are local by
  * construction.
  */
-function extractDestination(args: unknown[]): { host: string; port?: number } | undefined {
+function extractDestination(
+  args: unknown[],
+): { host: string; port?: number } | undefined {
   let first = args[0];
   // Node's internal `normalizeArgs` passes an array [options, cb] in some paths.
-  if (Array.isArray(first) && first.length > 0 && typeof first[0] === 'object') {
-    first = first[0];
+  if (Array.isArray(first) && first.length > 0) {
+    const inner: unknown = first[0];
+    if (typeof inner === 'object') first = inner;
   }
-  if (typeof first === 'object' && first !== null) {
-    const o = first as { path?: unknown; host?: unknown; port?: unknown };
-    if (typeof o.path === 'string' && o.path) return undefined;
-    const host = typeof o.host === 'string' && o.host ? o.host : 'localhost';
-    const port = o.port === undefined ? undefined : Number(o.port);
+  if (isRecord(first)) {
+    const ipcPath = first['path'];
+    if (typeof ipcPath === 'string' && ipcPath) return undefined;
+    const hostValue = first['host'];
+    const portValue = first['port'];
+    const host =
+      typeof hostValue === 'string' && hostValue ? hostValue : 'localhost';
+    const port = portValue === undefined ? undefined : Number(portValue);
     return { host, port };
   }
   if (typeof first === 'string' && !/^\d+$/.test(first)) {
@@ -175,7 +207,8 @@ function extractDestination(args: unknown[]): { host: string; port?: number } | 
     return undefined;
   }
   if (typeof first === 'number' || typeof first === 'string') {
-    const host = typeof args[1] === 'string' && args[1] ? args[1] : 'localhost';
+    const second: unknown = args[1];
+    const host = typeof second === 'string' && second ? second : 'localhost';
     return { host, port: Number(first) };
   }
   return undefined;

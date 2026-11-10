@@ -14,8 +14,16 @@ import type { OllamaShowResponse } from './wireTypes.js';
 
 /** Metadata as reported by Ollama 0.30 for a real gemma4:12b install. */
 const GEMMA4_SHOW: OllamaShowResponse = {
-  details: { family: 'gemma4', families: ['gemma4'], parameter_size: '11.9B', quantization_level: 'Q4_K_M' },
-  model_info: { 'general.architecture': 'gemma4', 'gemma4.context_length': 262144 },
+  details: {
+    family: 'gemma4',
+    families: ['gemma4'],
+    parameter_size: '11.9B',
+    quantization_level: 'Q4_K_M',
+  },
+  model_info: {
+    'general.architecture': 'gemma4',
+    'gemma4.context_length': 262144,
+  },
   capabilities: ['completion', 'vision', 'tools', 'thinking'],
 };
 
@@ -31,7 +39,9 @@ describe('verifyGemma4Model', () => {
   });
 
   it('accepts a re-tagged Gemma 4 (names are not trusted either way)', () => {
-    expect(verifyGemma4Model('my-coder:latest', GEMMA4_SHOW).allowed).toBe(true);
+    expect(verifyGemma4Model('my-coder:latest', GEMMA4_SHOW).allowed).toBe(
+      true,
+    );
   });
 
   // Threat: `ollama cp qwen3:8b gemma4:fake` — a misleading alias.
@@ -52,7 +62,9 @@ describe('verifyGemma4Model', () => {
   });
 
   it('falls back to family metadata on older daemons without model_info', () => {
-    const v = verifyGemma4Model('gemma4:e4b', { details: { family: 'gemma4' } });
+    const v = verifyGemma4Model('gemma4:e4b', {
+      details: { family: 'gemma4' },
+    });
     expect(v).toMatchObject({ allowed: true, reason: 'verified-family' });
   });
 
@@ -64,17 +76,23 @@ describe('verifyGemma4Model', () => {
   });
 
   it('rejects cloud-backed models even if their architecture is gemma4', () => {
+    expect(verifyGemma4Model('gemma4:31b-cloud', GEMMA4_SHOW).reason).toBe(
+      'cloud-model',
+    );
     expect(
-      verifyGemma4Model('gemma4:31b-cloud', GEMMA4_SHOW).reason,
-    ).toBe('cloud-model');
-    expect(
-      verifyGemma4Model('gemma4:31b', { ...GEMMA4_SHOW, remote_host: 'https://ollama.com:443' }).reason,
+      verifyGemma4Model('gemma4:31b', {
+        ...GEMMA4_SHOW,
+        remote_host: 'https://ollama.com:443',
+      }).reason,
     ).toBe('cloud-model');
   });
 
   it('rejects a Gemma 4 build that lacks tool calling', () => {
     expect(
-      verifyGemma4Model('gemma4:odd', { ...GEMMA4_SHOW, capabilities: ['completion'] }).reason,
+      verifyGemma4Model('gemma4:odd', {
+        ...GEMMA4_SHOW,
+        capabilities: ['completion'],
+      }).reason,
     ).toBe('no-tool-support');
   });
 });
@@ -82,7 +100,10 @@ describe('verifyGemma4Model', () => {
 describe('prefilterTagModel', () => {
   it('rejects other families without an /api/show round trip', () => {
     expect(
-      prefilterTagModel({ name: 'qwen3:8b', details: { family: 'qwen3', families: ['qwen3'] } }),
+      prefilterTagModel({
+        name: 'qwen3:8b',
+        details: { family: 'qwen3', families: ['qwen3'] },
+      }),
     ).toMatchObject({ allowed: false, reason: 'wrong-architecture' });
   });
 

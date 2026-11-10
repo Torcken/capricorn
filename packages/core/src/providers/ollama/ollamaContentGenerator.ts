@@ -44,7 +44,7 @@ import type { ContentGenerator } from '../../core/contentGenerator.js';
 import type { LlmRole } from '../../telemetry/llmRole.js';
 import { estimateTokenCountSync } from '../../utils/tokenCalculation.js';
 import { debugLogger } from '../../utils/debugLogger.js';
-import { OllamaClient } from './client.js';
+import type { OllamaClient } from './client.js';
 import {
   createToolCallIdAllocator,
   frameToResponse,
@@ -90,7 +90,8 @@ export interface OllamaGeneratorSettings {
 }
 
 /** Prefixes upstream uses for internal model ids and aliases. */
-const UPSTREAM_MODEL_ALIAS = /^(gemini-|auto|pro$|flash|flash-lite$|gemma-|models\/)/i;
+const UPSTREAM_MODEL_ALIAS =
+  /^(gemini-|auto|pro$|flash|flash-lite$|gemma-|models\/)/i;
 
 /** Clamp for the learned estimate->actual token ratio. */
 const CALIBRATION_MIN = 0.5;
@@ -181,7 +182,10 @@ export class OllamaContentGenerator implements ContentGenerator {
           // Skip empty intermediate frames (keep-alives) so upstream does not
           // see zero-part chunks mid-stream; always emit the terminal frame,
           // which carries finishReason and usage.
-          if (!frame.done && (chunk.candidates?.[0]?.content?.parts ?? []).length === 0) {
+          if (
+            !frame.done &&
+            (chunk.candidates?.[0]?.content?.parts ?? []).length === 0
+          ) {
             continue;
           }
           yielded = true;
@@ -254,7 +258,10 @@ export class OllamaContentGenerator implements ContentGenerator {
     const model = this.resolveModelName(request.model);
     const verdict = await this.verify(model, request.config?.abortSignal);
     const config = request.config;
-    const messages = toOllamaMessages(request.contents, config?.systemInstruction);
+    const messages = toOllamaMessages(
+      request.contents,
+      config?.systemInstruction,
+    );
     const tools = toOllamaTools(config?.tools);
     const body: OllamaChatRequest = {
       model: verdict.model,
@@ -293,7 +300,10 @@ export class OllamaContentGenerator implements ContentGenerator {
    * Verifies a tag once per session (cached). Failed verifications are not
    * cached, so installing a missing model mid-session works without restart.
    */
-  private async verify(model: string, signal?: AbortSignal): Promise<ModelVerdict> {
+  private async verify(
+    model: string,
+    signal?: AbortSignal,
+  ): Promise<ModelVerdict> {
     let pending = this.verdicts.get(model);
     if (!pending) {
       pending = this.fetchVerdict(model, signal);
@@ -311,7 +321,10 @@ export class OllamaContentGenerator implements ContentGenerator {
     return verdict;
   }
 
-  private async fetchVerdict(model: string, signal?: AbortSignal): Promise<ModelVerdict> {
+  private async fetchVerdict(
+    model: string,
+    signal?: AbortSignal,
+  ): Promise<ModelVerdict> {
     // Cheap rejection for cloud tags without touching the daemon.
     const pre = prefilterTagModel({ name: model });
     if (pre) return pre;
@@ -330,7 +343,9 @@ export class OllamaContentGenerator implements ContentGenerator {
    * sending `think` to a model without the capability is an Ollama error.
    */
   private resolveThink(
-    thinkingConfig: { includeThoughts?: boolean; thinkingBudget?: number } | undefined,
+    thinkingConfig:
+      | { includeThoughts?: boolean; thinkingBudget?: number }
+      | undefined,
     verdict: ModelVerdict,
   ): boolean | undefined {
     if (verdict.capabilities && !verdict.capabilities.includes('thinking')) {
@@ -364,7 +379,10 @@ export class OllamaContentGenerator implements ContentGenerator {
     const ratio = actual / estimate;
     // Exponential smoothing so one odd request does not swing budgets.
     const next = 0.7 * this.calibration + 0.3 * ratio;
-    this.calibration = Math.min(CALIBRATION_MAX, Math.max(CALIBRATION_MIN, next));
+    this.calibration = Math.min(
+      CALIBRATION_MAX,
+      Math.max(CALIBRATION_MIN, next),
+    );
   }
 
   private async withRetry<T>(
@@ -389,7 +407,10 @@ export class OllamaContentGenerator implements ContentGenerator {
     }
   }
 
-  private backoff(attempt: number, signal: AbortSignal | undefined): Promise<void> {
+  private backoff(
+    attempt: number,
+    signal: AbortSignal | undefined,
+  ): Promise<void> {
     const delay = (this.settings.retryBaseDelayMs ?? 500) * 2 ** (attempt - 1);
     return new Promise((resolve, reject) => {
       const timer = setTimeout(resolve, delay);
@@ -397,7 +418,9 @@ export class OllamaContentGenerator implements ContentGenerator {
         'abort',
         () => {
           clearTimeout(timer);
-          reject(new OllamaError(OllamaErrorKind.CANCELLED, 'Request cancelled.'));
+          reject(
+            new OllamaError(OllamaErrorKind.CANCELLED, 'Request cancelled.'),
+          );
         },
         { once: true },
       );

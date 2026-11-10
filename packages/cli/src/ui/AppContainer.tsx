@@ -1056,7 +1056,7 @@ export const AppContainer = (props: AppContainerProps) => {
         ) {
           writeToStdout(`
 ----------------------------------------------------------------
-Logging in with Google... Restarting Gemini CLI to continue.
+Logging in with Google... Restarting Capricorn to continue.
 ----------------------------------------------------------------
           `);
           await relaunchApp();
@@ -1309,7 +1309,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
     historyManager.addItem(
       {
         type: MessageType.INFO,
-        text: 'Refreshing hierarchical memory (GEMINI.md or other context files)...',
+        text: 'Refreshing hierarchical memory (CAPRICORN.md or other context files)...',
       },
       Date.now(),
     );

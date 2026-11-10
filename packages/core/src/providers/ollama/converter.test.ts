@@ -50,15 +50,39 @@ describe('toOllamaMessages', () => {
         role: 'model',
         parts: [
           { text: 'Reading.' },
-          { functionCall: { id: 'c1', name: 'read_file', args: { file_path: 'a' } } },
-          { functionCall: { id: 'c2', name: 'read_file', args: { file_path: 'b' } } },
+          {
+            functionCall: {
+              id: 'c1',
+              name: 'read_file',
+              args: { file_path: 'a' },
+            },
+          },
+          {
+            functionCall: {
+              id: 'c2',
+              name: 'read_file',
+              args: { file_path: 'b' },
+            },
+          },
         ],
       },
       {
         role: 'user',
         parts: [
-          { functionResponse: { id: 'c1', name: 'read_file', response: { output: 'A' } } },
-          { functionResponse: { id: 'c2', name: 'read_file', response: { error: 'ENOENT' } } },
+          {
+            functionResponse: {
+              id: 'c1',
+              name: 'read_file',
+              response: { output: 'A' },
+            },
+          },
+          {
+            functionResponse: {
+              id: 'c2',
+              name: 'read_file',
+              response: { error: 'ENOENT' },
+            },
+          },
         ],
       },
     ];
@@ -68,28 +92,56 @@ describe('toOllamaMessages', () => {
         role: 'assistant',
         content: 'Reading.',
         tool_calls: [
-          { id: 'c1', function: { name: 'read_file', arguments: { file_path: 'a' } } },
-          { id: 'c2', function: { name: 'read_file', arguments: { file_path: 'b' } } },
+          {
+            id: 'c1',
+            function: { name: 'read_file', arguments: { file_path: 'a' } },
+          },
+          {
+            id: 'c2',
+            function: { name: 'read_file', arguments: { file_path: 'b' } },
+          },
         ],
       },
-      { role: 'tool', content: 'A', tool_name: 'read_file', tool_call_id: 'c1' },
-      { role: 'tool', content: 'Error: ENOENT', tool_name: 'read_file', tool_call_id: 'c2' },
+      {
+        role: 'tool',
+        content: 'A',
+        tool_name: 'read_file',
+        tool_call_id: 'c1',
+      },
+      {
+        role: 'tool',
+        content: 'Error: ENOENT',
+        tool_name: 'read_file',
+        tool_call_id: 'c2',
+      },
     ]);
   });
 
   it('JSON-encodes structured tool results without losing fields', () => {
     const [msg] = toOllamaMessages([
-      { role: 'user', parts: [{ functionResponse: { name: 't', response: { a: 1, b: [2] } } }] },
+      {
+        role: 'user',
+        parts: [
+          { functionResponse: { name: 't', response: { a: 1, b: [2] } } },
+        ],
+      },
     ]);
     expect(msg).toMatchObject({ role: 'tool', content: '{"a":1,"b":[2]}' });
   });
 
   it('drops prior thoughts by default and keeps them when asked', () => {
     const history: Content[] = [
-      { role: 'model', parts: [{ text: 'secret plan', thought: true }, { text: 'answer' }] },
+      {
+        role: 'model',
+        parts: [{ text: 'secret plan', thought: true }, { text: 'answer' }],
+      },
     ];
-    expect(toOllamaMessages(history)).toEqual([{ role: 'assistant', content: 'answer' }]);
-    expect(toOllamaMessages(history, undefined, { includeThinking: true })).toEqual([
+    expect(toOllamaMessages(history)).toEqual([
+      { role: 'assistant', content: 'answer' },
+    ]);
+    expect(
+      toOllamaMessages(history, undefined, { includeThinking: true }),
+    ).toEqual([
       { role: 'assistant', content: 'answer', thinking: 'secret plan' },
     ]);
   });
@@ -113,7 +165,15 @@ describe('toOllamaMessages', () => {
     const [msg] = toOllamaMessages([
       {
         role: 'model',
-        parts: [{ functionCall: { id: 'x', name: 'ls', args: { [MALFORMED_ARGS_MARKER]: 'bad' } } }],
+        parts: [
+          {
+            functionCall: {
+              id: 'x',
+              name: 'ls',
+              args: { [MALFORMED_ARGS_MARKER]: 'bad' },
+            },
+          },
+        ],
       },
     ]);
     expect(msg.tool_calls?.[0].function.arguments).toEqual({});
@@ -128,7 +188,10 @@ describe('toOllamaTools / geminiSchemaToJsonSchema', () => {
           {
             name: 'read_file',
             description: 'Read',
-            parametersJsonSchema: { type: 'object', properties: { p: { type: 'string' } } },
+            parametersJsonSchema: {
+              type: 'object',
+              properties: { p: { type: 'string' } },
+            },
           },
         ],
       },
@@ -168,23 +231,44 @@ describe('toOllamaTools / geminiSchemaToJsonSchema', () => {
   });
 
   it('gives parameterless tools an empty object schema', () => {
-    expect(toOllamaTools([{ functionDeclarations: [{ name: 'now' }] }])[0].function.parameters)
-      .toEqual({ type: 'object', properties: {} });
+    expect(
+      toOllamaTools([{ functionDeclarations: [{ name: 'now' }] }])[0].function
+        .parameters,
+    ).toEqual({ type: 'object', properties: {} });
   });
 });
 
 describe('generation config mapping', () => {
   it('always sets num_ctx and maps sampling fields', () => {
     expect(
-      toOllamaOptions({ temperature: 0.2, topP: 0.9, maxOutputTokens: 100, stopSequences: ['X'] }, 32768),
-    ).toEqual({ num_ctx: 32768, temperature: 0.2, top_p: 0.9, num_predict: 100, stop: ['X'] });
+      toOllamaOptions(
+        {
+          temperature: 0.2,
+          topP: 0.9,
+          maxOutputTokens: 100,
+          stopSequences: ['X'],
+        },
+        32768,
+      ),
+    ).toEqual({
+      num_ctx: 32768,
+      temperature: 0.2,
+      top_p: 0.9,
+      num_predict: 100,
+      stop: ['X'],
+    });
   });
 
   it('maps JSON response schema to structured output format', () => {
     expect(
-      toOllamaFormat({ responseMimeType: 'application/json', responseJsonSchema: { type: 'object' } }),
+      toOllamaFormat({
+        responseMimeType: 'application/json',
+        responseJsonSchema: { type: 'object' },
+      }),
     ).toEqual({ type: 'object' });
-    expect(toOllamaFormat({ responseMimeType: 'application/json' })).toBe('json');
+    expect(toOllamaFormat({ responseMimeType: 'application/json' })).toBe(
+      'json',
+    );
     expect(toOllamaFormat({})).toBeUndefined();
   });
 });
@@ -197,7 +281,9 @@ describe('response conversion', () => {
         message: {
           content: 'Done.',
           thinking: 'hmm',
-          tool_calls: [{ id: 'call_1', function: { name: 'ls', arguments: { dir: '.' } } }],
+          tool_calls: [
+            { id: 'call_1', function: { name: 'ls', arguments: { dir: '.' } } },
+          ],
         },
         done: true,
         done_reason: 'stop',
@@ -212,19 +298,29 @@ describe('response conversion', () => {
       { functionCall: { id: 'call_1', name: 'ls', args: { dir: '.' } } },
     ]);
     expect(r.candidates?.[0].finishReason).toBe(FinishReason.STOP);
-    expect(r.usageMetadata).toEqual({ promptTokenCount: 10, candidatesTokenCount: 5, totalTokenCount: 15 });
+    expect(r.usageMetadata).toEqual({
+      promptTokenCount: 10,
+      candidatesTokenCount: 5,
+      totalTokenCount: 15,
+    });
     // The real SDK class, so upstream getters work.
     expect(r.functionCalls?.[0].name).toBe('ls');
   });
 
   it('omits finishReason and usage on intermediate frames', () => {
-    const r = frameToResponse({ message: { content: 'par' }, done: false }, createToolCallIdAllocator());
+    const r = frameToResponse(
+      { message: { content: 'par' }, done: false },
+      createToolCallIdAllocator(),
+    );
     expect(r.candidates?.[0].finishReason).toBeUndefined();
     expect(r.usageMetadata).toBeUndefined();
   });
 
   it('maps length truncation to MAX_TOKENS', () => {
-    const r = frameToResponse({ done: true, done_reason: 'length' }, createToolCallIdAllocator());
+    const r = frameToResponse(
+      { done: true, done_reason: 'length' },
+      createToolCallIdAllocator(),
+    );
     expect(r.candidates?.[0].finishReason).toBe(FinishReason.MAX_TOKENS);
   });
 
@@ -232,8 +328,16 @@ describe('response conversion', () => {
     const ids = createToolCallIdAllocator();
     const seen = new Set<string>();
     const call = { id: 'dup', function: { name: 'ls', arguments: {} } };
-    frameToResponse({ message: { content: '', tool_calls: [call] }, done: false }, ids, seen);
-    const second = frameToResponse({ message: { content: '', tool_calls: [call] }, done: false }, ids, seen);
+    frameToResponse(
+      { message: { content: '', tool_calls: [call] }, done: false },
+      ids,
+      seen,
+    );
+    const second = frameToResponse(
+      { message: { content: '', tool_calls: [call] }, done: false },
+      ids,
+      seen,
+    );
     expect(second.candidates?.[0].content?.parts).toEqual([]);
   });
 });
@@ -242,7 +346,10 @@ describe('tool call validation (untrusted model output)', () => {
   const ids = createToolCallIdAllocator('t');
 
   it('accepts object arguments and assigns ids when missing', () => {
-    const fc = toFunctionCall({ function: { name: 'ls', arguments: { a: 1 } } }, ids);
+    const fc = toFunctionCall(
+      { function: { name: 'ls', arguments: { a: 1 } } },
+      ids,
+    );
     expect(fc.name).toBe('ls');
     expect(fc.id).toMatch(/^t_/);
     expect(fc.args).toEqual({ a: 1 });
@@ -264,7 +371,10 @@ describe('tool call validation (untrusted model output)', () => {
 
   // Threat: a name crafted to look like a path or contain control characters.
   it('neutralizes syntactically invalid tool names', () => {
-    const fc = toFunctionCall({ function: { name: '../../bin/sh; rm', arguments: {} } }, ids);
+    const fc = toFunctionCall(
+      { function: { name: '../../bin/sh; rm', arguments: {} } },
+      ids,
+    );
     expect(fc.name).toMatch(/^invalid_tool_name_/);
   });
 });

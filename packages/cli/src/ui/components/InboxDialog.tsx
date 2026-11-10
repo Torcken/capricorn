@@ -80,12 +80,12 @@ const SKILL_DESTINATION_CHOICES: DestinationChoice[] = [
   {
     destination: 'global',
     label: 'Global',
-    description: '~/.gemini/skills — available in all projects',
+    description: '~/.capricorn/skills — available in all projects',
   },
   {
     destination: 'project',
     label: 'Project',
-    description: '.gemini/skills — available in this workspace',
+    description: '.capricorn/skills — available in this workspace',
   },
 ];
 
@@ -182,13 +182,13 @@ function getSkillOriginTag(filePath: string): string {
   if (normalizedPath.includes('/extensions/')) {
     return 'Extension';
   }
-  if (normalizedPath.includes('/.gemini/skills/')) {
+  if (normalizedPath.includes('/.capricorn/skills/')) {
     const homeDirs = [process.env['HOME'], process.env['USERPROFILE']]
       .filter((homeDir): homeDir is string => Boolean(homeDir))
       .map(normalizePathForUi);
     if (
       homeDirs.some((homeDir) =>
-        normalizedPath.startsWith(`${homeDir}/.gemini/skills/`),
+        normalizedPath.startsWith(`${homeDir}/.capricorn/skills/`),
       )
     ) {
       return 'Global';
@@ -458,7 +458,7 @@ export const InboxDialog: React.FC<InboxDialogProps> = ({
             value: {
               ...choice,
               description:
-                '.gemini/skills — unavailable until this workspace is trusted',
+                '.capricorn/skills — unavailable until this workspace is trusted',
             },
             disabled: true,
           };
@@ -493,7 +493,7 @@ export const InboxDialog: React.FC<InboxDialogProps> = ({
             value: {
               ...choice,
               description:
-                '.gemini/skills — unavailable until this workspace is trusted',
+                '.capricorn/skills — unavailable until this workspace is trusted',
             },
             disabled: true,
           };

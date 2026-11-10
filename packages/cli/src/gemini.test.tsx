@@ -239,6 +239,22 @@ vi.mock('./utils/events.js', async (importOriginal) => {
 
 import * as readStdinModule from './utils/readStdin.js';
 
+// Capricorn: startup preflight (Ollama + model check) and the egress guard
+// are exercised by their own tests; here they are stubbed so main() flow
+// tests do not need a daemon or full settings objects.
+vi.mock('./capricorn/preflight.js', () => ({
+  // Plain functions (not vi.fn) so vi.resetAllMocks() in beforeEach keeps them.
+  runPreflight: async () => ({
+    ok: true,
+    model: 'gemma4:12b',
+    switched: false,
+  }),
+  readlineConfirm: async () => true,
+}));
+vi.mock('./capricorn/networkPolicy.js', () => ({
+  installCapricornNetworkPolicy: () => {},
+}));
+
 vi.mock('./utils/sandbox.js', () => ({
   sandbox_command: vi.fn(() => ''), // Default to no sandbox command
   start_sandbox: vi.fn(() => Promise.resolve()), // Mock as an async function that resolves
@@ -492,6 +508,9 @@ describe('gemini.tsx main function kitty protocol', () => {
     // Set no relaunch in tests since process spawning causing issues in tests
     originalEnvNoRelaunch = process.env['GEMINI_CLI_NO_RELAUNCH'];
     process.env['GEMINI_CLI_NO_RELAUNCH'] = 'true';
+    // Capricorn: make workspace trust explicit. These tests previously
+    // depended on the developer's real ~/.gemini/trustedFolders.json.
+    vi.stubEnv('GEMINI_CLI_TRUST_WORKSPACE', 'true');
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!(process.stdin as any).setRawMode) {
@@ -1240,6 +1259,9 @@ describe('gemini.tsx main function exit codes', () => {
     vi.spyOn(process, 'exit').mockImplementation((code) => {
       throw new MockProcessExitError(code);
     });
+    // Capricorn: make workspace trust explicit. These tests previously
+    // depended on the developer's real ~/.gemini/trustedFolders.json.
+    vi.stubEnv('GEMINI_CLI_TRUST_WORKSPACE', 'true');
     // Mock stderr to avoid cluttering output
     vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
@@ -1536,6 +1558,9 @@ describe('project hooks loading based on trust', () => {
 
     vi.clearAllMocks();
     // Mock the main function's dependencies to isolate the config loading part
+    // Capricorn: make workspace trust explicit. These tests previously
+    // depended on the developer's real ~/.gemini/trustedFolders.json.
+    vi.stubEnv('GEMINI_CLI_TRUST_WORKSPACE', 'true');
     vi.mock('./nonInteractiveCli.js', () => ({
       runNonInteractive: vi.fn().mockResolvedValue(undefined),
     }));

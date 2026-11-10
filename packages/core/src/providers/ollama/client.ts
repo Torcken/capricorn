@@ -23,7 +23,7 @@
  * `converter.ts`) and model policy (see `modelPolicy.ts`).
  */
 
-import type { z } from 'zod';
+import { z } from 'zod';
 import {
   OllamaError,
   OllamaErrorKind,
@@ -48,10 +48,7 @@ import {
 } from './wireTypes.js';
 
 /** Signature of the `fetch` implementation the client uses. */
-export type FetchLike = (
-  input: string,
-  init: RequestInit,
-) => Promise<Response>;
+export type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
 
 /** Construction options for {@link OllamaClient}. */
 export interface OllamaClientOptions {
@@ -259,7 +256,11 @@ export class OllamaClient {
         for await (const raw of parseNdjsonStream(response.body)) {
           // Each frame resets the idle watchdog.
           arm(this.streamIdleTimeoutMs);
-          const frame = parseOrThrow(ollamaChatResponseSchema, raw, 'chat frame');
+          const frame = parseOrThrow(
+            ollamaChatResponseSchema,
+            raw,
+            'chat frame',
+          );
           if (frame.error) {
             throw new OllamaError(
               classifyOllamaMessage(frame.error),
@@ -341,14 +342,14 @@ export class OllamaClient {
    * Performs a JSON request with a timeout, validates the response against
    * `schema` and normalizes every failure.
    */
-  private async requestJson<S extends z.ZodTypeAny>(
+  private async requestJson<T>(
     method: 'GET' | 'POST',
     path: string,
     body: unknown,
-    schema: S,
+    schema: ResponseSchema<T>,
     signal: AbortSignal | undefined,
     timeoutMs = this.metadataTimeoutMs,
-  ): Promise<z.infer<S>> {
+  ): Promise<T> {
     const timeout = AbortSignal.timeout(timeoutMs);
     const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
     const context = { endpoint: this.baseUrl, operation: `${method} ${path}` };
@@ -357,7 +358,9 @@ export class OllamaClient {
       response = await this.fetchImpl(`${this.baseUrl}${path}`, {
         method,
         headers:
-          body === undefined ? undefined : { 'content-type': 'application/json' },
+          body === undefined
+            ? undefined
+            : { 'content-type': 'application/json' },
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: combined,
       });
@@ -400,13 +403,9 @@ export class OllamaClient {
     try {
       const text = await response.text();
       try {
-        const parsed: unknown = JSON.parse(text);
-        if (
-          typeof parsed === 'object' &&
-          parsed !== null &&
-          typeof (parsed as { error?: unknown }).error === 'string'
-        ) {
-          detail = (parsed as { error: string }).error;
+        const parsed = errorBodySchema.safeParse(JSON.parse(text));
+        if (parsed.success) {
+          detail = parsed.data.error;
         }
       } catch {
         // Bound the echoed body: a misbehaving proxy could return megabytes.
@@ -420,9 +419,13 @@ export class OllamaClient {
       kind === OllamaErrorKind.MODEL_NOT_FOUND && model
         ? `Model "${model}" is not installed in Ollama`
         : `Ollama returned HTTP ${response.status}`;
-    throw new OllamaError(kind, detail ? `${subject}: ${detail}` : `${subject}.`, {
-      status: response.status,
-    });
+    throw new OllamaError(
+      kind,
+      detail ? `${subject}: ${detail}` : `${subject}.`,
+      {
+        status: response.status,
+      },
+    );
   }
 
   /** Distinguishes our idle/first-byte timeout from user cancellation. */
@@ -446,12 +449,21 @@ export class OllamaClient {
   }
 }
 
+/**
+ * A zod schema producing `T` from arbitrary input. The input type is
+ * `unknown` on purpose: responses are untrusted until validated.
+ */
+type ResponseSchema<T> = z.ZodType<T, z.ZodTypeDef, unknown>;
+
+/** Shape of Ollama's HTTP error bodies: `{"error": "..."}`. */
+const errorBodySchema = z.object({ error: z.string() });
+
 /** Validates `value` with `schema`, mapping failure to `INVALID_RESPONSE`. */
-function parseOrThrow<S extends z.ZodTypeAny>(
-  schema: S,
+function parseOrThrow<T>(
+  schema: ResponseSchema<T>,
   value: unknown,
   what: string,
-): z.infer<S> {
+): T {
   const result = schema.safeParse(value);
   if (!result.success) {
     throw new OllamaError(
@@ -462,5 +474,5 @@ function parseOrThrow<S extends z.ZodTypeAny>(
         .join('; ')}`,
     );
   }
-  return result.data as z.infer<S>;
+  return result.data;
 }

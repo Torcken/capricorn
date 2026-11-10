@@ -114,9 +114,13 @@ export function normalizeTag(tag: string): string {
   return lastSegment.includes(':') ? t : `${t}:latest`;
 }
 
-/** Orders models by preset order, then by name, for stable display. */
+/**
+ * Orders alternatives for suggestion: the candidate default first (it is the
+ * documented, tested configuration), then preset order, then by name.
+ */
 function sortByPreference(models: DiscoveredModel[]): DiscoveredModel[] {
   const rank = (m: DiscoveredModel) => {
+    if (m.model === DEFAULT_GEMMA4_MODEL) return -1;
     const i = GEMMA4_PRESETS.findIndex((p) => p.tag === m.model);
     return i === -1 ? GEMMA4_PRESETS.length : i;
   };

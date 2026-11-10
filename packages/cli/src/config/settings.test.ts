@@ -292,9 +292,9 @@ describe('Settings Loading and Merging', () => {
       expect(settings.user.settings.security?.auth?.selectedType).toBe(
         AuthType.LOGIN_WITH_GOOGLE,
       );
-      expect(settings.merged.security.auth.selectedType).toBe(
-        AuthType.LOGIN_WITH_GOOGLE,
-      );
+      // Capricorn invariant: no settings file or override can select a
+      // hosted back-end; the merged value is always the local Ollama provider.
+      expect(settings.merged.security.auth.selectedType).toBe(AuthType.OLLAMA);
       expect(process.env['GEMINI_CLI_AUTH_OVERRIDE']).toBeUndefined();
     });
 
@@ -480,6 +480,19 @@ describe('Settings Loading and Merging', () => {
         ui: { theme: 'system-theme' },
         tools: { sandbox: false },
         telemetry: false,
+        // Capricorn invariants applied after merging (applyCapricornInvariants).
+        general: {
+          enableAutoUpdate: false,
+          enableAutoUpdateNotification: false,
+        },
+        privacy: { usageStatisticsEnabled: false },
+        security: {
+          auth: {
+            selectedType: AuthType.OLLAMA,
+            enforcedType: undefined,
+            useExternal: false,
+          },
+        },
       });
     });
 
@@ -4120,6 +4133,8 @@ MALICIOUS_VAR=allowed-because-trusted
       });
     });
 
+    // Capricorn: the upstream Vertex AI project-switching cases were removed
+    // with Vertex AI support; the remaining cases cover .env sanitisation.
     describe('Cloud Shell security', () => {
       it('should handle Cloud Shell special defaults securely when untrusted', () => {
         process.env['CLOUD_SHELL'] = 'true';
@@ -4138,29 +4153,6 @@ MALICIOUS_VAR=allowed-because-trusted
         );
 
         expect(process.env['GOOGLE_CLOUD_PROJECT']).toBe('cloudshell-gca');
-      });
-
-      it('should not override GOOGLE_CLOUD_PROJECT in Cloud Shell when auth type is vertex-ai', () => {
-        vi.stubEnv('CLOUD_SHELL', 'true');
-        vi.stubEnv('GOOGLE_CLOUD_PROJECT', 'my-vertex-project');
-        process.argv = ['node', 'gemini', '-s', 'prompt'];
-        vi.mocked(isWorkspaceTrusted).mockReturnValue({
-          isTrusted: false,
-          source: 'file',
-        });
-
-        // No .env file
-        vi.mocked(fs.existsSync).mockReturnValue(false);
-
-        loadEnvironment(
-          createMockSettings({
-            tools: { sandbox: false },
-            security: { auth: { selectedType: AuthType.USE_VERTEX_AI } },
-          }).merged,
-          MOCK_WORKSPACE_DIR,
-        );
-
-        expect(process.env['GOOGLE_CLOUD_PROJECT']).toBe('my-vertex-project');
       });
 
       it('should respect .env override for GOOGLE_CLOUD_PROJECT in Cloud Shell when auth type is vertex-ai', () => {
@@ -4187,85 +4179,6 @@ MALICIOUS_VAR=allowed-because-trusted
         );
 
         expect(process.env['GOOGLE_CLOUD_PROJECT']).toBe('env-vertex-project');
-      });
-
-      it('should clear cloudshell-gca when switching to Vertex AI without an original project', () => {
-        process.env['CLOUD_SHELL'] = 'true';
-        process.argv = ['node', 'gemini', '-s', 'prompt'];
-        vi.mocked(isWorkspaceTrusted).mockReturnValue({
-          isTrusted: false,
-          source: 'file',
-        });
-        vi.mocked(fs.existsSync).mockReturnValue(false);
-
-        // First call: normal Cloud Shell auth sets cloudshell-gca
-        loadEnvironment(
-          createMockSettings({ tools: { sandbox: false } }).merged,
-          MOCK_WORKSPACE_DIR,
-        );
-        expect(process.env['GOOGLE_CLOUD_PROJECT']).toBe('cloudshell-gca');
-
-        // Second call: user switched to Vertex AI, should remove cloudshell-gca
-        loadEnvironment(
-          createMockSettings({
-            tools: { sandbox: false },
-            security: { auth: { selectedType: AuthType.USE_VERTEX_AI } },
-          }).merged,
-          MOCK_WORKSPACE_DIR,
-        );
-        expect(process.env['GOOGLE_CLOUD_PROJECT']).toBeUndefined();
-      });
-
-      it('should restore original project when switching to Vertex AI after Cloud Shell override', () => {
-        process.env['CLOUD_SHELL'] = 'true';
-        process.env['GOOGLE_CLOUD_PROJECT'] = 'my-real-project';
-        process.argv = ['node', 'gemini', '-s', 'prompt'];
-        vi.mocked(isWorkspaceTrusted).mockReturnValue({
-          isTrusted: false,
-          source: 'file',
-        });
-        vi.mocked(fs.existsSync).mockReturnValue(false);
-
-        // First call: saves original to _GEMINI_USER_GCP_PROJECT, sets cloudshell-gca
-        loadEnvironment(
-          createMockSettings({ tools: { sandbox: false } }).merged,
-          MOCK_WORKSPACE_DIR,
-        );
-        expect(process.env['GOOGLE_CLOUD_PROJECT']).toBe('cloudshell-gca');
-        expect(process.env['_GEMINI_USER_GCP_PROJECT']).toBe('my-real-project');
-
-        // Second call: switching to Vertex AI should restore the saved value
-        loadEnvironment(
-          createMockSettings({
-            tools: { sandbox: false },
-            security: { auth: { selectedType: AuthType.USE_VERTEX_AI } },
-          }).merged,
-          MOCK_WORKSPACE_DIR,
-        );
-        expect(process.env['GOOGLE_CLOUD_PROJECT']).toBe('my-real-project');
-      });
-
-      it('should restore project after restart when child inherits cloudshell-gca', () => {
-        // Simulate child process after restart: inherits cloudshell-gca and
-        // the saved original from the parent process.
-        process.env['CLOUD_SHELL'] = 'true';
-        process.env['GOOGLE_CLOUD_PROJECT'] = 'cloudshell-gca';
-        process.env['_GEMINI_USER_GCP_PROJECT'] = 'my-real-project';
-        process.argv = ['node', 'gemini', '-s', 'prompt'];
-        vi.mocked(isWorkspaceTrusted).mockReturnValue({
-          isTrusted: false,
-          source: 'file',
-        });
-        vi.mocked(fs.existsSync).mockReturnValue(false);
-
-        loadEnvironment(
-          createMockSettings({
-            tools: { sandbox: false },
-            security: { auth: { selectedType: AuthType.USE_VERTEX_AI } },
-          }).merged,
-          MOCK_WORKSPACE_DIR,
-        );
-        expect(process.env['GOOGLE_CLOUD_PROJECT']).toBe('my-real-project');
       });
 
       it('should sanitize GOOGLE_CLOUD_PROJECT in Cloud Shell when loaded from .env in untrusted mode', () => {

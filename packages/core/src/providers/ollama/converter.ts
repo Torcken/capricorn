@@ -84,8 +84,8 @@ const TOOL_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_.:-]{0,127}$/;
  */
 export function normalizeContents(contents: ContentListUnion): Content[] {
   const items: Array<Content | PartUnion> = Array.isArray(contents)
-    ? (contents as Array<Content | PartUnion>)
-    : [contents as Content | PartUnion];
+    ? contents
+    : [contents];
   const out: Content[] = [];
   let looseParts: Part[] = [];
   const flushLoose = () => {
@@ -150,7 +150,9 @@ export function toOllamaMessages(
   for (const content of normalizeContents(contents)) {
     const parts = content.parts ?? [];
     if (content.role === 'model') {
-      messages.push(modelTurnToMessage(parts, options.includeThinking ?? false));
+      messages.push(
+        modelTurnToMessage(parts, options.includeThinking ?? false),
+      );
       continue;
     }
     // `user` (or unspecified) turns: may interleave text, media and tool
@@ -222,10 +224,16 @@ function functionResponseToMessage(part: Part): OllamaChatMessage {
   const response = fr.response ?? {};
   let content: string;
   const keys = Object.keys(response);
-  if (keys.length === 1 && keys[0] === 'output' && typeof response['output'] === 'string') {
-    content = response['output'];
-  } else if (keys.length === 1 && keys[0] === 'error' && typeof response['error'] === 'string') {
-    content = `Error: ${response['error']}`;
+  const output = response['output'];
+  const error = response['error'];
+  if (keys.length === 1 && keys[0] === 'output' && typeof output === 'string') {
+    content = output;
+  } else if (
+    keys.length === 1 &&
+    keys[0] === 'error' &&
+    typeof error === 'string'
+  ) {
+    content = `Error: ${error}`;
   } else {
     content = safeStringify(response);
   }
@@ -283,9 +291,10 @@ export function toOllamaTools(
   const out: OllamaToolDefinition[] = [];
   const seen = new Set<string>();
   for (const tool of tools) {
-    const declarations =
-      (tool as { functionDeclarations?: FunctionDeclaration[] })
-        .functionDeclarations ?? [];
+    // `ToolUnion` also admits SDK CallableTool objects, which carry no
+    // declarations of their own.
+    const declarations: FunctionDeclaration[] =
+      'functionDeclarations' in tool ? (tool.functionDeclarations ?? []) : [];
     for (const decl of declarations) {
       if (!decl.name || seen.has(decl.name)) continue;
       seen.add(decl.name);
@@ -302,10 +311,14 @@ export function toOllamaTools(
   return out;
 }
 
-function declarationParameters(decl: FunctionDeclaration): Record<string, unknown> {
-  const raw = decl.parametersJsonSchema ?? (decl.parameters ? geminiSchemaToJsonSchema(decl.parameters) : undefined);
-  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-    return raw as Record<string, unknown>;
+function declarationParameters(
+  decl: FunctionDeclaration,
+): Record<string, unknown> {
+  const raw =
+    decl.parametersJsonSchema ??
+    (decl.parameters ? geminiSchemaToJsonSchema(decl.parameters) : undefined);
+  if (isPlainObject(raw)) {
+    return raw;
   }
   // Tools without parameters still need an object schema for the template.
   return { type: 'object', properties: {} };
@@ -326,7 +339,10 @@ export function geminiSchemaToJsonSchema(schema: unknown): unknown {
   if (!schema || typeof schema !== 'object') {
     return schema;
   }
-  const input = schema as Record<string, unknown>;
+  if (!isPlainObject(schema)) {
+    return schema;
+  }
+  const input = schema;
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     switch (key) {
@@ -342,7 +358,7 @@ export function geminiSchemaToJsonSchema(schema: unknown): unknown {
       case 'properties': {
         const props: Record<string, unknown> = {};
         for (const [name, sub] of Object.entries(
-          (value ?? {}) as Record<string, unknown>,
+          isPlainObject(value) ? value : {},
         )) {
           props[name] = geminiSchemaToJsonSchema(sub);
         }
@@ -360,8 +376,9 @@ export function geminiSchemaToJsonSchema(schema: unknown): unknown {
         out[key] = value;
     }
   }
-  if (input['nullable'] === true && typeof out['type'] === 'string') {
-    out['type'] = [out['type'], 'null'];
+  const outType = out['type'];
+  if (input['nullable'] === true && typeof outType === 'string') {
+    out['type'] = [outType, 'null'];
   }
   return out;
 }
@@ -380,14 +397,18 @@ export function toOllamaOptions(
 ): OllamaChatOptions {
   const options: OllamaChatOptions = { num_ctx: numCtx };
   if (!config) return options;
-  if (config.temperature !== undefined) options.temperature = config.temperature;
+  if (config.temperature !== undefined)
+    options.temperature = config.temperature;
   if (config.topP !== undefined) options.top_p = config.topP;
   if (config.topK !== undefined) options.top_k = config.topK;
   if (config.seed !== undefined) options.seed = config.seed;
-  if (config.maxOutputTokens !== undefined) options.num_predict = config.maxOutputTokens;
+  if (config.maxOutputTokens !== undefined)
+    options.num_predict = config.maxOutputTokens;
   if (config.stopSequences?.length) options.stop = config.stopSequences;
-  if (config.presencePenalty !== undefined) options.presence_penalty = config.presencePenalty;
-  if (config.frequencyPenalty !== undefined) options.frequency_penalty = config.frequencyPenalty;
+  if (config.presencePenalty !== undefined)
+    options.presence_penalty = config.presencePenalty;
+  if (config.frequencyPenalty !== undefined)
+    options.frequency_penalty = config.frequencyPenalty;
   return options;
 }
 
@@ -403,9 +424,11 @@ export function toOllamaFormat(
   }
   const schema =
     config.responseJsonSchema ??
-    (config.responseSchema ? geminiSchemaToJsonSchema(config.responseSchema) : undefined);
-  if (schema && typeof schema === 'object' && !Array.isArray(schema)) {
-    return schema as Record<string, unknown>;
+    (config.responseSchema
+      ? geminiSchemaToJsonSchema(config.responseSchema)
+      : undefined);
+  if (isPlainObject(schema)) {
+    return schema;
   }
   return 'json';
 }
@@ -421,7 +444,9 @@ export interface ToolCallIdAllocator {
 }
 
 /** Creates an id allocator scoped to one model response. */
-export function createToolCallIdAllocator(prefix = 'ollama'): ToolCallIdAllocator {
+export function createToolCallIdAllocator(
+  prefix = 'ollama',
+): ToolCallIdAllocator {
   let n = 0;
   const salt = Date.now().toString(36);
   return { next: () => `${prefix}_${salt}_${n++}` };
@@ -472,7 +497,9 @@ export function normalizeArguments(raw: unknown): Record<string, unknown> {
       return { [MALFORMED_ARGS_MARKER]: 'Arguments are not valid JSON.' };
     }
   }
-  return { [MALFORMED_ARGS_MARKER]: `Arguments must be an object, got ${Array.isArray(raw) ? 'array' : typeof raw}.` };
+  return {
+    [MALFORMED_ARGS_MARKER]: `Arguments must be an object, got ${Array.isArray(raw) ? 'array' : typeof raw}.`,
+  };
 }
 
 /** Maps Ollama's `done_reason` to a Gemini `FinishReason`. */
@@ -492,7 +519,9 @@ export function toFinishReason(doneReason: string | undefined): FinishReason {
 }
 
 /** Ollama usage counters mapped onto Gemini's usage metadata. */
-function toUsage(frame: OllamaChatResponse): GenerateContentResponse['usageMetadata'] {
+function toUsage(
+  frame: OllamaChatResponse,
+): GenerateContentResponse['usageMetadata'] {
   if (frame.prompt_eval_count === undefined && frame.eval_count === undefined) {
     return undefined;
   }

@@ -1,6 +1,6 @@
 {
   "name": "@google/gemini-cli-sdk",
-  "version": "0.67.0",
+  "version": "0.1.0-alpha.0",
   "description": "Gemini CLI SDK",
   "license": "Apache-2.0",
   "repository": {
@@ -32,5 +32,6 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "private": true
 }

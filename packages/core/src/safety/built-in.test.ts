@@ -340,9 +340,7 @@ describe('AllowedPathChecker', () => {
         const input = createInput({ path: p });
         const result = await checker.check(input);
         expect(result.decision).toBe(SafetyCheckDecision.ASK_USER);
-        expect(result.reason).toContain(
-          'Modifying .gemini configuration files requires explicit user confirmation',
-        );
+        expect(result.reason).toContain('requires explicit user confirmation');
       }
 
       // Verify that paths outside the workspace containing .gemini are strictly denied
@@ -357,6 +355,35 @@ describe('AllowedPathChecker', () => {
         expect(result.decision).toBe(SafetyCheckDecision.DENY);
         expect(result.reason).toContain('outside of the allowed workspace');
       }
+    });
+
+    // Capricorn regression guard: the agent's own configuration directory
+    // (settings, policies, trust, hooks) must never be writable without the
+    // user's explicit confirmation — otherwise a prompt-injected model could
+    // widen its own permissions. Covers Windows trailing-char, ADS and 8.3
+    // short-name bypasses of ".capricorn".
+    it('should require ASK_USER for .capricorn configuration files, including bypass spellings', async () => {
+      const capricornPaths = [
+        path.join(mockCwd, '.capricorn', 'settings.json'),
+        path.join(mockCwd, '.capricorn', 'policies', 'policy.toml'),
+        path.join(mockCwd, '.CAPRICORN', 'settings.json'),
+        path.join(mockCwd, '.capricorn ', 'settings.json'),
+        path.join(mockCwd, '.capricorn.', 'settings.json'),
+        path.join(mockCwd, '.capricorn::$DATA', 'settings.json'),
+        path.join(mockCwd, 'CAPRIC~1', 'settings.json'),
+        path.join(mockCwd, 'capric~2', 'settings.json'),
+        path.join(mockCwd, 'CA1B2C~1', 'settings.json'),
+      ];
+      for (const p of capricornPaths) {
+        const result = await checker.check(createInput({ path: p }));
+        expect(result.decision).toBe(SafetyCheckDecision.ASK_USER);
+        expect(result.reason).toContain('.capricorn');
+      }
+      // Similar-looking but unrelated directories are unaffected.
+      const result = await checker.check(
+        createInput({ path: path.join(mockCwd, 'capricorn-notes', 'a.md') }),
+      );
+      expect(result.decision).toBe(SafetyCheckDecision.ALLOW);
     });
 
     it('should require ASK_USER for .vscode configuration files inside workspace, but deny them if outside, including NTFS ADS bypasses and SFNs', async () => {

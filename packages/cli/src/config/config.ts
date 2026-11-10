@@ -13,8 +13,14 @@ import { mcpCommand } from '../commands/mcp.js';
 import { extensionsCommand } from '../commands/extensions.js';
 import { skillsCommand } from '../commands/skills.js';
 import { hooksCommand } from '../commands/hooks.js';
-import { gemmaCommand } from '../commands/gemma.js';
-import { modelsCommand } from '../commands/models.js';
+import {
+  capricornModelsCommand,
+  configCommand,
+  doctorCommand,
+  initCommand,
+  statusCommand,
+} from '../commands/capricorn.js';
+import { rewriteCapricornAliases } from '../capricorn/argAliases.js';
 import {
   setGeminiMdFilename as setServerGeminiMdFilename,
   resetGeminiMdFilename,
@@ -102,6 +108,7 @@ export interface CliArgs {
   sessionId: string | undefined;
   listSessions: boolean | undefined;
   deleteSession: string | undefined;
+  confirmDelete?: boolean | undefined;
   includeDirectories: string[] | undefined;
   screenReader: boolean | undefined;
   useWriteTodos: boolean | undefined;
@@ -164,13 +171,19 @@ export function getRequestedWorktreeName(
 export async function parseArguments(
   settings: MergedSettings,
 ): Promise<CliArgs> {
-  const rawArgv = hideBin(process.argv);
+  // Capricorn: map `run`/`sessions` spellings onto upstream flags first.
+  const aliasRewrite = rewriteCapricornAliases(hideBin(process.argv));
+  if (aliasRewrite.error) {
+    process.stderr.write(`${aliasRewrite.error}\n`);
+    process.exit(2);
+  }
+  const rawArgv = aliasRewrite.argv;
   const startupMessages: string[] = [];
   const yargsInstance = yargs(rawArgv)
     .locale('en')
-    .scriptName('gemini')
+    .scriptName('capricorn')
     .usage(
-      'Usage: gemini [options] [command]\n\nGemini CLI - Defaults to interactive mode. Use -p/--prompt for non-interactive (headless) mode.',
+      'Usage: capricorn [options] [command]\n\nCapricorn — a local-first coding agent powered by Gemma 4 and Ollama. Defaults to interactive mode. Use -p/--prompt for non-interactive (headless) mode.',
     )
     .option('isCommand', {
       type: 'boolean',
@@ -189,8 +202,11 @@ export async function parseArguments(
         extensionsCommand,
         skillsCommand,
         hooksCommand,
-        gemmaCommand,
-        modelsCommand,
+        capricornModelsCommand,
+        doctorCommand,
+        statusCommand,
+        configCommand,
+        initCommand,
       ];
 
       const subcommands = commandModules.flatMap((mod) => {
@@ -223,9 +239,6 @@ export async function parseArguments(
 
       const firstArg = argv._[0];
       if (typeof firstArg === 'string' && subcommands.includes(firstArg)) {
-        argv['isCommand'] = true;
-      }
-      if (argv['list-models']) {
         argv['isCommand'] = true;
       }
     }, true)
@@ -283,11 +296,14 @@ export async function parseArguments(
   yargsInstance.command(extensionsCommand);
   yargsInstance.command(skillsCommand);
   yargsInstance.command(hooksCommand);
-  yargsInstance.command(gemmaCommand);
-  yargsInstance.command(modelsCommand);
+  yargsInstance.command(capricornModelsCommand);
+  yargsInstance.command(doctorCommand);
+  yargsInstance.command(statusCommand);
+  yargsInstance.command(configCommand);
+  yargsInstance.command(initCommand);
 
   yargsInstance
-    .command('$0 [query..]', 'Launch Gemini CLI', (yargsInstance) =>
+    .command('$0 [query..]', 'Launch Capricorn', (yargsInstance) =>
       yargsInstance
         .positional('query', {
           description:
@@ -406,10 +422,6 @@ export async function parseArguments(
           type: 'boolean',
           description: 'List all available extensions and exit.',
         })
-        .option('list-models', {
-          type: 'boolean',
-          description: 'List available Gemini models and exit.',
-        })
         .option('resume', {
           alias: 'r',
           type: 'string',
@@ -463,6 +475,12 @@ export async function parseArguments(
           type: 'string',
           description:
             'Delete a session by index number (use --list-sessions to see available sessions).',
+        })
+        .option('confirm-delete', {
+          type: 'boolean',
+          hidden: true,
+          description:
+            'Internal (set by `capricorn sessions delete` without --yes): ask before deleting.',
         })
         .option('include-directories', {
           type: 'array',
@@ -1060,6 +1078,7 @@ export async function loadCliConfig(
       // not be able to redirect prompts and code off this machine.
       allowRemoteHost:
         loadedSettings?.user.settings.ollama?.allowRemoteHost === true,
+      model: resolvedModel,
       numCtx: settings.ollama?.numCtx,
       think: settings.ollama?.think,
       keepAlive: settings.ollama?.keepAlive,

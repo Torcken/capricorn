@@ -223,14 +223,22 @@ export function normalizeTransportError(
       { cause: e },
     );
   }
-  if (code === 'ECONNREFUSED' || code === 'EHOSTUNREACH' || code === 'ENOTFOUND') {
+  if (
+    code === 'ECONNREFUSED' ||
+    code === 'EHOSTUNREACH' ||
+    code === 'ENOTFOUND'
+  ) {
     return new OllamaError(
       OllamaErrorKind.CONNECTION_REFUSED,
       `Cannot connect to Ollama at ${context.endpoint} (${code}).`,
       { cause: e },
     );
   }
-  if (code === 'UND_ERR_HEADERS_TIMEOUT' || code === 'UND_ERR_BODY_TIMEOUT' || code === 'ETIMEDOUT') {
+  if (
+    code === 'UND_ERR_HEADERS_TIMEOUT' ||
+    code === 'UND_ERR_BODY_TIMEOUT' ||
+    code === 'ETIMEDOUT'
+  ) {
     return new OllamaError(
       OllamaErrorKind.TIMEOUT,
       `${context.operation} timed out waiting for Ollama at ${context.endpoint}.`,

@@ -8,7 +8,9 @@ import * as path from 'node:path';
 import { Storage } from '../config/storage.js';
 import { resolveToRealPath } from '../utils/paths.js';
 
-export const DEFAULT_CONTEXT_FILENAME = 'GEMINI.md';
+// Capricorn: project instructions file. GEMINI.md is intentionally not read
+// by default (spec §5.4); users may opt in via `context.fileName`.
+export const DEFAULT_CONTEXT_FILENAME = 'CAPRICORN.md';
 export const PROJECT_MEMORY_INDEX_FILENAME = 'MEMORY.md';
 
 // This variable will hold the currently configured filenames for GEMINI.md context files.

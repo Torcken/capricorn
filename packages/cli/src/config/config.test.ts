@@ -354,7 +354,12 @@ describe('parseArguments', () => {
       { cmd: 'skill list', expected: true },
       { cmd: 'hooks migrate', expected: true },
       { cmd: 'hook migrate', expected: true },
-      { cmd: 'gemma status', expected: true },
+      // Capricorn subcommands.
+      { cmd: 'doctor', expected: true },
+      { cmd: 'status', expected: true },
+      { cmd: 'models list', expected: true },
+      { cmd: 'config list', expected: true },
+      { cmd: 'init', expected: true },
       { cmd: 'some query', expected: undefined },
       { cmd: 'hello world', expected: undefined },
     ])(
@@ -769,10 +774,16 @@ describe('parseArguments', () => {
     expect(argv.isCommand).toBe(true);
   });
 
-  it('should set isCommand to true for gemma command', async () => {
-    process.argv = ['node', 'script.js', 'gemma', 'status'];
+  it('should set isCommand to true for the Capricorn models command', async () => {
+    process.argv = ['node', 'script.js', 'models', 'info', 'gemma4:12b'];
     const argv = await parseArguments(createTestMergedSettings());
     expect(argv.isCommand).toBe(true);
+  });
+
+  it('maps `run "<task>"` to a headless prompt', async () => {
+    process.argv = ['node', 'script.js', 'run', 'fix the tests'];
+    const argv = await parseArguments(createTestMergedSettings());
+    expect(argv.prompt).toBe('fix the tests');
   });
 });
 
@@ -794,7 +805,7 @@ describe('loadCliConfig', () => {
       const argv = {
         query: undefined,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        model: ['gemini-1.5-pro', 'gemini-2.0-flash'] as any,
+        model: ['gemma4:e4b', 'gemma4:12b'] as any,
         sandbox: undefined,
         debug: false,
         prompt: undefined,
@@ -833,7 +844,7 @@ describe('loadCliConfig', () => {
         },
       );
 
-      expect(config.getModel()).toBe('gemini-2.0-flash');
+      expect(config.getModel()).toBe('gemma4:12b');
     });
 
     it('should handle non-string model flags by coercing to string', async () => {
@@ -1863,86 +1874,66 @@ describe('loadCliConfig with admin.mcp.config', () => {
 });
 
 describe('loadCliConfig model selection', () => {
+  // Capricorn: models are local Ollama tags. Upstream Gemini names/aliases
+  // (e.g. left in an old settings file) resolve to the Gemma 4 default and are
+  // verified against Ollama metadata at startup.
   beforeEach(() => {
     vi.spyOn(ExtensionManager.prototype, 'getExtensions').mockReturnValue([]);
   });
 
   afterEach(() => {
     vi.resetAllMocks();
+    vi.unstubAllEnvs();
   });
 
-  it('selects a model from settings.json if provided', async () => {
-    process.argv = ['node', 'script.js'];
+  const load = async (args: string[], settings = {}) => {
+    process.argv = ['node', 'script.js', ...args];
     const argv = await parseArguments(createTestMergedSettings());
-    const config = await loadCliConfig(
-      createTestMergedSettings({
-        model: {
-          name: 'gemini-2.5-pro',
-        },
-      }),
+    return loadCliConfig(
+      createTestMergedSettings(settings),
       'test-session',
       argv,
     );
+  };
 
-    expect(config.getModel()).toBe('gemini-2.5-pro');
+  it('defaults to gemma4:12b', async () => {
+    expect((await load([])).getModel()).toBe('gemma4:12b');
   });
 
-  it('uses the default gemini model if nothing is set', async () => {
-    process.argv = ['node', 'script.js']; // No model set.
-    const argv = await parseArguments(createTestMergedSettings());
-    const config = await loadCliConfig(
-      createTestMergedSettings({
-        // No model set.
-      }),
-      'test-session',
-      argv,
+  it('selects a model from settings.json', async () => {
+    expect((await load([], { model: { name: 'gemma4:e4b' } })).getModel()).toBe(
+      'gemma4:e4b',
     );
-
-    expect(config.getModel()).toBe('auto');
   });
 
-  it('always prefers model from argv', async () => {
-    process.argv = ['node', 'script.js', '--model', 'gemini-2.5-flash-preview'];
-    const argv = await parseArguments(createTestMergedSettings());
-    const config = await loadCliConfig(
-      createTestMergedSettings({
-        model: {
-          name: 'gemini-2.5-pro',
-        },
-      }),
-      'test-session',
-      argv,
-    );
-
-    expect(config.getModel()).toBe('gemini-2.5-flash-preview');
+  it('prefers --model over settings', async () => {
+    expect(
+      (
+        await load(['--model', 'gemma4:26b'], { model: { name: 'gemma4:e4b' } })
+      ).getModel(),
+    ).toBe('gemma4:26b');
   });
 
-  it('selects the model from argv if provided', async () => {
-    process.argv = ['node', 'script.js', '--model', 'gemini-2.5-flash-preview'];
-    const argv = await parseArguments(createTestMergedSettings());
-    const config = await loadCliConfig(
-      createTestMergedSettings({
-        // No model provided via settings.
-      }),
-      'test-session',
-      argv,
-    );
-
-    expect(config.getModel()).toBe('gemini-2.5-flash-preview');
+  it('honours CAPRICORN_MODEL and ignores GEMINI_MODEL', async () => {
+    vi.stubEnv('GEMINI_MODEL', 'gemini-2.5-pro');
+    expect((await load([])).getModel()).toBe('gemma4:12b');
+    vi.stubEnv('CAPRICORN_MODEL', 'gemma4:e2b');
+    expect((await load([])).getModel()).toBe('gemma4:e2b');
   });
 
-  it('selects the default auto model if provided via auto alias', async () => {
-    process.argv = ['node', 'script.js', '--model', 'auto'];
-    const argv = await parseArguments(createTestMergedSettings());
-    const config = await loadCliConfig(
-      createTestMergedSettings({
-        // No model provided via settings.
-      }),
-      'test-session',
-      argv,
-    );
+  it.each(['auto', 'gemini-2.5-pro', 'auto-gemini-3'])(
+    'maps the upstream alias %s to the Gemma 4 default',
+    async (alias) => {
+      expect((await load([], { model: { name: alias } })).getModel()).toBe(
+        'gemma4:12b',
+      );
+    },
+  );
 
-    expect(config.getModel()).toBe('auto');
+  it('passes the resolved model to the Ollama settings', async () => {
+    expect(
+      (await load(['--model', 'gemma4:e4b'])).getOllamaSettings().model,
+    ).toBe('gemma4:e4b');
   });
 });
 

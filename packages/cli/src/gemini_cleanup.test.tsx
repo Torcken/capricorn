@@ -13,6 +13,22 @@ import {
   type HookSystem,
 } from '@google/gemini-cli-core';
 
+// Capricorn: startup preflight (Ollama + model check) and the egress guard
+// are exercised by their own tests; here they are stubbed so main() flow
+// tests do not need a daemon or full settings objects.
+vi.mock('./capricorn/preflight.js', () => ({
+  // Plain functions (not vi.fn) so vi.resetAllMocks() in beforeEach keeps them.
+  runPreflight: async () => ({
+    ok: true,
+    model: 'gemma4:12b',
+    switched: false,
+  }),
+  readlineConfirm: async () => true,
+}));
+vi.mock('./capricorn/networkPolicy.js', () => ({
+  installCapricornNetworkPolicy: () => {},
+}));
+
 vi.mock('@google/gemini-cli-core', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('@google/gemini-cli-core')>();

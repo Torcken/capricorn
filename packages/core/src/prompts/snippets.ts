@@ -189,8 +189,8 @@ export function renderPreamble(options?: PreambleOptions): string {
   if (options.approvalMode === 'autoEdit') modeStr = 'Auto-Edit';
 
   const base = options.interactive
-    ? 'You are Gemini CLI, an interactive CLI agent specializing in software engineering tasks.'
-    : 'You are Gemini CLI, an autonomous CLI agent specializing in software engineering tasks.';
+    ? 'You are Capricorn, an interactive CLI agent specializing in software engineering tasks.'
+    : 'You are Capricorn, an autonomous CLI agent specializing in software engineering tasks.';
 
   return `${base} You are currently operating in **${modeStr}** mode. Your primary goal is to help users safely and effectively.`;
 }
@@ -678,7 +678,7 @@ function mandateConfirm(interactive: boolean): string {
     : '**Handle Ambiguity/Expansion:** Do not take significant actions beyond the clear scope of the request. If the user implies a change (e.g., reports a bug) without explicitly asking for a fix, do not perform it automatically.';
 }
 
-function mandateTopicUpdateModel(): string {
+export function mandateTopicUpdateModel(): string {
   return `
 ## Topic Updates
 As you work, the user follows along by reading topic updates that you publish with ${UPDATE_TOPIC_TOOL_NAME}. Keep them informed by doing the following:

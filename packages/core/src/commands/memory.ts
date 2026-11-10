@@ -3,6 +3,8 @@
  * Copyright 2025 Google LLC
  * SPDX-License-Identifier: Apache-2.0
  */
+import { GEMINI_DIR } from '../utils/paths.js';
+import { DEFAULT_CONTEXT_FILENAME } from '../tools/memoryTool.js';
 
 import { randomUUID } from 'node:crypto';
 import { constants as fsConstants } from 'node:fs';
@@ -83,11 +85,11 @@ export function listMemoryFiles(config: Config): MessageActionReturn {
   let content: string;
 
   if (fileCount > 0) {
-    content = `There are ${fileCount} GEMINI.md file(s) in use:\n\n${filePaths.join(
+    content = `There are ${fileCount} ${DEFAULT_CONTEXT_FILENAME} file(s) in use:\n\n${filePaths.join(
       '\n',
     )}`;
   } else {
-    content = 'No GEMINI.md files in use.';
+    content = `No ${DEFAULT_CONTEXT_FILENAME} files in use.`;
   }
 
   return {
@@ -259,7 +261,9 @@ export async function moveInboxSkill(
   await fs.rm(sourcePath, { recursive: true, force: true });
 
   const label =
-    destination === 'global' ? '~/.gemini/skills' : '.gemini/skills';
+    destination === 'global'
+      ? `~/${GEMINI_DIR}/skills`
+      : `${GEMINI_DIR}/skills`;
   return {
     success: true,
     message: `Moved "${dirName}" to ${label}.`,

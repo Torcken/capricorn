@@ -15,7 +15,7 @@ import type {
 
 export class InitCommand implements Command {
   name = 'init';
-  description = 'Analyzes the project and creates a tailored GEMINI.md file';
+  description = 'Analyzes the project and creates a tailored CAPRICORN.md file';
   requiresWorkspace = true;
 
   async execute(
@@ -27,7 +27,7 @@ export class InitCommand implements Command {
       throw new Error('Command requires a workspace.');
     }
 
-    const geminiMdPath = path.join(targetDir, 'GEMINI.md');
+    const geminiMdPath = path.join(targetDir, 'CAPRICORN.md');
     const result = performInit(fs.existsSync(geminiMdPath));
 
     switch (result.type) {
@@ -51,7 +51,7 @@ export class InitCommand implements Command {
           data: {
             type: 'message',
             messageType: 'info',
-            content: `A template GEMINI.md has been created at ${geminiMdPath}.\n\nTo populate it with project context, you can run the following prompt in a new chat:\n\n${result.content}`,
+            content: `A template CAPRICORN.md has been created at ${geminiMdPath}.\n\nTo populate it with project context, you can run the following prompt in a new chat:\n\n${result.content}`,
           },
         };
 

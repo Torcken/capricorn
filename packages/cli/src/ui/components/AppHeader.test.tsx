@@ -266,7 +266,8 @@ describe('<AppHeader />', () => {
     await waitUntilReady();
 
     // Check for block characters from the logo
-    expect(lastFrame()).toContain('▗█▀▀▜▙');
+    // Capricorn wordmark (AsciiArt.ts): first glyph row of "CAPRICORN".
+    expect(lastFrame()).toContain('▄▀▀▀   ▄▀▄   █▀▀▄');
     expect(lastFrame()).toMatchSnapshot();
     unmount();
   });

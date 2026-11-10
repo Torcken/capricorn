@@ -19,6 +19,10 @@ import {
 
 const VSCODE_SFN_REGEX = /^(vscode|vs[0-9a-f]{4})~\d+(\..+)?$/i;
 const GEMINI_SFN_REGEX = /^(gemini|ge[0-9a-f]{4})~\d+(\..+)?$/i;
+// Capricorn: Windows 8.3 short names of ".capricorn" ("CAPRIC~1", or the
+// hashed "CAxxxx~1" form). Without this, `CAPRIC~1\settings.json` would
+// bypass the configuration-directory protection on NTFS.
+const CAPRICORN_SFN_REGEX = /^(capric|ca[0-9a-f]{4})~\d+(\..+)?$/i;
 
 /**
  * Interface for all in-process safety checkers.
@@ -88,7 +92,16 @@ export class AllowedPathChecker implements InProcessChecker {
           if (clean === '.vscode' || VSCODE_SFN_REGEX.test(clean)) {
             isVscodePath = true;
           }
-          if (clean === '.gemini' || GEMINI_SFN_REGEX.test(clean)) {
+          // Capricorn security check: the agent must not silently edit its
+          // own configuration (.capricorn: settings, policies, trust, hooks)
+          // — that would let a prompt-injected model widen its permissions.
+          // A user's legacy .gemini directory is protected the same way.
+          if (
+            clean === '.gemini' ||
+            GEMINI_SFN_REGEX.test(clean) ||
+            clean === '.capricorn' ||
+            CAPRICORN_SFN_REGEX.test(clean)
+          ) {
             isGeminiPath = true;
           }
         }
@@ -104,7 +117,7 @@ export class AllowedPathChecker implements InProcessChecker {
       if (isGeminiPath) {
         return {
           decision: SafetyCheckDecision.ASK_USER,
-          reason: `Modifying .gemini configuration files requires explicit user confirmation.`,
+          reason: `Modifying Capricorn configuration files (.capricorn) requires explicit user confirmation.`,
         };
       }
 

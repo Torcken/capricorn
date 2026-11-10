@@ -12,7 +12,8 @@ import { ConsentPrompt } from './ConsentPrompt.js';
 import { ThemeDialog } from './ThemeDialog.js';
 import { SettingsDialog } from './SettingsDialog.js';
 import { AuthInProgress } from '../auth/AuthInProgress.js';
-import { AuthDialog } from '../auth/AuthDialog.js';
+import { InferenceSetupDialog } from '../auth/InferenceSetupDialog.js';
+import { AuthState } from '../types.js';
 import { BannedAccountDialog } from '../auth/BannedAccountDialog.js';
 import { ApiAuthDialog } from '../auth/ApiAuthDialog.js';
 import { EditorSettingsDialog } from './EditorSettingsDialog.js';
@@ -24,7 +25,7 @@ import { EmptyWalletDialog } from './EmptyWalletDialog.js';
 import { relaunchApp } from '../../utils/processUtils.js';
 import { SessionBrowser } from './SessionBrowser.js';
 import { PermissionsModifyTrustDialog } from './PermissionsModifyTrustDialog.js';
-import { ModelDialog } from './ModelDialog.js';
+import { CapricornModelDialog } from './CapricornModelDialog.js';
 import { VoiceModelDialog } from './VoiceModelDialog.js';
 import { theme } from '../semantic-colors.js';
 import { useUIState } from '../contexts/UIStateContext.js';
@@ -239,7 +240,8 @@ export const DialogManager = ({
     );
   }
   if (uiState.isModelDialogOpen) {
-    return <ModelDialog onClose={uiActions.closeModelDialog} />;
+    // Capricorn: Gemma 4 picker instead of the upstream Gemini model dialog.
+    return <CapricornModelDialog onClose={uiActions.closeModelDialog} />;
   }
   if (uiState.isVoiceModelDialogOpen) {
     return <VoiceModelDialog onClose={uiActions.closeVoiceModelDialog} />;
@@ -320,15 +322,16 @@ export const DialogManager = ({
     );
   }
   if (uiState.isAuthDialogOpen) {
+    // Capricorn: no provider/sign-in choice exists; explain the local
+    // inference failure and offer retry or exit instead of AuthDialog.
     return (
       <Box flexDirection="column">
-        <AuthDialog
-          config={config}
-          settings={settings}
-          setAuthState={uiActions.setAuthState}
-          authError={uiState.authError}
-          onAuthError={uiActions.onAuthError}
-          setAuthContext={uiActions.setAuthContext}
+        <InferenceSetupDialog
+          error={uiState.authError}
+          onRetry={() => uiActions.setAuthState(AuthState.Unauthenticated)}
+          onExit={() => {
+            process.exit(1);
+          }}
         />
       </Box>
     );

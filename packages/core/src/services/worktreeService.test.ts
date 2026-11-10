@@ -33,7 +33,7 @@ describe('worktree utilities', () => {
   const worktreeName = 'test-feature';
   const expectedPath = path.join(
     projectRoot,
-    '.gemini',
+    '.capricorn',
     'worktrees',
     worktreeName,
   );
@@ -65,7 +65,7 @@ describe('worktree utilities', () => {
       } as never);
 
       const result = await getProjectRootForWorktree(
-        '/mock/project/.gemini/worktrees/my-feature',
+        '/mock/project/.capricorn/worktrees/my-feature',
       );
       expect(result).toBe('/mock/project');
     });
@@ -271,7 +271,7 @@ describe('WorktreeService', () => {
   describe('maybeCleanup', () => {
     const info = {
       name: 'feature-x',
-      path: path.join(projectRoot, '.gemini', 'worktrees', 'feature-x'),
+      path: path.join(projectRoot, '.capricorn', 'worktrees', 'feature-x'),
       baseSha: 'base-sha',
     };
 

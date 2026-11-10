@@ -18,7 +18,6 @@
  */
 
 import http from 'node:http';
-import type { AddressInfo } from 'node:net';
 
 /** A model the mock reports as installed. */
 export interface MockModel {
@@ -74,12 +73,43 @@ export interface MockOllama {
 
 /** The mock's default installed models: two Gemma 4 plus decoys. */
 export const DEFAULT_MOCK_MODELS: MockModel[] = [
-  { name: 'gemma4:12b', family: 'gemma4', capabilities: ['completion', 'tools', 'thinking'], contextLength: 262144, parameterSize: '11.9B', quantization: 'Q4_K_M', size: 8_021_618_941 },
-  { name: 'gemma4:e4b', family: 'gemma4', capabilities: ['completion', 'tools'], contextLength: 131072, parameterSize: '7.5B', quantization: 'Q4_K_M', size: 6_583_656_505 },
-  { name: 'qwen3:8b', family: 'qwen3', capabilities: ['completion', 'tools'], contextLength: 40960 },
+  {
+    name: 'gemma4:12b',
+    family: 'gemma4',
+    capabilities: ['completion', 'tools', 'thinking'],
+    contextLength: 262144,
+    parameterSize: '11.9B',
+    quantization: 'Q4_K_M',
+    size: 8_021_618_941,
+  },
+  {
+    name: 'gemma4:e4b',
+    family: 'gemma4',
+    capabilities: ['completion', 'tools'],
+    contextLength: 131072,
+    parameterSize: '7.5B',
+    quantization: 'Q4_K_M',
+    size: 6_583_656_505,
+  },
+  {
+    name: 'qwen3:8b',
+    family: 'qwen3',
+    capabilities: ['completion', 'tools'],
+    contextLength: 40960,
+  },
   // A misleading alias: tag says gemma4, weights say otherwise.
-  { name: 'gemma4:fake', family: 'qwen3', architecture: 'qwen3', capabilities: ['completion', 'tools'] },
-  { name: 'gemma4:31b-cloud', family: 'gemma4', capabilities: ['completion', 'tools'], remoteHost: 'https://ollama.com:443' },
+  {
+    name: 'gemma4:fake',
+    family: 'qwen3',
+    architecture: 'qwen3',
+    capabilities: ['completion', 'tools'],
+  },
+  {
+    name: 'gemma4:31b-cloud',
+    family: 'gemma4',
+    capabilities: ['completion', 'tools'],
+    remoteHost: 'https://ollama.com:443',
+  },
 ];
 
 /**
@@ -89,7 +119,11 @@ export const DEFAULT_MOCK_MODELS: MockModel[] = [
  * reply so incidental background calls (e.g. title generation) do not fail.
  */
 export async function startMockOllama(
-  options: { models?: MockModel[]; version?: string; defaultReply?: string } = {},
+  options: {
+    models?: MockModel[];
+    version?: string;
+    defaultReply?: string;
+  } = {},
 ): Promise<MockOllama> {
   const models = options.models ?? DEFAULT_MOCK_MODELS;
   const version = options.version ?? '0.30.11';
@@ -123,7 +157,7 @@ export async function startMockOllama(
     body: unknown,
     res: http.ServerResponse,
   ): Promise<void> => {
-    const model = (body as { model?: string } | undefined)?.model;
+    const model = stringField(body, 'model');
     switch (path) {
       case '/api/version':
         return json(res, 200, { version });
@@ -134,8 +168,15 @@ export async function startMockOllama(
             model: m.name,
             size: m.size ?? 1_000_000,
             digest: `sha256:${m.name.replace(/\W/g, '')}`,
-            details: { family: m.family, families: [m.family], parameter_size: m.parameterSize, quantization_level: m.quantization },
-            ...(m.remoteHost ? { remote_host: m.remoteHost, remote_model: m.name } : {}),
+            details: {
+              family: m.family,
+              families: [m.family],
+              parameter_size: m.parameterSize,
+              quantization_level: m.quantization,
+            },
+            ...(m.remoteHost
+              ? { remote_host: m.remoteHost, remote_model: m.name }
+              : {}),
           })),
         });
       case '/api/show': {
@@ -143,10 +184,20 @@ export async function startMockOllama(
         if (!m) return json(res, 404, { error: `model '${model}' not found` });
         const arch = m.architecture ?? m.family;
         return json(res, 200, {
-          details: { family: m.family, families: [m.family], parameter_size: m.parameterSize, quantization_level: m.quantization },
-          model_info: { 'general.architecture': arch, [`${arch}.context_length`]: m.contextLength ?? 8192 },
+          details: {
+            family: m.family,
+            families: [m.family],
+            parameter_size: m.parameterSize,
+            quantization_level: m.quantization,
+          },
+          model_info: {
+            'general.architecture': arch,
+            [`${arch}.context_length`]: m.contextLength ?? 8192,
+          },
           capabilities: m.capabilities,
-          ...(m.remoteHost ? { remote_host: m.remoteHost, remote_model: m.name } : {}),
+          ...(m.remoteHost
+            ? { remote_host: m.remoteHost, remote_model: m.name }
+            : {}),
         });
       }
       case '/api/ps':
@@ -154,7 +205,14 @@ export async function startMockOllama(
       case '/api/pull': {
         res.writeHead(200, { 'content-type': 'application/x-ndjson' });
         res.write(JSON.stringify({ status: 'pulling manifest' }) + '\n');
-        res.write(JSON.stringify({ status: 'downloading', digest: 'sha256:x', total: 100, completed: 100 }) + '\n');
+        res.write(
+          JSON.stringify({
+            status: 'downloading',
+            digest: 'sha256:x',
+            total: 100,
+            completed: 100,
+          }) + '\n',
+        );
         res.end(JSON.stringify({ status: 'success' }) + '\n');
         return;
       }
@@ -166,21 +224,36 @@ export async function startMockOllama(
   };
 
   const chat = async (body: unknown, res: http.ServerResponse) => {
-    const requestedModel = (body as { model?: string }).model;
+    const requestedModel = stringField(body, 'model');
     if (!models.some((m) => m.name === requestedModel)) {
-      return json(res, 404, { error: `model "${requestedModel}" not found, try pulling it first` });
+      return json(res, 404, {
+        error: `model "${requestedModel}" not found, try pulling it first`,
+      });
     }
     const script: MockChatScript = queue.shift() ?? {
       frames: [
-        { message: { role: 'assistant', content: options.defaultReply ?? 'OK' }, done: false },
-        { message: { role: 'assistant', content: '' }, done: true, done_reason: 'stop', prompt_eval_count: 10, eval_count: 2 },
+        {
+          message: { role: 'assistant', content: options.defaultReply ?? 'OK' },
+          done: false,
+        },
+        {
+          message: { role: 'assistant', content: '' },
+          done: true,
+          done_reason: 'stop',
+          prompt_eval_count: 10,
+          eval_count: 2,
+        },
       ],
     };
     if (script.headerDelayMs) await sleep(script.headerDelayMs);
     if (script.status && script.status >= 400) {
-      return json(res, script.status, script.errorBody ?? { error: 'mock failure' });
+      return json(
+        res,
+        script.status,
+        script.errorBody ?? { error: 'mock failure' },
+      );
     }
-    const stream = (body as { stream?: boolean }).stream !== false;
+    const stream = field(body, 'stream') !== false;
     if (!stream) {
       // Non-streamed: merge frames the way Ollama does (concatenate content).
       const merged = mergeFrames(script.frames);
@@ -189,7 +262,10 @@ export async function startMockOllama(
     res.writeHead(200, { 'content-type': 'application/x-ndjson' });
     let n = 0;
     for (const frame of script.frames) {
-      if (script.truncateAfterFrames !== undefined && n >= script.truncateAfterFrames) {
+      if (
+        script.truncateAfterFrames !== undefined &&
+        n >= script.truncateAfterFrames
+      ) {
         res.socket?.destroy();
         return;
       }
@@ -206,7 +282,8 @@ export async function startMockOllama(
   };
 
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const { port } = server.address() as AddressInfo;
+  const address = server.address();
+  const port = typeof address === 'object' && address ? address.port : 0;
 
   return {
     url: `http://127.0.0.1:${port}`,
@@ -221,13 +298,19 @@ export async function startMockOllama(
   };
 }
 
-function mergeFrames(frames: Array<Record<string, unknown>>): Record<string, unknown> {
+function mergeFrames(
+  frames: Array<Record<string, unknown>>,
+): Record<string, unknown> {
   let content = '';
   let thinking = '';
   const toolCalls: unknown[] = [];
   let last: Record<string, unknown> = {};
   for (const f of frames) {
-    const m = (f['message'] ?? {}) as { content?: string; thinking?: string; tool_calls?: unknown[] };
+    const m = (f['message'] ?? {}) as {
+      content?: string;
+      thinking?: string;
+      tool_calls?: unknown[];
+    };
     content += m.content ?? '';
     thinking += m.thinking ?? '';
     toolCalls.push(...(m.tool_calls ?? []));
@@ -245,6 +328,18 @@ function mergeFrames(frames: Array<Record<string, unknown>>): Record<string, unk
   };
 }
 
+/** Reads a property of an untrusted JSON body. */
+function field(body: unknown, key: string): unknown {
+  return typeof body === 'object' && body !== null && !Array.isArray(body)
+    ? (Object.getOwnPropertyDescriptor(body, key)?.value as unknown)
+    : undefined;
+}
+
+function stringField(body: unknown, key: string): string | undefined {
+  const v = field(body, key);
+  return typeof v === 'string' ? v : undefined;
+}
+
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -255,7 +350,11 @@ function sleep(ms: number) {
 
 /** A streamed text delta frame. */
 export function textFrame(content: string): Record<string, unknown> {
-  return { model: 'gemma4:12b', message: { role: 'assistant', content }, done: false };
+  return {
+    model: 'gemma4:12b',
+    message: { role: 'assistant', content },
+    done: false,
+  };
 }
 
 /** A frame carrying complete tool calls (Ollama sends them whole). */

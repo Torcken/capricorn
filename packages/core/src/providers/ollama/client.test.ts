@@ -34,12 +34,18 @@ async function drain(gen: AsyncIterable<OllamaChatResponse>) {
   return frames;
 }
 
-const req = { model: 'gemma4:12b', messages: [{ role: 'user' as const, content: 'hi' }], stream: true };
+const req = {
+  model: 'gemma4:12b',
+  messages: [{ role: 'user' as const, content: 'hi' }],
+  stream: true,
+};
 
 describe('OllamaClient metadata', () => {
   it('reads version, tags and show', async () => {
     expect(await client.version()).toBe('0.30.11');
-    expect((await client.listModels()).map((m) => m.name)).toContain('gemma4:12b');
+    expect((await client.listModels()).map((m) => m.name)).toContain(
+      'gemma4:12b',
+    );
     const show = await client.showModel('gemma4:12b');
     expect(show.model_info?.['general.architecture']).toBe('gemma4');
   });
@@ -81,7 +87,14 @@ describe('OllamaClient.chatStream', () => {
 
   it('passes complete tool calls through', async () => {
     mock.enqueueChat({
-      frames: [toolCallFrame({ id: 'c1', name: 'read_file', args: { file_path: 'a' } }), doneFrame()],
+      frames: [
+        toolCallFrame({
+          id: 'c1',
+          name: 'read_file',
+          args: { file_path: 'a' },
+        }),
+        doneFrame(),
+      ],
     });
     const frames = await drain(client.chatStream(req));
     expect(frames[0].message?.tool_calls?.[0].function.name).toBe('read_file');
@@ -89,21 +102,35 @@ describe('OllamaClient.chatStream', () => {
 
   // Regression guard: a connection closed mid-answer must never look complete.
   it('throws STREAM_TRUNCATED when the stream ends without done', async () => {
-    mock.enqueueChat({ frames: [textFrame('partial'), textFrame('more'), doneFrame()], truncateAfterFrames: 1 });
+    mock.enqueueChat({
+      frames: [textFrame('partial'), textFrame('more'), doneFrame()],
+      truncateAfterFrames: 1,
+    });
     await expect(drain(client.chatStream(req))).rejects.toMatchObject({
       kind: OllamaErrorKind.STREAM_TRUNCATED,
     });
   });
 
   it('surfaces an in-band error frame as a classified error', async () => {
-    mock.enqueueChat({ frames: [textFrame('a'), { error: 'model requires more system memory (12 GiB) than is available' }] });
+    mock.enqueueChat({
+      frames: [
+        textFrame('a'),
+        {
+          error: 'model requires more system memory (12 GiB) than is available',
+        },
+      ],
+    });
     await expect(drain(client.chatStream(req))).rejects.toMatchObject({
       kind: OllamaErrorKind.RESOURCE_EXHAUSTED,
     });
   });
 
   it('maps HTTP 500 out-of-memory bodies to RESOURCE_EXHAUSTED', async () => {
-    mock.enqueueChat({ frames: [], status: 500, errorBody: { error: 'cudaMalloc failed: out of memory' } });
+    mock.enqueueChat({
+      frames: [],
+      status: 500,
+      errorBody: { error: 'cudaMalloc failed: out of memory' },
+    });
     await expect(drain(client.chatStream(req))).rejects.toMatchObject({
       kind: OllamaErrorKind.RESOURCE_EXHAUSTED,
       status: 500,
@@ -111,38 +138,55 @@ describe('OllamaClient.chatStream', () => {
   });
 
   it('reports MODEL_NOT_FOUND for an uninstalled model', async () => {
-    await expect(drain(client.chatStream({ ...req, model: 'gemma4:31b' }))).rejects.toMatchObject({
+    await expect(
+      drain(client.chatStream({ ...req, model: 'gemma4:31b' })),
+    ).rejects.toMatchObject({
       kind: OllamaErrorKind.MODEL_NOT_FOUND,
     });
   });
 
   it('times out a stalled stream via the idle watchdog', async () => {
-    mock.enqueueChat({ frames: [textFrame('a'), textFrame('b'), doneFrame()], delayMs: 1000 });
+    mock.enqueueChat({
+      frames: [textFrame('a'), textFrame('b'), doneFrame()],
+      delayMs: 1000,
+    });
     await expect(drain(client.chatStream(req))).rejects.toMatchObject({
       kind: OllamaErrorKind.TIMEOUT,
     });
   });
 
   it('reports user cancellation as CANCELLED, not TIMEOUT', async () => {
-    mock.enqueueChat({ frames: [textFrame('a'), textFrame('b'), doneFrame()], delayMs: 100 });
+    mock.enqueueChat({
+      frames: [textFrame('a'), textFrame('b'), doneFrame()],
+      delayMs: 100,
+    });
     const ac = new AbortController();
     const gen = client.chatStream(req, ac.signal);
     const first = await gen.next();
     expect(first.value?.message?.content).toBe('a');
     ac.abort();
-    await expect(gen.next()).rejects.toMatchObject({ kind: OllamaErrorKind.CANCELLED });
+    await expect(gen.next()).rejects.toMatchObject({
+      kind: OllamaErrorKind.CANCELLED,
+    });
   });
 
   it('forces stream:true and sends the request body verbatim otherwise', async () => {
     mock.enqueueChat({ frames: [doneFrame()] });
-    await drain(client.chatStream({ ...req, stream: false, options: { num_ctx: 9000 } }));
-    expect(mock.chatRequests()[0].body).toMatchObject({ stream: true, options: { num_ctx: 9000 } });
+    await drain(
+      client.chatStream({ ...req, stream: false, options: { num_ctx: 9000 } }),
+    );
+    expect(mock.chatRequests()[0].body).toMatchObject({
+      stream: true,
+      options: { num_ctx: 9000 },
+    });
   });
 });
 
 describe('OllamaClient.chat (non-streamed)', () => {
   it('returns a single merged reply', async () => {
-    mock.enqueueChat({ frames: [textFrame('one '), textFrame('two'), doneFrame()] });
+    mock.enqueueChat({
+      frames: [textFrame('one '), textFrame('two'), doneFrame()],
+    });
     const r = await client.chat(req);
     expect(r.message?.content).toBe('one two');
     expect(r.done).toBe(true);
@@ -152,7 +196,8 @@ describe('OllamaClient.chat (non-streamed)', () => {
 describe('OllamaClient.pullModel', () => {
   it('streams progress frames', async () => {
     const statuses: string[] = [];
-    for await (const p of client.pullModel('gemma4:e2b')) statuses.push(p.status ?? '');
+    for await (const p of client.pullModel('gemma4:e2b'))
+      statuses.push(p.status ?? '');
     expect(statuses.at(-1)).toBe('success');
   });
 });

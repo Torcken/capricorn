@@ -131,7 +131,7 @@ export async function loadSandboxConfig(
 
   let sandboxValue: boolean | string | null | undefined;
   let allowedPaths: string[] = [];
-  let networkAccess = true;
+  let networkAccess = false; // Capricorn: default-deny network inside the sandbox.
   let customImage: string | undefined;
 
   if (
@@ -142,7 +142,8 @@ export async function loadSandboxConfig(
     const config = sandboxOption;
     sandboxValue = config.enabled ? (config.command ?? true) : false;
     allowedPaths = config.allowedPaths ?? [];
-    networkAccess = config.networkAccess ?? true;
+    // Capricorn: sandboxed processes get no network unless the user opts in.
+    networkAccess = config.networkAccess ?? false;
     customImage = config.image;
   } else if (typeof sandboxOption !== 'object' || sandboxOption === null) {
     sandboxValue = sandboxOption;

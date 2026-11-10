@@ -83,6 +83,7 @@ import {
 } from './core/initializer.js';
 import { validateAuthMethod } from './config/auth.js';
 import { installCapricornNetworkPolicy } from './capricorn/networkPolicy.js';
+import { readlineConfirm, runPreflight } from './capricorn/preflight.js';
 import { runAcpClient } from './acp/acpStdioTransport.js';
 import { validateNonInteractiveAuth } from './validateNonInterActiveAuth.js';
 import { appEvents, AppEvent } from './utils/events.js';
@@ -99,7 +100,6 @@ import { createPolicyUpdater } from './config/policy.js';
 
 import { setupTerminalAndTheme } from './utils/terminalTheme.js';
 import { runDeferredCommand } from './deferred.js';
-import { handleList as handleListModels } from './commands/models/list.js';
 import { cleanupBackgroundLogs } from './utils/logCleanup.js';
 import { SlashCommandConflictHandler } from './services/SlashCommandConflictHandler.js';
 
@@ -687,21 +687,8 @@ export async function main() {
   // Run deferred command now that we have admin settings.
   await runDeferredCommand(settings.merged);
 
-  if (argv.listModels) {
-    const outputFormat = argv.outputFormat === 'json' ? 'json' : 'text';
-    try {
-      await handleListModels({ outputFormat, loadedSettings: settings, argv });
-      await runExitCleanup();
-      process.exit(ExitCodes.SUCCESS);
-    } catch (error) {
-      debugLogger.error('Failed to list models:', error);
-      process.stderr.write(
-        `Error: ${error instanceof Error ? error.message : String(error)}\n`,
-      );
-      await runExitCleanup();
-      process.exit(ExitCodes.FATAL_INPUT_ERROR);
-    }
-  }
+  // Capricorn: `--list-models` (Gemini model catalogue) was removed; use
+  // `capricorn models list`.
 
   // hop into sandbox if we are outside and sandboxing is enabled
   if (!process.env['SANDBOX'] && !argv.isCommand) {
@@ -842,9 +829,47 @@ export async function main() {
     // Handle --delete-session flag
     const sessionToDelete = config.getDeleteSession();
     if (sessionToDelete) {
+      // Capricorn: `sessions delete` without --yes must confirm first.
+      if (argv.confirmDelete) {
+        if (!process.stdin.isTTY) {
+          writeToStderr(
+            'Refusing to delete without confirmation in a non-interactive shell. Re-run with --yes.\n',
+          );
+          await runExitCleanup();
+          process.exit(2);
+        }
+        const { createInterface } = await import('node:readline/promises');
+        const rl = createInterface({
+          input: process.stdin,
+          output: process.stderr,
+        });
+        const answer = await rl.question(
+          `Delete session "${sessionToDelete}"? This cannot be undone. [y/N] `,
+        );
+        rl.close();
+        if (!/^y(es)?$/i.test(answer.trim())) {
+          writeToStderr('Not deleted.\n');
+          await runExitCleanup();
+          process.exit(ExitCodes.SUCCESS);
+        }
+      }
       await deleteSession(config, sessionToDelete);
       await runExitCleanup();
       process.exit(ExitCodes.SUCCESS);
+    }
+
+    // Capricorn: verify Ollama + a Gemma 4 model before starting a session.
+    // Skipped for fake-response test runs, which never contact a daemon.
+    if (!config.fakeResponses && !config.fakeResponsesNonStrict) {
+      const preflight = await runPreflight(config, {
+        interactive: config.isInteractive() && !!process.stdin.isTTY,
+        confirm: readlineConfirm,
+      });
+      if (!preflight.ok) {
+        writeToStderr(`Capricorn: ${preflight.message}\n`);
+        await runExitCleanup();
+        process.exit(preflight.exitCode);
+      }
     }
 
     const wasRaw = process.stdin.isRaw;
@@ -867,22 +892,8 @@ export async function main() {
     const initializationResult = await initializeApp(config, settings);
     initAppHandle?.end();
 
-    import('./services/liteRtServerManager.js')
-      .then(({ LiteRtServerManager }) => {
-        const mergedGemma = settings.merged.experimental?.gemmaModelRouter;
-        if (!mergedGemma) return;
-        // Security: binaryPath and autoStartServer must come from user-scoped
-        // settings only to prevent workspace configs from triggering arbitrary
-        // binary execution.
-        const userGemma = settings.forScope(SettingScope.User).settings
-          .experimental?.gemmaModelRouter;
-        return LiteRtServerManager.ensureRunning({
-          ...mergedGemma,
-          binaryPath: userGemma?.binaryPath,
-          autoStartServer: userGemma?.autoStartServer,
-        });
-      })
-      .catch((e) => debugLogger.warn('LiteRT auto-start import failed:', e));
+    // Capricorn: the upstream LiteRT-LM Gemma router auto-start is removed;
+    // Capricorn's only inference runtime is Ollama.
 
     if (
       settings.merged.security.auth.selectedType ===

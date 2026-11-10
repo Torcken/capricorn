@@ -11,7 +11,7 @@ import { type SessionStatsState } from '../contexts/SessionContext.js';
 import { Banner } from './Banner.js';
 import { Footer } from './Footer.js';
 import { AppHeader } from './AppHeader.js';
-import { ModelDialog } from './ModelDialog.js';
+import { CapricornModelDialog } from './CapricornModelDialog.js';
 import { StatsDisplay } from './StatsDisplay.js';
 
 // Mock the theme module
@@ -82,9 +82,9 @@ describe('Gradient Crash Regression Tests', () => {
     unmount();
   });
 
-  it('<ModelDialog /> should not crash when theme.ui.gradient is empty', async () => {
+  it('<CapricornModelDialog /> should not crash when theme.ui.gradient is empty', async () => {
     const { lastFrame, unmount } = await renderWithProviders(
-      <ModelDialog onClose={async () => {}} />,
+      <CapricornModelDialog onClose={() => {}} />,
       {
         width: 120,
       },

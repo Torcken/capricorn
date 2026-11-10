@@ -57,11 +57,36 @@ export interface GemmaPreset {
  * pull` reports the registry's answer verbatim.
  */
 export const GEMMA4_PRESETS: readonly GemmaPreset[] = [
-  { tag: 'gemma4:e2b', label: 'Gemma 4 E2B', tier: 'experimental', approxMemoryGiB: 4 },
-  { tag: 'gemma4:e4b', label: 'Gemma 4 E4B', tier: 'lightweight', approxMemoryGiB: 7 },
-  { tag: 'gemma4:12b', label: 'Gemma 4 12B', tier: 'standard', approxMemoryGiB: 11 },
-  { tag: 'gemma4:26b', label: 'Gemma 4 26B A4B', tier: 'advanced', approxMemoryGiB: 20 },
-  { tag: 'gemma4:31b', label: 'Gemma 4 31B', tier: 'high-capability', approxMemoryGiB: 24 },
+  {
+    tag: 'gemma4:e2b',
+    label: 'Gemma 4 E2B',
+    tier: 'experimental',
+    approxMemoryGiB: 4,
+  },
+  {
+    tag: 'gemma4:e4b',
+    label: 'Gemma 4 E4B',
+    tier: 'lightweight',
+    approxMemoryGiB: 7,
+  },
+  {
+    tag: 'gemma4:12b',
+    label: 'Gemma 4 12B',
+    tier: 'standard',
+    approxMemoryGiB: 11,
+  },
+  {
+    tag: 'gemma4:26b',
+    label: 'Gemma 4 26B A4B',
+    tier: 'advanced',
+    approxMemoryGiB: 20,
+  },
+  {
+    tag: 'gemma4:31b',
+    label: 'Gemma 4 31B',
+    tier: 'high-capability',
+    approxMemoryGiB: 24,
+  },
 ];
 
 /**
@@ -105,7 +130,9 @@ export interface ModelVerdict {
  * This never *accepts* a model: acceptance always requires
  * {@link verifyGemma4Model} on `/api/show` metadata.
  */
-export function prefilterTagModel(tag: OllamaTagModel): ModelVerdict | undefined {
+export function prefilterTagModel(
+  tag: OllamaTagModel,
+): ModelVerdict | undefined {
   if (isCloudModel(tag.name, tag)) {
     return {
       model: tag.name,
@@ -164,7 +191,9 @@ export function verifyGemma4Model(
   const archValue = info['general.architecture'];
   const architecture =
     typeof archValue === 'string' ? archValue.toLowerCase() : undefined;
-  const ctxValue = architecture ? info[`${architecture}.context_length`] : undefined;
+  const ctxValue = architecture
+    ? info[`${architecture}.context_length`]
+    : undefined;
   const maxContextLength =
     typeof ctxValue === 'number' && ctxValue > 0 ? ctxValue : undefined;
 
@@ -244,7 +273,9 @@ export function isCloudModel(
   name: string,
   meta: { remote_host?: string; remote_model?: string },
 ): boolean {
-  const tagPart = name.includes(':') ? name.slice(name.lastIndexOf(':') + 1) : '';
+  const tagPart = name.includes(':')
+    ? name.slice(name.lastIndexOf(':') + 1)
+    : '';
   const lowered = tagPart.toLowerCase();
   return (
     lowered === 'cloud' ||

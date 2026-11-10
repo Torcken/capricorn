@@ -10,17 +10,23 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-export const GEMINI_DIR = '.gemini';
+// Capricorn: user state lives in ~/.capricorn and project config in
+// <project>/.capricorn. The constant keeps its upstream name to minimise
+// churn across the ~hundreds of retained call sites. Capricorn never reads
+// or edits ~/.gemini or <project>/.gemini (no implicit import).
+export const GEMINI_DIR = '.capricorn';
 export const GOOGLE_ACCOUNTS_FILENAME = 'google_accounts.json';
 export const TRUSTED_FOLDERS_FILENAME = 'trustedFolders.json';
 
 /**
  * Returns the home directory.
- * If GEMINI_CLI_HOME environment variable is set, it returns its value.
- * Otherwise, it returns the user's home directory.
+ * If CAPRICORN_HOME (Capricorn) or GEMINI_CLI_HOME (upstream, kept for the
+ * retained test harness) is set, it returns its value. Otherwise, it returns
+ * the user's home directory.
  */
 export function homedir(): string {
-  const envHome = process.env['GEMINI_CLI_HOME'];
+  const envHome =
+    process.env['CAPRICORN_HOME'] || process.env['GEMINI_CLI_HOME'];
   if (envHome) {
     return envHome;
   }

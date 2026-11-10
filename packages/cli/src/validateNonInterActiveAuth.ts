@@ -4,50 +4,40 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+// Capricorn modification (2026, Capricorn Contributors): headless runs no
+// longer look for Google credentials. The back-end is always the local Ollama
+// provider; any other configured type is a configuration error.
+
 import {
+  AuthType,
   debugLogger,
   OutputFormat,
   ExitCodes,
-  getAuthTypeFromEnv,
   type Config,
-  type AuthType,
 } from '@google/gemini-cli-core';
-import { USER_SETTINGS_PATH, type LoadedSettings } from './config/settings.js';
+import type { LoadedSettings } from './config/settings.js';
 import { validateAuthMethod } from './config/auth.js';
 import { handleError } from './utils/errors.js';
 import { runExitCleanup } from './utils/cleanup.js';
 
+/**
+ * Resolves and validates the inference back-end for a non-interactive run.
+ *
+ * @returns {@link AuthType.OLLAMA}. On failure the process exits with
+ *   `FATAL_AUTHENTICATION_ERROR` (or a JSON error in JSON output mode).
+ */
 export async function validateNonInteractiveAuth(
   configuredAuthType: AuthType | undefined,
-  useExternalAuth: boolean | undefined,
+  _useExternalAuth: boolean | undefined,
   nonInteractiveConfig: Config,
-  settings: LoadedSettings,
-) {
+  _settings: LoadedSettings,
+): Promise<AuthType> {
   try {
-    const effectiveAuthType = configuredAuthType || getAuthTypeFromEnv();
-
-    const enforcedType = settings.merged.security.auth.enforcedType;
-    if (enforcedType && effectiveAuthType !== enforcedType) {
-      const message = effectiveAuthType
-        ? `The enforced authentication type is '${enforcedType}', but the current type is '${effectiveAuthType}'. Please re-authenticate with the correct type.`
-        : `The auth type '${enforcedType}' is enforced, but no authentication is configured.`;
-      throw new Error(message);
+    const authType = configuredAuthType ?? AuthType.OLLAMA;
+    const err = await validateAuthMethod(String(authType));
+    if (err != null) {
+      throw new Error(err);
     }
-
-    if (!effectiveAuthType) {
-      const message = `Please set an Auth method in your ${USER_SETTINGS_PATH} or specify one of the following environment variables before running: GEMINI_API_KEY, GOOGLE_GENAI_USE_VERTEXAI, GOOGLE_GENAI_USE_GCA`;
-      throw new Error(message);
-    }
-
-    const authType: AuthType = effectiveAuthType;
-
-    if (!useExternalAuth) {
-      const err = await validateAuthMethod(String(authType));
-      if (err != null) {
-        throw new Error(err);
-      }
-    }
-
     return authType;
   } catch (error) {
     if (nonInteractiveConfig.getOutputFormat() === OutputFormat.JSON) {
@@ -61,5 +51,7 @@ export async function validateNonInteractiveAuth(
       await runExitCleanup();
       process.exit(ExitCodes.FATAL_AUTHENTICATION_ERROR);
     }
+    // handleError/process.exit never return; satisfy the type checker.
+    throw error;
   }
 }

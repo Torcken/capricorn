@@ -188,15 +188,27 @@ describe('BuiltinCommandLoader', () => {
     });
   });
 
-  it('should include upgrade command when authType is login_with_google', async () => {
-    const { AuthType } = await import('@google/gemini-cli-core');
-    (mockConfig.getContentGeneratorConfig as Mock).mockReturnValue({
-      authType: AuthType.LOGIN_WITH_GOOGLE,
-    });
+  // Capricorn: commands tied to Google sign-in, upstream issue reporting or
+  // hosted documentation are not registered, whatever the auth type.
+  it.each(['upgrade', 'auth', 'bug', 'privacy', 'docs', 'setup-github'])(
+    'does not register the /%s command',
+    async (name) => {
+      const { AuthType } = await import('@google/gemini-cli-core');
+      (mockConfig.getContentGeneratorConfig as Mock).mockReturnValue({
+        authType: AuthType.LOGIN_WITH_GOOGLE,
+      });
+      const loader = new BuiltinCommandLoader(mockConfig);
+      const commands = await loader.loadCommands(new AbortController().signal);
+      expect(commands.find((c) => c.name === name)).toBeUndefined();
+    },
+  );
+
+  it('registers the Capricorn /model command', async () => {
     const loader = new BuiltinCommandLoader(mockConfig);
     const commands = await loader.loadCommands(new AbortController().signal);
-    const upgradeCmd = commands.find((c) => c.name === 'upgrade');
-    expect(upgradeCmd).toBeDefined();
+    expect(commands.find((c) => c.name === 'model')?.description).toContain(
+      'Gemma 4',
+    );
   });
 
   it('should exclude upgrade command when authType is NOT login_with_google', async () => {

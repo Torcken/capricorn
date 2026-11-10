@@ -1,0 +1,521 @@
+/**
+ * @license
+ * Copyright 2026 Capricorn Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
+ * @fileoverview Environment diagnostics behind `capricorn doctor` and the
+ * interactive startup check.
+ *
+ * Each check returns a structured {@link DiagnosticCheck} rather than
+ * printing, so the same results feed human output, `--json` output and tests.
+ * Checks never throw: an unexpected exception becomes a failed check with the
+ * error message, because a diagnostic tool that crashes is useless exactly
+ * when the user needs it.
+ *
+ * Privacy: diagnostics only contact the configured Ollama endpoint (loopback
+ * by default). Nothing is uploaded; output never includes prompt or file
+ * contents.
+ */
+
+import os from 'node:os';
+import fs from 'node:fs';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import {
+  GEMINI_DIR,
+  OllamaError,
+  discoverModels,
+  homedir,
+  isEgressGuardInstalled,
+  selectModel,
+  GEMMA4_PRESETS,
+  type DiscoveredModel,
+  type OllamaClient,
+} from '@google/gemini-cli-core';
+import type { CapricornRuntime } from './runtime.js';
+import { formatGiB } from './runtime.js';
+
+/** Outcome severity. `fail` makes `doctor` exit non-zero. */
+export type CheckStatus = 'pass' | 'warn' | 'fail' | 'skip';
+
+/** One diagnostic result. `id` values are a stable public contract. */
+export interface DiagnosticCheck {
+  id: string;
+  title: string;
+  status: CheckStatus;
+  message: string;
+  remediation?: string;
+  data?: Record<string, unknown>;
+}
+
+/** Complete report as emitted by `doctor --json`. */
+export interface DiagnosticReport {
+  ok: boolean;
+  capricornVersion: string;
+  checks: DiagnosticCheck[];
+  models: DiscoveredModel[];
+}
+
+/** Minimum Node.js major version (matches `engines.node`). */
+export const MIN_NODE_MAJOR = 20;
+
+/**
+ * Minimum Ollama version Capricorn is tested against. Older daemons may lack
+ * Gemma 4 support or streamed tool calls; this is a warning, not a failure,
+ * because the authoritative test is model verification.
+ */
+export const MIN_OLLAMA_VERSION = '0.12.0';
+
+/** Inputs for {@link runDiagnostics}; injectable for tests. */
+export interface DiagnosticsInput {
+  runtime: CapricornRuntime;
+  client: OllamaClient | undefined;
+  /** Error from constructing the client (endpoint policy violation). */
+  clientError?: unknown;
+  version: string;
+  cwd: string;
+  /** Whether the current folder is trusted, if known. */
+  workspaceTrusted?: boolean;
+  signal?: AbortSignal;
+}
+
+/**
+ * Runs every check in dependency order (model checks only run if the daemon
+ * answered).
+ */
+export async function runDiagnostics(
+  input: DiagnosticsInput,
+): Promise<DiagnosticReport> {
+  const checks: DiagnosticCheck[] = [];
+  let models: DiscoveredModel[] = [];
+
+  checks.push(checkNode());
+  checks.push(checkSystemMemory());
+  checks.push(checkEndpointPolicy(input));
+
+  let daemonOk = false;
+  if (input.client) {
+    const daemon = await safe('ollama.daemon', 'Ollama daemon', () =>
+      checkDaemon(input.client!, input.signal),
+    );
+    checks.push(daemon);
+    daemonOk = daemon.status === 'pass' || daemon.status === 'warn';
+  }
+
+  if (daemonOk && input.client) {
+    let discoveryError: unknown;
+    try {
+      models = await discoverModels(input.client, input.signal);
+    } catch (e) {
+      discoveryError = e;
+    }
+    checks.push(checkInstalledModels(models, discoveryError));
+    checks.push(checkSelectedModel(models, input.runtime, discoveryError));
+    checks.push(checkContextWindow(models, input.runtime));
+  } else {
+    for (const [id, title] of [
+      ['models.installed', 'Gemma 4 models'],
+      ['models.selected', 'Selected model'],
+      ['models.context', 'Context window'],
+    ] as const) {
+      checks.push({
+        id,
+        title,
+        status: 'skip',
+        message: 'Skipped: Ollama is not reachable.',
+      });
+    }
+  }
+
+  checks.push(checkEgressGuard());
+  checks.push(checkStateDir());
+  checks.push(checkWorkspace(input));
+  checks.push(
+    checkTool(
+      'tools.git',
+      'git',
+      ['--version'],
+      'Git integration (status/diff/checkpoints) is unavailable.',
+    ),
+  );
+  checks.push(
+    checkTool(
+      'tools.ripgrep',
+      'rg',
+      ['--version'],
+      'Search falls back to the slower built-in grep.',
+    ),
+  );
+
+  return {
+    ok: !checks.some((c) => c.status === 'fail'),
+    capricornVersion: input.version,
+    checks,
+    models,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Individual checks
+// ---------------------------------------------------------------------------
+
+function checkNode(): DiagnosticCheck {
+  const major = Number(process.versions.node.split('.')[0]);
+  return major >= MIN_NODE_MAJOR
+    ? {
+        id: 'runtime.node',
+        title: 'Node.js',
+        status: 'pass',
+        message: `Node.js ${process.versions.node}`,
+      }
+    : {
+        id: 'runtime.node',
+        title: 'Node.js',
+        status: 'fail',
+        message: `Node.js ${process.versions.node} is too old.`,
+        remediation: `Install Node.js ${MIN_NODE_MAJOR} or newer.`,
+      };
+}
+
+function checkSystemMemory(): DiagnosticCheck {
+  const total = os.totalmem();
+  const free = os.freemem();
+  return {
+    id: 'runtime.memory',
+    title: 'System memory',
+    status: total < 8 * 1024 ** 3 ? 'warn' : 'pass',
+    message: `${formatGiB(total)} total, ${formatGiB(free)} free (${os.platform()} ${os.arch()}, ${os.cpus().length} CPUs)`,
+    remediation:
+      total < 8 * 1024 ** 3
+        ? 'Less than 8 GiB RAM: use gemma4:e2b or gemma4:e4b with a small ollama.numCtx.'
+        : undefined,
+    data: {
+      totalBytes: total,
+      freeBytes: free,
+      platform: os.platform(),
+      arch: os.arch(),
+    },
+  };
+}
+
+function checkEndpointPolicy(input: DiagnosticsInput): DiagnosticCheck {
+  const { runtime } = input;
+  if (input.clientError) {
+    const msg =
+      input.clientError instanceof Error
+        ? input.clientError.message
+        : String(input.clientError);
+    return {
+      id: 'ollama.endpoint',
+      title: 'Ollama endpoint',
+      status: 'fail',
+      message: msg,
+      remediation:
+        input.clientError instanceof OllamaError
+          ? input.clientError.remediation
+          : undefined,
+      data: {
+        endpoint: runtime.settings.endpoint,
+        source: runtime.endpointSource,
+      },
+    };
+  }
+  const client = input.client!;
+  return {
+    id: 'ollama.endpoint',
+    title: 'Ollama endpoint',
+    status: client.isLoopback ? 'pass' : 'warn',
+    message: client.isLoopback
+      ? `${client.baseUrl} (local, from ${runtime.endpointSource})`
+      : `${client.baseUrl} — REMOTE HOST: prompts and code leave this machine (opted in via user settings).`,
+    data: {
+      endpoint: client.baseUrl,
+      local: client.isLoopback,
+      source: runtime.endpointSource,
+    },
+  };
+}
+
+async function checkDaemon(
+  client: OllamaClient,
+  signal?: AbortSignal,
+): Promise<DiagnosticCheck> {
+  try {
+    const version = await client.version(signal);
+    const old = compareVersions(version, MIN_OLLAMA_VERSION) < 0;
+    return {
+      id: 'ollama.daemon',
+      title: 'Ollama daemon',
+      status: old ? 'warn' : 'pass',
+      message: `Ollama ${version} is running.`,
+      remediation: old
+        ? `Capricorn is tested with Ollama >= ${MIN_OLLAMA_VERSION}; update Ollama.`
+        : undefined,
+      data: { version },
+    };
+  } catch (e) {
+    const err = e instanceof OllamaError ? e : undefined;
+    return {
+      id: 'ollama.daemon',
+      title: 'Ollama daemon',
+      status: 'fail',
+      message: e instanceof Error ? e.message : String(e),
+      remediation:
+        err?.remediation ??
+        'Install Ollama from https://ollama.com/download and start it.',
+      data: { kind: err?.kind },
+    };
+  }
+}
+
+function checkInstalledModels(
+  models: DiscoveredModel[],
+  error: unknown,
+): DiagnosticCheck {
+  if (error) {
+    return {
+      id: 'models.installed',
+      title: 'Gemma 4 models',
+      status: 'fail',
+      message: `Could not list models: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+  const allowed = models.filter((m) => m.allowed);
+  const rejected = models.length - allowed.length;
+  if (allowed.length === 0) {
+    return {
+      id: 'models.installed',
+      title: 'Gemma 4 models',
+      status: 'fail',
+      message: `No verified Gemma 4 model is installed (${models.length} other model(s) found).`,
+      remediation: `Pull one, e.g. \`capricorn models pull gemma4:e4b\` (smaller) or \`capricorn models pull gemma4:12b\`.`,
+    };
+  }
+  return {
+    id: 'models.installed',
+    title: 'Gemma 4 models',
+    status: 'pass',
+    message:
+      `${allowed.map((m) => m.model).join(', ')}` +
+      (rejected ? ` (${rejected} non-Gemma-4 or cloud model(s) ignored)` : ''),
+    data: { allowed: allowed.map((m) => m.model) },
+  };
+}
+
+function checkSelectedModel(
+  models: DiscoveredModel[],
+  runtime: CapricornRuntime,
+  error: unknown,
+): DiagnosticCheck {
+  if (error) {
+    return {
+      id: 'models.selected',
+      title: 'Selected model',
+      status: 'skip',
+      message: 'Skipped: model listing failed.',
+    };
+  }
+  const selection = selectModel(models, runtime.settings.model);
+  if (selection.kind === 'selected') {
+    const m = selection.model;
+    return {
+      id: 'models.selected',
+      title: 'Selected model',
+      status: 'pass',
+      message: `${m.model} (${[m.parameterSize, m.quantization].filter(Boolean).join(', ')}; from ${runtime.modelSource}) — ${m.detail}`,
+      data: {
+        model: m.model,
+        source: runtime.modelSource,
+        capabilities: m.capabilities,
+      },
+    };
+  }
+  return {
+    id: 'models.selected',
+    title: 'Selected model',
+    status: 'fail',
+    message: `${selection.reason}`,
+    remediation: selection.alternatives.length
+      ? `Use an installed model: \`capricorn models use ${selection.alternatives[0].model}\` (or pass --model).`
+      : `Pull it: \`capricorn models pull ${selection.requested}\`.`,
+    data: {
+      requested: selection.requested,
+      alternatives: selection.alternatives.map((a) => a.model),
+    },
+  };
+}
+
+function checkContextWindow(
+  models: DiscoveredModel[],
+  runtime: CapricornRuntime,
+): DiagnosticCheck {
+  const selection = selectModel(models, runtime.settings.model);
+  const numCtx = runtime.settings.numCtx;
+  if (selection.kind !== 'selected') {
+    return {
+      id: 'models.context',
+      title: 'Context window',
+      status: 'skip',
+      message: `num_ctx ${numCtx} (model not available).`,
+    };
+  }
+  const max = selection.model.maxContextLength;
+  const effective = max ? Math.min(numCtx, max) : numCtx;
+  const preset = GEMMA4_PRESETS.find((p) => p.tag === selection.model.model);
+  const parts = [
+    `num_ctx ${effective.toLocaleString('en-US')} tokens allocated` +
+      (max ? ` (model maximum ${max.toLocaleString('en-US')})` : ''),
+  ];
+  if (preset)
+    parts.push(`≈${preset.approxMemoryGiB} GiB resident at 32K (approximate)`);
+  return {
+    id: 'models.context',
+    title: 'Context window',
+    status: numCtx > (max ?? Infinity) ? 'warn' : 'pass',
+    message: parts.join('; '),
+    remediation:
+      numCtx > (max ?? Infinity)
+        ? `ollama.numCtx exceeds the model maximum; ${max} will be used.`
+        : undefined,
+    data: { numCtx, effective, modelMax: max },
+  };
+}
+
+function checkEgressGuard(): DiagnosticCheck {
+  const installed = isEgressGuardInstalled();
+  return {
+    id: 'security.network',
+    title: 'Network policy',
+    status: installed ? 'pass' : 'warn',
+    message: installed
+      ? 'Outbound connections are limited to loopback and explicitly allowed hosts.'
+      : 'Egress guard is not active in this process.',
+  };
+}
+
+function checkStateDir(): DiagnosticCheck {
+  const dir = path.join(homedir(), GEMINI_DIR);
+  try {
+    const st = fs.statSync(dir);
+    // World/group-writable state dirs let other local users tamper with
+    // settings, sessions and trust decisions.
+    const loose = process.platform !== 'win32' && (st.mode & 0o022) !== 0;
+    return {
+      id: 'state.dir',
+      title: 'State directory',
+      status: loose ? 'warn' : 'pass',
+      message: `${dir}${loose ? ' is writable by other users' : ''}`,
+      remediation: loose ? `Run: chmod go-w ${dir}` : undefined,
+    };
+  } catch {
+    return {
+      id: 'state.dir',
+      title: 'State directory',
+      status: 'pass',
+      message: `${dir} (will be created on first run)`,
+    };
+  }
+}
+
+function checkWorkspace(input: DiagnosticsInput): DiagnosticCheck {
+  const instructions = fs.existsSync(path.join(input.cwd, 'CAPRICORN.md'));
+  const legacy = fs.existsSync(path.join(input.cwd, 'GEMINI.md'));
+  const notes = [
+    input.cwd,
+    instructions
+      ? 'CAPRICORN.md found'
+      : 'no CAPRICORN.md (run `capricorn init`)',
+  ];
+  if (legacy && !instructions)
+    notes.push('GEMINI.md present but not read (see docs/CONFIGURATION.md)');
+  if (input.workspaceTrusted === false) notes.push('folder not trusted');
+  return {
+    id: 'workspace',
+    title: 'Workspace',
+    status: input.workspaceTrusted === false ? 'warn' : 'pass',
+    message: notes.join('; '),
+  };
+}
+
+function checkTool(
+  id: string,
+  cmd: string,
+  args: string[],
+  missing: string,
+): DiagnosticCheck {
+  const r = spawnSync(cmd, args, { encoding: 'utf8', timeout: 5000 });
+  if (r.status === 0) {
+    return {
+      id,
+      title: cmd,
+      status: 'pass',
+      message: (r.stdout || '').split('\n')[0].trim(),
+    };
+  }
+  return {
+    id,
+    title: cmd,
+    status: 'warn',
+    message: `${cmd} not found.`,
+    remediation: missing,
+  };
+}
+
+/** Runs a check, converting unexpected exceptions into a failed result. */
+async function safe(
+  id: string,
+  title: string,
+  fn: () => Promise<DiagnosticCheck>,
+): Promise<DiagnosticCheck> {
+  try {
+    return await fn();
+  } catch (e) {
+    return {
+      id,
+      title,
+      status: 'fail',
+      message: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
+/** Numeric dotted-version comparison; non-numeric suffixes are ignored. */
+export function compareVersions(a: string, b: string): number {
+  const pa = a.split(/[.-]/).map((x) => parseInt(x, 10) || 0);
+  const pb = b.split(/[.-]/).map((x) => parseInt(x, 10) || 0);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pa[i] ?? 0) - (pb[i] ?? 0);
+  }
+  return 0;
+}
+
+// ---------------------------------------------------------------------------
+// Rendering
+// ---------------------------------------------------------------------------
+
+const ICON: Record<CheckStatus, string> = {
+  pass: '✓',
+  warn: '!',
+  fail: '✗',
+  skip: '-',
+};
+
+/** Plain-text rendering (no ANSI so it is safe in logs and pipes). */
+export function renderReport(report: DiagnosticReport): string {
+  const lines = [
+    `Capricorn ${report.capricornVersion} — environment check`,
+    '',
+  ];
+  for (const c of report.checks) {
+    lines.push(`${ICON[c.status]} ${c.title}: ${c.message}`);
+    if (c.remediation && c.status !== 'pass')
+      lines.push(`    → ${c.remediation}`);
+  }
+  lines.push('');
+  lines.push(
+    report.ok ? 'Result: ready.' : 'Result: problems found (see ✗ above).',
+  );
+  return lines.join('\n');
+}

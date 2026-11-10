@@ -171,7 +171,15 @@ export async function createContentGenerator(
     setActiveContextWindow(settings.numCtx);
     return new LoggingContentGenerator(
       new OllamaContentGenerator(client, {
-        getActiveModel: () => gcConfig.getModel(),
+        // The active model is normally the verified Gemma tag chosen by the
+        // user. If retained upstream logic (e.g. quota fallback) ever sets a
+        // Gemini name, serve the configured Gemma model instead of failing.
+        getActiveModel: () => {
+          const active = gcConfig.getModel();
+          return !active || /^(gemini-|auto)/i.test(active)
+            ? settings.model
+            : active;
+        },
         numCtx: settings.numCtx,
         think: settings.think,
         keepAlive: settings.keepAlive,

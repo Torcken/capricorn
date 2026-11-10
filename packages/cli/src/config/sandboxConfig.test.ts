@@ -93,7 +93,7 @@ describe('loadSandboxConfig', () => {
       expect(config).toEqual({
         enabled: true,
         allowedPaths: [],
-        networkAccess: true,
+        networkAccess: false, // Capricorn default: sandbox network off
         command: 'docker',
         image: 'default/image',
       });
@@ -122,7 +122,7 @@ describe('loadSandboxConfig', () => {
       expect(config).toEqual({
         enabled: true,
         allowedPaths: [],
-        networkAccess: true,
+        networkAccess: false, // Capricorn default: sandbox network off
         command: 'lxc',
         image: 'default/image',
       });
@@ -148,7 +148,7 @@ describe('loadSandboxConfig', () => {
       expect(config).toEqual({
         enabled: true,
         allowedPaths: [],
-        networkAccess: true,
+        networkAccess: false, // Capricorn default: sandbox network off
         command: 'sandbox-exec',
         image: 'default/image',
       });
@@ -161,7 +161,7 @@ describe('loadSandboxConfig', () => {
       expect(config).toEqual({
         enabled: true,
         allowedPaths: [],
-        networkAccess: true,
+        networkAccess: false, // Capricorn default: sandbox network off
         command: 'sandbox-exec',
         image: 'default/image',
       });
@@ -174,7 +174,7 @@ describe('loadSandboxConfig', () => {
       expect(config).toEqual({
         enabled: true,
         allowedPaths: [],
-        networkAccess: true,
+        networkAccess: false, // Capricorn default: sandbox network off
         command: 'docker',
         image: 'default/image',
       });
@@ -187,7 +187,7 @@ describe('loadSandboxConfig', () => {
       expect(config).toEqual({
         enabled: true,
         allowedPaths: [],
-        networkAccess: true,
+        networkAccess: false, // Capricorn default: sandbox network off
         command: 'podman',
         image: 'default/image',
       });
@@ -210,7 +210,7 @@ describe('loadSandboxConfig', () => {
       expect(config).toEqual({
         enabled: true,
         allowedPaths: [],
-        networkAccess: true,
+        networkAccess: false, // Capricorn default: sandbox network off
         command: 'podman',
         image: 'default/image',
       });
@@ -244,7 +244,7 @@ describe('loadSandboxConfig', () => {
       expect(config).toEqual({
         enabled: true,
         allowedPaths: [],
-        networkAccess: true,
+        networkAccess: false, // Capricorn default: sandbox network off
         command: 'docker',
         image: 'env/image',
       });
@@ -257,7 +257,7 @@ describe('loadSandboxConfig', () => {
       expect(config).toEqual({
         enabled: true,
         allowedPaths: [],
-        networkAccess: true,
+        networkAccess: false, // Capricorn default: sandbox network off
         command: 'docker',
         image: 'default/image',
       });
@@ -285,7 +285,7 @@ describe('loadSandboxConfig', () => {
         expect(config).toEqual({
           enabled: true,
           allowedPaths: [],
-          networkAccess: true,
+          networkAccess: false, // Capricorn default: sandbox network off
           command: 'docker',
           image: 'default/image',
         });
@@ -315,7 +315,7 @@ describe('loadSandboxConfig', () => {
             sandbox: {
               enabled: true,
               allowedPaths: ['/tmp'],
-              networkAccess: true,
+              networkAccess: false, // Capricorn default: sandbox network off
             },
           },
         },
@@ -324,7 +324,7 @@ describe('loadSandboxConfig', () => {
       expect(config).toEqual({
         enabled: true,
         allowedPaths: ['/tmp'],
-        networkAccess: true,
+        networkAccess: false, // Capricorn default: sandbox network off
         command: 'docker',
         image: 'default/image',
       });
@@ -339,7 +339,7 @@ describe('loadSandboxConfig', () => {
               enabled: true,
               command: 'podman',
               allowedPaths: [],
-              networkAccess: true,
+              networkAccess: false, // Capricorn default: sandbox network off
             },
           },
         },
@@ -356,7 +356,7 @@ describe('loadSandboxConfig', () => {
               enabled: true,
               image: 'custom/image',
               allowedPaths: [],
-              networkAccess: true,
+              networkAccess: false, // Capricorn default: sandbox network off
             },
           },
         },
@@ -372,7 +372,7 @@ describe('loadSandboxConfig', () => {
             sandbox: {
               enabled: false,
               allowedPaths: [],
-              networkAccess: true,
+              networkAccess: false, // Capricorn default: sandbox network off
             },
           },
         },
@@ -388,7 +388,7 @@ describe('loadSandboxConfig', () => {
             sandbox: {
               enabled: true,
               allowedPaths: ['/settings-path'],
-              networkAccess: true,
+              networkAccess: false, // Capricorn default: sandbox network off
             },
           },
         },
@@ -410,7 +410,7 @@ describe('loadSandboxConfig', () => {
       expect(config).toEqual({
         enabled: true,
         allowedPaths: [],
-        networkAccess: true,
+        networkAccess: false, // Capricorn default: sandbox network off
         command: 'runsc',
         image: 'default/image',
       });
@@ -425,7 +425,7 @@ describe('loadSandboxConfig', () => {
       expect(config).toEqual({
         enabled: true,
         allowedPaths: [],
-        networkAccess: true,
+        networkAccess: false, // Capricorn default: sandbox network off
         command: 'runsc',
         image: 'default/image',
       });
@@ -442,7 +442,7 @@ describe('loadSandboxConfig', () => {
       expect(config).toEqual({
         enabled: true,
         allowedPaths: [],
-        networkAccess: true,
+        networkAccess: false, // Capricorn default: sandbox network off
         command: 'runsc',
         image: 'default/image',
       });
@@ -460,7 +460,7 @@ describe('loadSandboxConfig', () => {
       expect(config).toEqual({
         enabled: true,
         allowedPaths: [],
-        networkAccess: true,
+        networkAccess: false, // Capricorn default: sandbox network off
         command: 'runsc',
         image: 'default/image',
       });

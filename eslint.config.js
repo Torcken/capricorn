@@ -310,13 +310,19 @@ export default tseslint.config(
           source: 'string',
           content: [
             '@license',
-            'Copyright (year) Google LLC',
+            'Copyright (year) (holder)',
             'SPDX-License-Identifier: Apache-2.0',
           ].join('\n'),
           patterns: {
             year: {
               pattern: `202[5-${currentYear.toString().slice(-1)}]`,
               defaultValue: currentYear.toString(),
+            },
+            // Capricorn: upstream files keep "Google LLC"; new Capricorn
+            // files use "Capricorn Contributors" (see NOTICE).
+            holder: {
+              pattern: '(Google LLC|Capricorn Contributors)',
+              defaultValue: 'Capricorn Contributors',
             },
           },
         },

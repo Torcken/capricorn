@@ -110,9 +110,15 @@ function toAsyncIterable(
   body: AsyncIterable<Uint8Array> | ReadableStream<Uint8Array>,
 ): AsyncIterable<Uint8Array> {
   if (Symbol.asyncIterator in body) {
-    return body as AsyncIterable<Uint8Array>;
+    return body;
   }
-  const stream = body as ReadableStream<Uint8Array>;
+  return readerIterable(body);
+}
+
+/** Adapts a web stream without async-iterator support via its reader. */
+function readerIterable(
+  stream: ReadableStream<Uint8Array>,
+): AsyncIterable<Uint8Array> {
   return {
     async *[Symbol.asyncIterator]() {
       const reader = stream.getReader();

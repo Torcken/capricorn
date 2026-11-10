@@ -29,7 +29,9 @@ describe('parseNdjsonStream', () => {
 
   it('reassembles a line split across chunks', async () => {
     expect(
-      await collect(parseNdjsonStream(chunks('{"message":{"con', 'tent":"hi"}}\n'))),
+      await collect(
+        parseNdjsonStream(chunks('{"message":{"con', 'tent":"hi"}}\n')),
+      ),
     ).toEqual([{ message: { content: 'hi' } }]);
   });
 
@@ -38,7 +40,9 @@ describe('parseNdjsonStream', () => {
   it('handles a multi-byte UTF-8 code point split across chunks', async () => {
     const bytes = enc.encode('{"t":"é🐐"}\n');
     const out = await collect(
-      parseNdjsonStream(chunks(bytes.slice(0, 7), bytes.slice(7, 9), bytes.slice(9))),
+      parseNdjsonStream(
+        chunks(bytes.slice(0, 7), bytes.slice(7, 9), bytes.slice(9)),
+      ),
     );
     expect(out).toEqual([{ t: 'é🐐' }]);
   });

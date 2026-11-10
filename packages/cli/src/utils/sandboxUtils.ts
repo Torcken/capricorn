@@ -158,8 +158,8 @@ export function isSensitiveHostPath(hostPath: string): boolean {
         hostPath === '~' ||
         hostPath === '~/' ||
         hostPath === '~\\' ||
-        hostPath === '~/.gemini' ||
-        hostPath.startsWith('~/.gemini/') ||
+        hostPath === '~/.capricorn' ||
+        hostPath.startsWith('~/.capricorn/') ||
         hostPath === '~\\.gemini' ||
         hostPath.startsWith('~\\.gemini\\')
       ) {

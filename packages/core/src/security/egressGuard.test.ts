@@ -19,7 +19,9 @@ import {
 
 afterEach(() => uninstallEgressGuard());
 
-async function withLocalServer<T>(fn: (port: number) => Promise<T>): Promise<T> {
+async function withLocalServer<T>(
+  fn: (port: number) => Promise<T>,
+): Promise<T> {
   const server = http.createServer((_req, res) => res.end('ok'));
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
   try {
@@ -43,7 +45,9 @@ describe('egress guard', () => {
   it('blocks fetch to an external host before any DNS lookup', async () => {
     const seen: BlockedConnection[] = [];
     installEgressGuard({ onBlocked: (b) => seen.push(b) });
-    await expect(fetch('https://telemetry.example.com/collect')).rejects.toThrow();
+    await expect(
+      fetch('https://telemetry.example.com/collect'),
+    ).rejects.toThrow();
     expect(seen.map((b) => b.host)).toContain('telemetry.example.com');
     expect(getBlockedConnections().length).toBeGreaterThan(0);
   });
@@ -51,7 +55,11 @@ describe('egress guard', () => {
   it('blocks node:https requests', async () => {
     installEgressGuard();
     const err = await new Promise<Error>((resolve) => {
-      https.get('https://www.googleapis.com/', () => resolve(new Error('connected'))).on('error', resolve);
+      https
+        .get('https://www.googleapis.com/', () =>
+          resolve(new Error('connected')),
+        )
+        .on('error', resolve);
     });
     expect(err.message).toContain('blocked an outbound connection');
   });

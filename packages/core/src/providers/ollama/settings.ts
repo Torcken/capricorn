@@ -63,15 +63,21 @@ export const MIN_NUM_CTX = 8_192;
 export function resolveOllamaSettings(
   partial: Partial<OllamaSettings> | undefined,
 ): OllamaSettings {
-  const merged = { ...DEFAULT_OLLAMA_SETTINGS, ...stripUndefined(partial ?? {}) };
-  merged.numCtx = Math.max(MIN_NUM_CTX, Math.floor(merged.numCtx));
-  merged.requestTimeoutMs = Math.max(1_000, merged.requestTimeoutMs);
-  merged.streamIdleTimeoutMs = Math.max(1_000, merged.streamIdleTimeoutMs);
-  return merged;
-}
-
-function stripUndefined<T extends object>(o: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(o).filter(([, v]) => v !== undefined),
-  ) as Partial<T>;
+  const p = partial ?? {};
+  const d = DEFAULT_OLLAMA_SETTINGS;
+  // Field-by-field so an explicit `undefined` (an unset setting) never
+  // overwrites a default.
+  return {
+    endpoint: p.endpoint ?? d.endpoint,
+    allowRemoteHost: p.allowRemoteHost ?? d.allowRemoteHost,
+    model: p.model ?? d.model,
+    numCtx: Math.max(MIN_NUM_CTX, Math.floor(p.numCtx ?? d.numCtx)),
+    think: p.think ?? d.think,
+    keepAlive: p.keepAlive ?? d.keepAlive,
+    requestTimeoutMs: Math.max(1_000, p.requestTimeoutMs ?? d.requestTimeoutMs),
+    streamIdleTimeoutMs: Math.max(
+      1_000,
+      p.streamIdleTimeoutMs ?? d.streamIdleTimeoutMs,
+    ),
+  };
 }

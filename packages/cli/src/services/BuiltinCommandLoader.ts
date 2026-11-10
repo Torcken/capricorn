@@ -16,20 +16,15 @@ import {
   isNightly,
   startupProfiler,
   getAdminErrorMessage,
-  AuthType,
 } from '@google/gemini-cli-core';
 import { aboutCommand } from '../ui/commands/aboutCommand.js';
 import { agentsCommand } from '../ui/commands/agentsCommand.js';
-import { authCommand } from '../ui/commands/authCommand.js';
-import { bugCommand } from '../ui/commands/bugCommand.js';
-import { bugMemoryCommand } from '../ui/commands/bugMemoryCommand.js';
 import { chatCommand, debugCommand } from '../ui/commands/chatCommand.js';
 import { clearCommand } from '../ui/commands/clearCommand.js';
 import { commandsCommand } from '../ui/commands/commandsCommand.js';
 import { compressCommand } from '../ui/commands/compressCommand.js';
 import { copyCommand } from '../ui/commands/copyCommand.js';
 import { corgiCommand } from '../ui/commands/corgiCommand.js';
-import { docsCommand } from '../ui/commands/docsCommand.js';
 import { exportSessionCommand } from '../ui/commands/exportSessionCommand.js';
 import { directoryCommand } from '../ui/commands/directoryCommand.js';
 import { editorCommand } from '../ui/commands/editorCommand.js';
@@ -43,12 +38,10 @@ import { ideCommand } from '../ui/commands/ideCommand.js';
 import { initCommand } from '../ui/commands/initCommand.js';
 import { mcpCommand } from '../ui/commands/mcpCommand.js';
 import { memoryCommand } from '../ui/commands/memoryCommand.js';
-import { modelCommand } from '../ui/commands/modelCommand.js';
-import { oncallCommand } from '../ui/commands/oncallCommand.js';
+import { capricornModelCommand } from '../ui/commands/capricornModelCommand.js';
 import { permissionsCommand } from '../ui/commands/permissionsCommand.js';
 import { planCommand } from '../ui/commands/planCommand.js';
 import { policiesCommand } from '../ui/commands/policiesCommand.js';
-import { privacyCommand } from '../ui/commands/privacyCommand.js';
 import { profileCommand } from '../ui/commands/profileCommand.js';
 import { quitCommand } from '../ui/commands/quitCommand.js';
 import { restoreCommand } from '../ui/commands/restoreCommand.js';
@@ -60,10 +53,7 @@ import { skillsCommand } from '../ui/commands/skillsCommand.js';
 import { settingsCommand } from '../ui/commands/settingsCommand.js';
 import { tasksCommand } from '../ui/commands/tasksCommand.js';
 import { vimCommand } from '../ui/commands/vimCommand.js';
-import { setupGithubCommand } from '../ui/commands/setupGithubCommand.js';
 import { terminalSetupCommand } from '../ui/commands/terminalSetupCommand.js';
-import { upgradeCommand } from '../ui/commands/upgradeCommand.js';
-import { gemmaStatusCommand } from '../ui/commands/gemmaStatusCommand.js';
 import { voiceCommand } from '../ui/commands/voiceCommand.js';
 
 /**
@@ -123,9 +113,8 @@ export class BuiltinCommandLoader implements ICommandLoader {
     const allDefinitions: Array<SlashCommand | null> = [
       aboutCommand,
       ...(this.config?.isAgentsEnabled() ? [agentsCommand] : []),
-      authCommand,
-      bugCommand,
-      bugMemoryCommand,
+      // Capricorn: /auth, /bug and /bug-memory removed (Google sign-in and
+      // upstream issue reporting).
       {
         ...chatCommand,
         subCommands: chatResumeSubCommands,
@@ -135,7 +124,6 @@ export class BuiltinCommandLoader implements ICommandLoader {
       compressCommand,
       copyCommand,
       corgiCommand,
-      docsCommand,
       exportSessionCommand,
       directoryCommand,
       editorCommand,
@@ -167,7 +155,6 @@ export class BuiltinCommandLoader implements ICommandLoader {
       rewindCommand,
       await ideCommand(),
       initCommand,
-      ...(isNightlyBuild ? [oncallCommand] : []),
       ...(this.config?.getMcpEnabled() === false
         ? [
             {
@@ -188,11 +175,10 @@ export class BuiltinCommandLoader implements ICommandLoader {
           ]
         : [mcpCommand]),
       memoryCommand(this.config),
-      modelCommand,
+      capricornModelCommand,
       ...(this.config?.getFolderTrust() ? [permissionsCommand] : []),
       ...(this.config?.isPlanEnabled() ? [planCommand] : []),
       policiesCommand,
-      privacyCommand,
       ...(isDevelopment ? [profileCommand] : []),
       quitCommand,
       restoreCommand(this.config),
@@ -227,16 +213,10 @@ export class BuiltinCommandLoader implements ICommandLoader {
           : [skillsCommand]
         : []),
       settingsCommand,
-      gemmaStatusCommand,
       tasksCommand,
       vimCommand,
-      setupGithubCommand,
       terminalSetupCommand,
       ...(this.config?.isVoiceModeEnabled() ? [voiceCommand] : []),
-      ...(this.config?.getContentGeneratorConfig()?.authType ===
-      AuthType.LOGIN_WITH_GOOGLE
-        ? [upgradeCommand]
-        : []),
     ];
     handle?.end();
     return allDefinitions.filter((cmd): cmd is SlashCommand => cmd !== null);
