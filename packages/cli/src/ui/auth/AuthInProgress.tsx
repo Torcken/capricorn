@@ -53,7 +53,7 @@ export function AuthInProgress({
       ) : (
         <Box>
           <Text>
-            <CliSpinner type="dots" /> Waiting for authentication... (Press Esc
+            <CliSpinner type="dots" /> Connecting to local Ollama... (Press Esc
             or Ctrl+C to cancel)
           </Text>
         </Box>

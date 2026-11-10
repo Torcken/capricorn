@@ -659,6 +659,11 @@ export interface ConfigParameters {
   model: string;
   disableLoopDetection?: boolean;
   maxSessionTurns?: number;
+  /**
+   * Capricorn: wall-clock budget for one user prompt (all model turns and
+   * tool calls it triggers), in ms. 0 disables the budget.
+   */
+  maxPromptDurationMs?: number;
   acpMode?: boolean;
   listSessions?: boolean;
   deleteSession?: string;
@@ -859,6 +864,7 @@ export class Config implements McpContext, AgentLoopContext {
   private _activeModel: string;
   private fallbackOverrides = new Map<string, string>();
   private readonly maxSessionTurns: number;
+  private readonly maxPromptDurationMs: number;
   private readonly listSessions: boolean;
   private readonly deleteSession: string | undefined;
   private readonly listExtensions: boolean;
@@ -1263,6 +1269,7 @@ export class Config implements McpContext, AgentLoopContext {
     );
     ExecutionLifecycleService.setInjectionService(this.injectionService);
     this.maxSessionTurns = params.maxSessionTurns ?? -1;
+    this.maxPromptDurationMs = params.maxPromptDurationMs ?? 30 * 60_000;
     this.acpMode = params.acpMode ?? false;
     this.listSessions = params.listSessions ?? false;
     this.deleteSession = params.deleteSession;
@@ -2030,6 +2037,11 @@ export class Config implements McpContext, AgentLoopContext {
   resetBillingTurnState(overageStrategy?: OverageStrategy): void {
     this.creditsNotificationShown = false;
     this.billing.overageStrategy = overageStrategy ?? 'ask';
+  }
+
+  /** Capricorn: per-prompt wall-clock budget in ms (0 = unlimited). */
+  getMaxPromptDurationMs(): number {
+    return this.maxPromptDurationMs;
   }
 
   getMaxSessionTurns(): number {

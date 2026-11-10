@@ -59,7 +59,7 @@ describe('AuthInProgress', () => {
     const { lastFrame, unmount } = await render(
       <AuthInProgress onTimeout={onTimeout} />,
     );
-    expect(lastFrame()).toContain('[Spinner] Waiting for authentication...');
+    expect(lastFrame()).toContain('[Spinner] Connecting to local Ollama...');
     expect(lastFrame()).toContain('Press Esc or Ctrl+C to cancel');
     unmount();
   });

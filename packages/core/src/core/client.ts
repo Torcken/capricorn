@@ -100,6 +100,8 @@ export class GeminiClient {
   private readonly toolOutputMaskingService: ToolOutputMaskingService;
   private contextManager?: ContextManager;
   private lastPromptId: string;
+  /** Capricorn: start time of the current user prompt (time budget). */
+  private promptStartedAt = Date.now();
   private currentSequenceModel: string | null = null;
   private lastSentIdeContext: IdeContext | undefined;
   private forceFullIdeContext = true;
@@ -664,6 +666,21 @@ export class GeminiClient {
       return turn;
     }
 
+    // Capricorn: bound the wall-clock time of one prompt's agent loop. Local
+    // models can be slow; a runaway tool loop must not run unattended for
+    // hours. Checked before every model turn, so the current tool batch
+    // finishes but no new inference starts once the budget is spent.
+    const budgetMs = this.config.getMaxPromptDurationMs?.() ?? 0;
+    if (budgetMs > 0 && Date.now() - this.promptStartedAt > budgetMs) {
+      yield {
+        type: GeminiEventType.AgentExecutionStopped,
+        value: {
+          reason: `Stopped: this task exceeded its ${Math.round(budgetMs / 60_000)}-minute time budget (setting model.maxRunMinutes).`,
+        },
+      };
+      return turn;
+    }
+
     // Check for context window overflow
     const modelForLimitCheck = this._getActiveModelForCurrentTurn();
 
@@ -951,6 +968,8 @@ export class GeminiClient {
     const messageBus = this.context.messageBus;
 
     if (this.lastPromptId !== prompt_id) {
+      // Capricorn: a new user prompt starts a new time budget.
+      this.promptStartedAt = Date.now();
       this.loopDetector.reset(prompt_id, partListUnionToString(request));
       this.hookStateMap.delete(this.lastPromptId);
       this.lastPromptId = prompt_id;

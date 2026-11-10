@@ -4,194 +4,58 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+// Capricorn modification (2026, Capricorn Contributors): the header shows
+// inference location and approval mode instead of a Google account.
+
 import { renderWithProviders } from '../../test-utils/render.js';
 import { UserIdentity } from './UserIdentity.js';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
+  ApprovalMode,
   makeFakeConfig,
-  AuthType,
-  UserAccountManager,
-  type ContentGeneratorConfig,
+  resolveOllamaSettings,
 } from '@google/gemini-cli-core';
 
-// Mock UserAccountManager to control cached account
-vi.mock('@google/gemini-cli-core', async (importOriginal) => {
-  const original =
-    await importOriginal<typeof import('@google/gemini-cli-core')>();
-  return {
-    ...original,
-    UserAccountManager: vi.fn().mockImplementation(() => ({
-      getCachedGoogleAccount: () => 'test@example.com',
-    })),
-  };
-});
-
 describe('<UserIdentity />', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should render login message and auth indicator', async () => {
-    const mockConfig = makeFakeConfig();
-    vi.spyOn(mockConfig, 'getContentGeneratorConfig').mockReturnValue({
-      authType: AuthType.LOGIN_WITH_GOOGLE,
-      model: 'gemini-pro',
-    } as unknown as ContentGeneratorConfig);
-    vi.spyOn(mockConfig, 'getUserTierName').mockReturnValue(undefined);
-
+  it('states that inference is local and shows the endpoint', async () => {
+    const config = makeFakeConfig();
     const { lastFrame, unmount } = await renderWithProviders(
-      <UserIdentity config={mockConfig} />,
+      <UserIdentity config={config} />,
     );
-
-    const output = lastFrame();
-    expect(output).toContain('Signed in with Google: test@example.com');
-    expect(output).toContain('/auth');
-    expect(output).not.toContain('/upgrade');
+    const out = lastFrame();
+    expect(out).toContain('Local inference');
+    expect(out).toContain('http://127.0.0.1:11434');
+    expect(out).not.toMatch(/Google|\/auth|\/upgrade/);
     unmount();
   });
 
-  it('should render the user email on the very first frame (regression test)', async () => {
-    const mockConfig = makeFakeConfig();
-    vi.spyOn(mockConfig, 'getContentGeneratorConfig').mockReturnValue({
-      authType: AuthType.LOGIN_WITH_GOOGLE,
-      model: 'gemini-pro',
-    } as unknown as ContentGeneratorConfig);
-    vi.spyOn(mockConfig, 'getUserTierName').mockReturnValue(undefined);
-
-    const { lastFrameRaw, unmount } = await renderWithProviders(
-      <UserIdentity config={mockConfig} />,
+  // The remote opt-in must be impossible to miss.
+  it('flags an opted-in remote host as not local-only', async () => {
+    const config = makeFakeConfig();
+    vi.spyOn(config, 'getOllamaSettings').mockReturnValue(
+      resolveOllamaSettings({
+        endpoint: 'http://gpu-box.lan:11434',
+        allowRemoteHost: true,
+      }),
     );
-
-    // Assert immediately on the first available frame before any async ticks happen
-    const output = lastFrameRaw();
-    expect(output).toContain('test@example.com');
+    const { lastFrame, unmount } = await renderWithProviders(
+      <UserIdentity config={config} />,
+    );
+    expect(lastFrame()).toContain('REMOTE inference (not local-only)');
     unmount();
   });
 
-  it('should render login message if email is missing', async () => {
-    // Modify the mock for this specific test
-    vi.mocked(UserAccountManager).mockImplementationOnce(
-      () =>
-        ({
-          getCachedGoogleAccount: () => undefined,
-        }) as unknown as UserAccountManager,
-    );
-
-    const mockConfig = makeFakeConfig();
-    vi.spyOn(mockConfig, 'getContentGeneratorConfig').mockReturnValue({
-      authType: AuthType.LOGIN_WITH_GOOGLE,
-      model: 'gemini-pro',
-    } as unknown as ContentGeneratorConfig);
-    vi.spyOn(mockConfig, 'getUserTierName').mockReturnValue(undefined);
-
+  it.each([
+    [ApprovalMode.DEFAULT, 'ask before edits and commands'],
+    [ApprovalMode.AUTO_EDIT, 'edits auto-approved'],
+    [ApprovalMode.YOLO, 'YOLO'],
+  ])('shows the safety mode %s', async (mode, text) => {
+    const config = makeFakeConfig();
+    vi.spyOn(config, 'getApprovalMode').mockReturnValue(mode);
     const { lastFrame, unmount } = await renderWithProviders(
-      <UserIdentity config={mockConfig} />,
+      <UserIdentity config={config} />,
     );
-
-    const output = lastFrame();
-    expect(output).toContain('Signed in with Google');
-    expect(output).not.toContain('Signed in with Google:');
-    expect(output).toContain('/auth');
-    expect(output).not.toContain('/upgrade');
-    unmount();
-  });
-
-  it('should render plan name and upgrade indicator', async () => {
-    const mockConfig = makeFakeConfig();
-    vi.spyOn(mockConfig, 'getContentGeneratorConfig').mockReturnValue({
-      authType: AuthType.LOGIN_WITH_GOOGLE,
-      model: 'gemini-pro',
-    } as unknown as ContentGeneratorConfig);
-    vi.spyOn(mockConfig, 'getUserTierName').mockReturnValue('Premium Plan');
-
-    const { lastFrame, unmount } = await renderWithProviders(
-      <UserIdentity config={mockConfig} />,
-    );
-
-    const output = lastFrame();
-    expect(output).toContain('Signed in with Google: test@example.com');
-    expect(output).toContain('/auth');
-    expect(output).toContain('Plan: Premium Plan');
-    expect(output).toContain('/upgrade');
-
-    // Check for two lines (or more if wrapped, but here it should be separate)
-    const lines = output?.split('\n').filter((line) => line.trim().length > 0);
-    expect(lines?.some((line) => line.includes('Signed in with Google'))).toBe(
-      true,
-    );
-    expect(lines?.some((line) => line.includes('Plan: Premium Plan'))).toBe(
-      true,
-    );
-
-    unmount();
-  });
-
-  it('should not render if authType is missing', async () => {
-    const mockConfig = makeFakeConfig();
-    vi.spyOn(mockConfig, 'getContentGeneratorConfig').mockReturnValue(
-      {} as unknown as ContentGeneratorConfig,
-    );
-
-    const { lastFrame, unmount } = await renderWithProviders(
-      <UserIdentity config={mockConfig} />,
-    );
-
-    expect(lastFrame({ allowEmpty: true })).toBe('');
-    unmount();
-  });
-
-  it('should render non-Google auth message', async () => {
-    const mockConfig = makeFakeConfig();
-    vi.spyOn(mockConfig, 'getContentGeneratorConfig').mockReturnValue({
-      authType: AuthType.USE_GEMINI,
-      model: 'gemini-pro',
-    } as unknown as ContentGeneratorConfig);
-    vi.spyOn(mockConfig, 'getUserTierName').mockReturnValue(undefined);
-
-    const { lastFrame, unmount } = await renderWithProviders(
-      <UserIdentity config={mockConfig} />,
-    );
-
-    const output = lastFrame();
-    expect(output).toContain(`Authenticated with ${AuthType.USE_GEMINI}`);
-    expect(output).toContain('/auth');
-    expect(output).not.toContain('/upgrade');
-    unmount();
-  });
-
-  it('should render specific tier name when provided', async () => {
-    const mockConfig = makeFakeConfig();
-    vi.spyOn(mockConfig, 'getContentGeneratorConfig').mockReturnValue({
-      authType: AuthType.LOGIN_WITH_GOOGLE,
-      model: 'gemini-pro',
-    } as unknown as ContentGeneratorConfig);
-    vi.spyOn(mockConfig, 'getUserTierName').mockReturnValue('Enterprise Tier');
-
-    const { lastFrame, unmount } = await renderWithProviders(
-      <UserIdentity config={mockConfig} />,
-    );
-
-    const output = lastFrame();
-    expect(output).toContain('Plan: Enterprise Tier');
-    expect(output).toContain('/upgrade');
-    unmount();
-  });
-
-  it('should not render /upgrade indicator for ultra tiers', async () => {
-    const mockConfig = makeFakeConfig();
-    vi.spyOn(mockConfig, 'getContentGeneratorConfig').mockReturnValue({
-      authType: AuthType.LOGIN_WITH_GOOGLE,
-      model: 'gemini-pro',
-    } as unknown as ContentGeneratorConfig);
-    vi.spyOn(mockConfig, 'getUserTierName').mockReturnValue('Advanced Ultra');
-
-    const { lastFrame, unmount } = await renderWithProviders(
-      <UserIdentity config={mockConfig} />,
-    );
-
-    const output = lastFrame();
-    expect(output).toContain('Plan: Advanced Ultra');
-    expect(output).not.toContain('/upgrade');
+    expect(lastFrame()).toContain(text);
     unmount();
   });
 });

@@ -2,14 +2,16 @@
 
 exports[`AppHeader Icon Rendering > renders the default icon in standard terminals 1`] = `
 "
- ▝▜▄      ▄▀▀▀   ▄▀▄   █▀▀▄  █▀▀▄  █  ▄▀▀▀  ▄▀▀▄  █▀▀▄  █▄  █
-   ▝▜▄    █     █   █  █  █  █  █  █  █     █  █  █  █  █ ▀▄█
-  ▗▟▀     █     █▀▀▀█  █▀▀   █▀▀▄  █  █     █  █  █▀▀▄  █  ▀█
- ▝▀       █     █   █  █     █  █  █  █     █  █  █  █  █   █
-          ▀▄▄▄  ▀   ▀  ▀     ▀  ▀  ▀  ▀▄▄▄   ▀▀   ▀  ▀  ▀   ▀
+ ▄▀▀▀▄   ▄▀▀▀   ▄▀▄   █▀▀▄  █▀▀▄  █  ▄▀▀▀  ▄▀▀▄  █▀▀▄  █▄  █
+ █  ▀    █     █   █  █  █  █  █  █  █     █  █  █  █  █ ▀▄█
+ ▀▄▄▄▀   █     █▀▀▀█  █▀▀   █▀▀▄  █  █     █  █  █▀▀▄  █  ▀█
+         █     █   █  █     █  █  █  █     █  █  █  █  █   █
+         ▀▄▄▄  ▀   ▀  ▀     ▀  ▀  ▀  ▀▄▄▄   ▀▀   ▀  ▀  ▀   ▀
 
  Capricorn v1.0.0
 
+ Local inference · Ollama http://127.0.0.1:11434
+ Safety: ask before edits and commands /permissions
 
 
 Tips for getting started:
@@ -21,14 +23,16 @@ Tips for getting started:
 
 exports[`AppHeader Icon Rendering > renders the symmetric icon in Apple Terminal 1`] = `
 "
- ▝▜▄     ▄▀▀▀   ▄▀▄   █▀▀▄  █▀▀▄  █  ▄▀▀▀  ▄▀▀▄  █▀▀▄  █▄  █
-   ▝▜▄   █     █   █  █  █  █  █  █  █     █  █  █  █  █ ▀▄█
-   ▗▟▀   █     █▀▀▀█  █▀▀   █▀▀▄  █  █     █  █  █▀▀▄  █  ▀█
- ▗▟▀     █     █   █  █     █  █  █  █     █  █  █  █  █   █
+ █████   ▄▀▀▀   ▄▀▄   █▀▀▄  █▀▀▄  █  ▄▀▀▀  ▄▀▀▄  █▀▀▄  █▄  █
+ █       █     █   █  █  █  █  █  █  █     █  █  █  █  █ ▀▄█
+ █████   █     █▀▀▀█  █▀▀   █▀▀▄  █  █     █  █  █▀▀▄  █  ▀█
+         █     █   █  █     █  █  █  █     █  █  █  █  █   █
          ▀▄▄▄  ▀   ▀  ▀     ▀  ▀  ▀  ▀▄▄▄   ▀▀   ▀  ▀  ▀   ▀
 
  Capricorn v1.0.0
 
+ Local inference · Ollama http://127.0.0.1:11434
+ Safety: ask before edits and commands /permissions
 
 
 Tips for getting started:

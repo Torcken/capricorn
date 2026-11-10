@@ -4,71 +4,80 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+// Capricorn modification (2026, Capricorn Contributors): upstream showed the
+// signed-in Google account and subscription tier here. Capricorn has no
+// account; the header instead states where inference runs (local Ollama, or a
+// clearly flagged remote host the user opted into) and the approval mode, so
+// the safety-relevant runtime facts are visible at startup (spec §5.1).
+
 import type React from 'react';
-import { useMemo, useState, useEffect } from 'react';
 import { Box, Text } from 'ink';
 import { theme } from '../semantic-colors.js';
 import {
   type Config,
-  UserAccountManager,
-  AuthType,
+  ApprovalMode,
+  resolveOllamaEndpoint,
 } from '@google/gemini-cli-core';
-import { isUltraTier } from '../../utils/tierUtils.js';
 
 interface UserIdentityProps {
   config: Config;
 }
 
+const MODE_LABEL: Record<string, string> = {
+  [ApprovalMode.DEFAULT]: 'ask before edits and commands',
+  [ApprovalMode.AUTO_EDIT]: 'edits auto-approved, commands ask',
+  [ApprovalMode.PLAN]: 'plan mode (read-only)',
+  [ApprovalMode.YOLO]: 'YOLO — everything auto-approved',
+};
+
 export const UserIdentity: React.FC<UserIdentityProps> = ({ config }) => {
-  const authType = config.getContentGeneratorConfig()?.authType;
-  const [email, setEmail] = useState<string | undefined>();
-
-  useEffect(() => {
-    if (authType) {
-      const userAccountManager = new UserAccountManager();
-      setEmail(userAccountManager.getCachedGoogleAccount() ?? undefined);
-    } else {
-      setEmail(undefined);
-    }
-  }, [authType]);
-
-  const tierName = useMemo(
-    () => (authType ? config.getUserTierName() : undefined),
-    [config, authType],
-  );
-
-  const isUltra = useMemo(() => isUltraTier(tierName), [tierName]);
-
-  if (!authType) {
+  const settings = config.getOllamaSettings?.();
+  if (!settings) {
     return null;
   }
+  let endpoint = settings.endpoint;
+  let isLocal = true;
+  try {
+    const resolved = resolveOllamaEndpoint(
+      settings.endpoint,
+      settings.allowRemoteHost,
+    );
+    endpoint = resolved.baseUrl;
+    isLocal = resolved.isLoopback;
+  } catch {
+    // An invalid endpoint is reported by the inference setup dialog.
+  }
+  const mode = config.getApprovalMode?.() ?? ApprovalMode.DEFAULT;
 
   return (
     <Box flexDirection="column">
-      {/* User Email /auth */}
       <Box>
-        <Text color={theme.text.primary} wrap="truncate-end">
-          {authType === AuthType.LOGIN_WITH_GOOGLE ? (
+        <Text
+          color={isLocal ? theme.text.primary : theme.status.warning}
+          wrap="truncate-end"
+        >
+          {isLocal ? (
             <Text>
-              <Text bold>Signed in with Google{email ? ':' : ''}</Text>
-              {email ? ` ${email}` : ''}
+              <Text bold>Local inference</Text> · Ollama {endpoint}
             </Text>
           ) : (
-            `Authenticated with ${authType}`
+            <Text bold>REMOTE inference (not local-only): {endpoint}</Text>
           )}
         </Text>
-        <Text color={theme.text.secondary}> /auth</Text>
       </Box>
-
-      {/* Tier Name /upgrade */}
-      {tierName && (
-        <Box>
-          <Text color={theme.text.primary} wrap="truncate-end">
-            <Text bold>Plan:</Text> {tierName}
-          </Text>
-          {!isUltra && <Text color={theme.text.secondary}> /upgrade</Text>}
-        </Box>
-      )}
+      <Box>
+        <Text
+          color={
+            mode === ApprovalMode.YOLO
+              ? theme.status.warning
+              : theme.text.secondary
+          }
+          wrap="truncate-end"
+        >
+          Safety: {MODE_LABEL[mode] ?? mode}
+        </Text>
+        <Text color={theme.text.secondary}> /permissions</Text>
+      </Box>
     </Box>
   );
 };

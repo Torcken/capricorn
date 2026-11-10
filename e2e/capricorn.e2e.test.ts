@@ -419,6 +419,39 @@ describe('failure handling', () => {
   });
 });
 
+describe('agent loop limits', () => {
+  // Guards against a runaway local agent: the per-prompt wall-clock budget
+  // stops further model turns once spent (model.maxRunMinutes).
+  it('stops a slow tool loop when the time budget is exhausted', async () => {
+    env.write(
+      '.capricorn/settings.json',
+      JSON.stringify({ model: { maxRunMinutes: 0.01 } }),
+    );
+    const loopCall = (id: string) => ({
+      frames: [
+        toolCallFrame({
+          id,
+          name: 'read_file',
+          args: { file_path: 'README.md' },
+        }),
+        doneFrame(),
+      ],
+      headerDelayMs: 1500,
+    });
+    env.mock.enqueueChat(
+      loopCall('t1'),
+      loopCall('t2'),
+      loopCall('t3'),
+      loopCall('t4'),
+    );
+    const r = await env.run(['--skip-trust', '-p', 'loop'], {
+      env: { GEMINI_CLI_TRUST_WORKSPACE: 'true' },
+    });
+    expect(r.stdout + r.stderr).toMatch(/time budget/);
+    expect(env.mock.chatRequests().length).toBeLessThan(4);
+  });
+});
+
 describe('sessions', () => {
   it('lists the session created by a headless run and resumes it', async () => {
     env.mock.enqueueChat({ frames: [textFrame('First answer.'), doneFrame()] });

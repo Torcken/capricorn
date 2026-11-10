@@ -1089,6 +1089,8 @@ export async function loadCliConfig(
     bugCommand: settings.advanced?.bugCommand,
     model: resolvedModel,
     maxSessionTurns: settings.model?.maxSessionTurns,
+    maxPromptDurationMs:
+      Math.max(0, settings.model?.maxRunMinutes ?? 30) * 60_000,
 
     listExtensions: argv.listExtensions || false,
     listSessions: argv.listSessions || false,

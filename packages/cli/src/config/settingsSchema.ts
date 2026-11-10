@@ -1160,6 +1160,16 @@ const SETTINGS_SCHEMA = {
           'The local Gemma 4 model tag to use (e.g. gemma4:12b). Must be installed in Ollama and verified as Gemma 4.',
         showInDialog: true,
       },
+      maxRunMinutes: {
+        type: 'number',
+        label: 'Max Run Minutes',
+        category: 'Model',
+        requiresRestart: false,
+        default: 30,
+        description:
+          'Capricorn: wall-clock budget for one prompt, including every model turn and tool call it triggers. 0 disables the limit.',
+        showInDialog: true,
+      },
       maxSessionTurns: {
         type: 'number',
         label: 'Max Session Turns',
