@@ -12,6 +12,7 @@ import { GEMINI_DIR, makeRelative } from '../utils/paths.js';
 import { ApprovalMode } from '../policy/types.js';
 import * as snippets from './snippets.js';
 import * as legacySnippets from './snippets.legacy.js';
+import * as capricornSnippets from './capricornSnippets.js';
 import {
   resolvePathFromEnv,
   applySubstitutions,
@@ -79,7 +80,9 @@ export class PromptProvider {
       context.config.hasGemini35FlashGAAccess?.() ?? false,
     );
     const isModernModel = supportsModernFeatures(desiredModel);
-    const activeSnippets = isModernModel ? snippets : legacySnippets;
+    // Capricorn: always use the concise Gemma 4 prompt (see
+    // capricornSnippets.ts). The modern/legacy split is Gemini-specific.
+    const activeSnippets = capricornSnippets;
     const contextFilenames = getAllGeminiMdFilenames();
 
     let trackerDir = context.config.isTrackerEnabled()

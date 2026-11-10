@@ -37,6 +37,7 @@ export * from './core/baseLlmClient.js';
 export * from './core/client.js';
 export * from './core/contentGenerator.js';
 export * from './providers/ollama/index.js';
+export * from './security/egressGuard.js';
 export * from './core/fakeContentGenerator.js';
 export * from './core/loggingContentGenerator.js';
 export * from './core/geminiChat.js';

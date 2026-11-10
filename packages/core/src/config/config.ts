@@ -48,12 +48,10 @@ import {
   resetModifiedBuildFiles,
 } from '../utils/untrustedContextTracker.js';
 import { WriteFileTool } from '../tools/write-file.js';
-import { WebFetchTool } from '../tools/web-fetch.js';
 import {
   setGeminiMdFilename,
   getCurrentGeminiMdFilename,
 } from '../tools/memoryTool.js';
-import { WebSearchTool } from '../tools/web-search.js';
 import { AskUserTool } from '../tools/ask-user.js';
 import { UpdateTopicTool } from '../tools/topicTool.js';
 import { TopicState } from './topicState.js';
@@ -4081,9 +4079,10 @@ export class Config implements McpContext, AgentLoopContext {
     maybeRegister(WriteFileTool, () =>
       registry.registerTool(new WriteFileTool(this, this.messageBus)),
     );
-    maybeRegister(WebFetchTool, () =>
-      registry.registerTool(new WebFetchTool(this, this.messageBus)),
-    );
+    // Capricorn: web_fetch is not registered. Its primary path delegates the
+    // fetch to Gemini's hosted URL-context tool; routed to a local Gemma model
+    // it would answer without ever retrieving the page (fabricated content),
+    // and any working fetch is an external network call. See docs/SECURITY.md.
     maybeRegister(ReadMcpResourceTool, () =>
       registry.registerTool(new ReadMcpResourceTool(this, this.messageBus)),
     );
@@ -4103,9 +4102,8 @@ export class Config implements McpContext, AgentLoopContext {
         new ReadBackgroundOutputTool(this, this.messageBus),
       ),
     );
-    maybeRegister(WebSearchTool, () =>
-      registry.registerTool(new WebSearchTool(this, this.messageBus)),
-    );
+    // Capricorn: google_web_search is not registered; it is a hosted Gemini
+    // grounding feature with no local equivalent.
     maybeRegister(AskUserTool, () =>
       registry.registerTool(new AskUserTool(this.messageBus)),
     );

@@ -82,6 +82,7 @@ import {
   type InitializationResult,
 } from './core/initializer.js';
 import { validateAuthMethod } from './config/auth.js';
+import { installCapricornNetworkPolicy } from './capricorn/networkPolicy.js';
 import { runAcpClient } from './acp/acpStdioTransport.js';
 import { validateNonInteractiveAuth } from './validateNonInterActiveAuth.js';
 import { appEvents, AppEvent } from './utils/events.js';
@@ -493,6 +494,10 @@ export async function main() {
   const loadSettingsHandle = startupProfiler.start('load_settings');
   const settings = loadSettings();
   loadSettingsHandle?.end();
+
+  // Capricorn: enforce the local-only network policy before anything else
+  // (auth, extensions, MCP, telemetry init) gets a chance to open a socket.
+  installCapricornNetworkPolicy(settings);
 
   // If a worktree is requested and enabled, set it up early.
   // This must be awaited before any other async tasks that depend on CWD (like loadCliConfig)

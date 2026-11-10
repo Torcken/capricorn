@@ -442,9 +442,9 @@ const SETTINGS_SCHEMA = {
         label: 'Topic & Update Narration',
         category: 'General',
         requiresRestart: false,
-        default: true,
+        default: false,
         description:
-          'Enable the Topic & Update communication model for reduced chattiness and structured progress reporting.',
+          'Enable the Topic & Update communication model for structured progress reporting. Off by default in Capricorn: each update is an extra local model tool call.',
         showInDialog: true,
       },
       logRagSnippets: {
@@ -1915,6 +1915,30 @@ const SETTINGS_SCHEMA = {
     description: 'Security-related settings.',
     showInDialog: false,
     properties: {
+      // Capricorn: outbound network policy (see packages/core/src/security/egressGuard.ts).
+      network: {
+        type: 'object',
+        label: 'Network',
+        category: 'Security',
+        requiresRestart: true,
+        default: {},
+        description:
+          'Outbound network policy. Capricorn blocks every non-loopback connection unless the host is allowed here.',
+        showInDialog: false,
+        properties: {
+          allowedHosts: {
+            type: 'array',
+            label: 'Allowed External Hosts',
+            category: 'Security',
+            requiresRestart: true,
+            default: [] as string[],
+            description:
+              'External hosts Capricorn itself may connect to (e.g. a remote MCP server). Exact hostnames or "*.example.com". Honoured only in user settings.',
+            showInDialog: false,
+            items: { type: 'string' },
+          },
+        },
+      },
       toolSandboxing: {
         type: 'boolean',
         label: 'Tool Sandboxing',
@@ -2310,8 +2334,9 @@ const SETTINGS_SCHEMA = {
         label: 'Enable Agents',
         category: 'Experimental',
         requiresRestart: true,
-        default: true,
-        description: 'Enable local and remote subagents.',
+        default: false,
+        description:
+          'Enable local and remote subagents. Off by default in Capricorn: every subagent runs additional local Gemma 4 inference turns.',
         showInDialog: false,
       },
       worktrees: {
