@@ -37,11 +37,12 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
 - **Capricorn suites:** provider/security/generator 129/129; CLI Capricorn
   modules 23/23 + config/settings suites passing; e2e 25/25 (also 23/23 inside a
   loopback-only network namespace); real-model smoke 2/2.
-- **Last full-suite run** before the final documentation/link cleanup: core only
-  the 7 pre-existing failures; cli 4 pre-existing failures. A final full run of
-  core, cli, typecheck and lint after the last commit was **started but its
-  results are not recorded here** — rerun before relying on this table (see
-  docs/TESTING.md).
+- **Final full run (2026-11-11, commit after docs cleanup):** core 7 failed /
+  8618 and cli 4 failed / 7448 — exactly the pre-existing upstream failures
+  listed above (the fifth baseline CLI failure belonged to the removed upstream
+  `models list` command). `npm run typecheck`, `npm run lint` and
+  `npx prettier --check .` pass. E2E 25/25 (the real-model smoke file is skipped
+  unless `CAPRICORN_REAL_MODEL=1`).
 
 ## Known limitations
 

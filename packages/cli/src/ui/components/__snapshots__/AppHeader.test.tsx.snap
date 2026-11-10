@@ -2,14 +2,16 @@
 
 exports[`<AppHeader /> > should not render the banner when no flags are set 1`] = `
 "
- ▝▜▄      ▄▀▀▀   ▄▀▄   █▀▀▄  █▀▀▄  █  ▄▀▀▀  ▄▀▀▄  █▀▀▄  █▄  █
-   ▝▜▄    █     █   █  █  █  █  █  █  █     █  █  █  █  █ ▀▄█
-  ▗▟▀     █     █▀▀▀█  █▀▀   █▀▀▄  █  █     █  █  █▀▀▄  █  ▀█
- ▝▀       █     █   █  █     █  █  █  █     █  █  █  █  █   █
-          ▀▄▄▄  ▀   ▀  ▀     ▀  ▀  ▀  ▀▄▄▄   ▀▀   ▀  ▀  ▀   ▀
+ ▄▀▀▀▄   ▄▀▀▀   ▄▀▄   █▀▀▄  █▀▀▄  █  ▄▀▀▀  ▄▀▀▄  █▀▀▄  █▄  █
+ █  ▀    █     █   █  █  █  █  █  █  █     █  █  █  █  █ ▀▄█
+ ▀▄▄▄▀   █     █▀▀▀█  █▀▀   █▀▀▄  █  █     █  █  █▀▀▄  █  ▀█
+         █     █   █  █     █  █  █  █     █  █  █  █  █   █
+         ▀▄▄▄  ▀   ▀  ▀     ▀  ▀  ▀  ▀▄▄▄   ▀▀   ▀  ▀  ▀   ▀
 
  Capricorn v1.0.0
 
+ Local inference · Ollama http://127.0.0.1:11434
+ Safety: ask before edits and commands /permissions
 
 
 Tips for getting started:
@@ -22,14 +24,16 @@ Tips for getting started:
 
 exports[`<AppHeader /> > should not render the default banner if shown count is 5 or more 1`] = `
 "
- ▝▜▄      ▄▀▀▀   ▄▀▄   █▀▀▄  █▀▀▄  █  ▄▀▀▀  ▄▀▀▄  █▀▀▄  █▄  █
-   ▝▜▄    █     █   █  █  █  █  █  █  █     █  █  █  █  █ ▀▄█
-  ▗▟▀     █     █▀▀▀█  █▀▀   █▀▀▄  █  █     █  █  █▀▀▄  █  ▀█
- ▝▀       █     █   █  █     █  █  █  █     █  █  █  █  █   █
-          ▀▄▄▄  ▀   ▀  ▀     ▀  ▀  ▀  ▀▄▄▄   ▀▀   ▀  ▀  ▀   ▀
+ ▄▀▀▀▄   ▄▀▀▀   ▄▀▄   █▀▀▄  █▀▀▄  █  ▄▀▀▀  ▄▀▀▄  █▀▀▄  █▄  █
+ █  ▀    █     █   █  █  █  █  █  █  █     █  █  █  █  █ ▀▄█
+ ▀▄▄▄▀   █     █▀▀▀█  █▀▀   █▀▀▄  █  █     █  █  █▀▀▄  █  ▀█
+         █     █   █  █     █  █  █  █     █  █  █  █  █   █
+         ▀▄▄▄  ▀   ▀  ▀     ▀  ▀  ▀  ▀▄▄▄   ▀▀   ▀  ▀  ▀   ▀
 
  Capricorn v1.0.0
 
+ Local inference · Ollama http://127.0.0.1:11434
+ Safety: ask before edits and commands /permissions
 
 
 Tips for getting started:
@@ -42,14 +46,16 @@ Tips for getting started:
 
 exports[`<AppHeader /> > should render the banner with default text 1`] = `
 "
- ▝▜▄      ▄▀▀▀   ▄▀▄   █▀▀▄  █▀▀▄  █  ▄▀▀▀  ▄▀▀▄  █▀▀▄  █▄  █
-   ▝▜▄    █     █   █  █  █  █  █  █  █     █  █  █  █  █ ▀▄█
-  ▗▟▀     █     █▀▀▀█  █▀▀   █▀▀▄  █  █     █  █  █▀▀▄  █  ▀█
- ▝▀       █     █   █  █     █  █  █  █     █  █  █  █  █   █
-          ▀▄▄▄  ▀   ▀  ▀     ▀  ▀  ▀  ▀▄▄▄   ▀▀   ▀  ▀  ▀   ▀
+ ▄▀▀▀▄   ▄▀▀▀   ▄▀▄   █▀▀▄  █▀▀▄  █  ▄▀▀▀  ▄▀▀▄  █▀▀▄  █▄  █
+ █  ▀    █     █   █  █  █  █  █  █  █     █  █  █  █  █ ▀▄█
+ ▀▄▄▄▀   █     █▀▀▀█  █▀▀   █▀▀▄  █  █     █  █  █▀▀▄  █  ▀█
+         █     █   █  █     █  █  █  █     █  █  █  █  █   █
+         ▀▄▄▄  ▀   ▀  ▀     ▀  ▀  ▀  ▀▄▄▄   ▀▀   ▀  ▀  ▀   ▀
 
  Capricorn v1.0.0
 
+ Local inference · Ollama http://127.0.0.1:11434
+ Safety: ask before edits and commands /permissions
 
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ This is the default banner                                                                       │
@@ -65,14 +71,16 @@ Tips for getting started:
 
 exports[`<AppHeader /> > should render the banner with warning text 1`] = `
 "
- ▝▜▄      ▄▀▀▀   ▄▀▄   █▀▀▄  █▀▀▄  █  ▄▀▀▀  ▄▀▀▄  █▀▀▄  █▄  █
-   ▝▜▄    █     █   █  █  █  █  █  █  █     █  █  █  █  █ ▀▄█
-  ▗▟▀     █     █▀▀▀█  █▀▀   █▀▀▄  █  █     █  █  █▀▀▄  █  ▀█
- ▝▀       █     █   █  █     █  █  █  █     █  █  █  █  █   █
-          ▀▄▄▄  ▀   ▀  ▀     ▀  ▀  ▀  ▀▄▄▄   ▀▀   ▀  ▀  ▀   ▀
+ ▄▀▀▀▄   ▄▀▀▀   ▄▀▄   █▀▀▄  █▀▀▄  █  ▄▀▀▀  ▄▀▀▄  █▀▀▄  █▄  █
+ █  ▀    █     █   █  █  █  █  █  █  █     █  █  █  █  █ ▀▄█
+ ▀▄▄▄▀   █     █▀▀▀█  █▀▀   █▀▀▄  █  █     █  █  █▀▀▄  █  ▀█
+         █     █   █  █     █  █  █  █     █  █  █  █  █   █
+         ▀▄▄▄  ▀   ▀  ▀     ▀  ▀  ▀  ▀▄▄▄   ▀▀   ▀  ▀  ▀   ▀
 
  Capricorn v1.0.0
 
+ Local inference · Ollama http://127.0.0.1:11434
+ Safety: ask before edits and commands /permissions
 
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ There are capacity issues                                                                        │
@@ -88,12 +96,15 @@ Tips for getting started:
 
 exports[`<AppHeader /> > should render the full logo when logged out 1`] = `
 "
- ▝▜▄      ▄▀▀▀   ▄▀▄   █▀▀▄  █▀▀▄  █  ▄▀▀▀  ▄▀▀▄  █▀▀▄  █▄  █
-   ▝▜▄    █     █   █  █  █  █  █  █  █     █  █  █  █  █ ▀▄█
-  ▗▟▀     █     █▀▀▀█  █▀▀   █▀▀▄  █  █     █  █  █▀▀▄  █  ▀█
- ▝▀       █     █   █  █     █  █  █  █     █  █  █  █  █   █
-          ▀▄▄▄  ▀   ▀  ▀     ▀  ▀  ▀  ▀▄▄▄   ▀▀   ▀  ▀  ▀   ▀
+ ▄▀▀▀▄   ▄▀▀▀   ▄▀▄   █▀▀▄  █▀▀▄  █  ▄▀▀▀  ▄▀▀▄  █▀▀▄  █▄  █
+ █  ▀    █     █   █  █  █  █  █  █  █     █  █  █  █  █ ▀▄█
+ ▀▄▄▄▀   █     █▀▀▀█  █▀▀   █▀▀▄  █  █     █  █  █▀▀▄  █  ▀█
+         █     █   █  █     █  █  █  █     █  █  █  █  █   █
+         ▀▄▄▄  ▀   ▀  ▀     ▀  ▀  ▀  ▀▄▄▄   ▀▀   ▀  ▀  ▀   ▀
 
  Capricorn v1.0.0
+
+ Local inference · Ollama http://127.0.0.1:11434
+ Safety: ask before edits and commands /permissions
 "
 `;

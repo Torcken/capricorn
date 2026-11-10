@@ -123,6 +123,9 @@ describe.skipIf(os.platform() === 'win32')('buildBwrapArgs', () => {
       '--ro-bind',
       `${workspace}/.geminiignore`,
       `${workspace}/.geminiignore`,
+      '--ro-bind',
+      `${workspace}/.capricornignore`,
+      `${workspace}/.capricornignore`,
     ]);
   });
 

@@ -45,7 +45,9 @@ async function getDocsRoot(): Promise<string> {
     try {
       const stats = await fs.stat(dir);
       if (stats.isDirectory()) {
-        const marker = path.join(dir, 'sidebar.json');
+        // Capricorn: docs/index.md marks the documentation root (upstream
+        // used the website's sidebar.json, which Capricorn does not ship).
+        const marker = path.join(dir, 'index.md');
         await fs.access(marker);
         return true;
       }
@@ -68,7 +70,7 @@ async function getDocsRoot(): Promise<string> {
     searchDir = parent;
   }
 
-  throw new Error('Could not find Gemini CLI documentation directory.');
+  throw new Error('Could not find the Capricorn documentation directory.');
 }
 
 class GetInternalDocsInvocation extends BaseToolInvocation<
@@ -111,7 +113,7 @@ class GetInternalDocsInvocation extends BaseToolInvocation<
         files.sort();
 
         const fileList = files.map((f) => `- ${f}`).join('\n');
-        const resultContent = `Available Gemini CLI documentation files:\n\n${fileList}`;
+        const resultContent = `Available Capricorn documentation files:\n\n${fileList}`;
 
         return {
           llmContent: resultContent,
