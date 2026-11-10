@@ -69,3 +69,6 @@ temp_agents/
 # conductor extension and planning directories
 conductor/
 .vscode-test/
+
+# Capricorn: local smoke-test results
+e2e/.results/

@@ -14,6 +14,7 @@ import {
 import { delay, createAbortError } from './delay.js';
 import { debugLogger } from './debugLogger.js';
 import { getErrorStatus, ModelNotFoundError } from './httpErrors.js';
+import { OllamaError } from '../providers/ollama/errors.js';
 import type { RetryAvailabilityContext } from '../availability/modelPolicy.js';
 
 export type { RetryAvailabilityContext };
@@ -171,6 +172,13 @@ export function isRetryableError(
   error: Error | unknown,
   retryFetchErrors?: boolean,
 ): boolean {
+  // Capricorn: Ollama errors carry an explicit, kind-based retry decision.
+  // Without this, an HTTP 500 for "out of memory" or a refused model would be
+  // retried by status code alone, wasting minutes on a deterministic failure.
+  if (error instanceof OllamaError) {
+    return error.retryable;
+  }
+
   // Check for common network error codes
   const errorCode = getNetworkErrorCode(error);
   if (errorCode && isRetryableSslErrorCode(errorCode)) {

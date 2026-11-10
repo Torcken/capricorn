@@ -4144,10 +4144,13 @@ export class Config implements McpContext, AgentLoopContext {
       );
     }
 
-    // Register Subagent Tool
-    maybeRegister(AgentTool, () =>
-      registry.registerTool(new AgentTool(this, this.messageBus)),
-    );
+    // Register Subagent Tool. Capricorn: only when sub-agents are enabled
+    // (opt-in); otherwise the model would be offered a tool with no agents.
+    if (this.isAgentsEnabled()) {
+      maybeRegister(AgentTool, () =>
+        registry.registerTool(new AgentTool(this, this.messageBus)),
+      );
+    }
 
     await registry.discoverAllTools();
     registry.sortTools();
