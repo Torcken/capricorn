@@ -812,6 +812,12 @@ export async function loadCliConfig(
     }
     throw err;
   }
+  // Capricorn: no telemetry. GEMINI_TELEMETRY_* / OTEL_* environment
+  // variables and settings could otherwise enable OpenTelemetry export,
+  // including to Google Cloud (`target: gcp`). The SDK only starts when
+  // `enabled` is true (core/telemetry/sdk.ts), so forcing it off here is
+  // sufficient.
+  telemetrySettings = { ...telemetrySettings, enabled: false };
 
   // -p/--prompt forces non-interactive (headless) mode
   // -i/--prompt-interactive forces interactive mode with an initial prompt

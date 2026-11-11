@@ -6,7 +6,8 @@
 
 export const SERVICE_NAME = 'gemini-cli';
 export const SERVICE_DESCRIPTION =
-  'Capricorn is an open-source AI agent that brings the power of Gemini directly into your terminal. It is designed to be a terminal-first, extensible, and powerful tool for developers, engineers, SREs, and beyond.';
+  // Capricorn: own description (upstream advertised Gemini).
+  'Capricorn is a local-first, open-source terminal coding agent that runs verified Gemma 4 models through Ollama.';
 
 // Gemini CLI specific semantic conventions
 // https://opentelemetry.io/docs/specs/semconv/registry/attributes/gen-ai/#genai-attributes

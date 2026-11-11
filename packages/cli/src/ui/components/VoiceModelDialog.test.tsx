@@ -26,8 +26,10 @@ vi.mock('@google/gemini-cli-core', async () => {
   };
 });
 
+// Capricorn: the Gemini Live (Google Cloud) backend was removed; upstream's
+// tests for its option, privacy warning and selection are replaced below.
 describe('VoiceModelDialog', () => {
-  it('should display a privacy warning when Gemini Live API (Cloud) is selected', async () => {
+  it('offers only local Whisper, with no cloud backend or cloud warning', async () => {
     const onClose = vi.fn();
     const { lastFrame, waitUntilReady } = await renderWithProviders(
       <VoiceModelDialog onClose={onClose} />,
@@ -36,57 +38,35 @@ describe('VoiceModelDialog', () => {
     await waitUntilReady();
 
     const frame = lastFrame();
-    expect(frame).toContain('Gemini Live API (Cloud)');
-    expect(frame).toContain('When using the Gemini Live backend');
+    expect(frame).toContain('Whisper (Local)');
+    expect(frame).not.toContain('Gemini Live');
+    expect(frame).not.toContain('Google Cloud');
   });
 
-  it('should NOT display a privacy warning when Whisper (Local) is highlighted', async () => {
-    const onClose = vi.fn();
-    const { lastFrame, waitUntilReady, stdin } = await renderWithProviders(
-      <VoiceModelDialog onClose={onClose} />,
-    );
-
-    await waitUntilReady();
-
-    // Verify warning is present for default (Gemini Live)
-    expect(lastFrame()).toContain('When using the Gemini Live backend');
-
-    // Arrow Down to highlight Whisper
-    await act(async () => {
-      stdin.write('\u001b[B');
-    });
-
-    await waitFor(() => {
-      const frame = lastFrame();
-      expect(frame).toContain('Whisper (Local)');
-      expect(frame).not.toContain('When using the Gemini Live backend');
-    });
-  });
-
-  it('should update settings and close dialog when a backend is selected', async () => {
+  it('opens the Whisper model list on select and never stores a cloud backend', async () => {
     const onClose = vi.fn();
     const settings = createMockSettings();
     const setValueSpy = vi.spyOn(settings, 'setValue');
 
-    const { waitUntilReady, stdin } = await renderWithProviders(
+    const { lastFrame, waitUntilReady, stdin } = await renderWithProviders(
       <VoiceModelDialog onClose={onClose} />,
       { settings },
     );
 
     await waitUntilReady();
 
-    // Select Gemini Live (it's already highlighted, just press Enter)
     await act(async () => {
       stdin.write('\r');
     });
 
     await waitFor(() => {
-      expect(setValueSpy).toHaveBeenCalledWith(
-        SettingScope.User,
-        'experimental.voice.backend',
-        'gemini-live',
-      );
-      expect(onClose).toHaveBeenCalled();
+      expect(lastFrame()).toContain('Select Whisper Model');
     });
+    expect(setValueSpy).not.toHaveBeenCalledWith(
+      SettingScope.User,
+      'experimental.voice.backend',
+      'gemini-live',
+    );
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

@@ -330,6 +330,22 @@ export function applyCapricornInvariants(
     enableAutoUpdate: false,
     enableAutoUpdateNotification: false,
   };
+  // Voice transcription is local Whisper only: the upstream Gemini Live
+  // backend streamed microphone audio to Google Cloud.
+  if (merged.experimental?.voice) {
+    merged.experimental = {
+      ...merged.experimental,
+      voice: { ...merged.experimental.voice, backend: 'whisper' },
+    };
+  }
+  // OpenTelemetry export is off, whatever settings say (it could target
+  // Google Cloud or any OTLP collector). This only keeps the merged view
+  // honest; the authoritative switch is in loadCliConfig, which also covers
+  // GEMINI_TELEMETRY_* / OTEL_* variables and flags. Unset or legacy
+  // non-object values are left alone (they cannot enable anything there).
+  if (isRecord(merged.telemetry)) {
+    merged.telemetry = { ...merged.telemetry, enabled: false };
+  }
   return merged;
 }
 

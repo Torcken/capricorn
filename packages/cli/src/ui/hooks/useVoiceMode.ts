@@ -6,7 +6,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  AudioRecorder,
+  type AudioRecorder,
   TranscriptionFactory,
   debugLogger,
   type Config,
@@ -32,7 +32,8 @@ const RELEASE_DELAY_MS = 300;
 
 export function useVoiceMode({
   buffer,
-  config,
+  // Capricorn: `config` is still accepted (callers pass it) but no longer
+  // read: it only supplied the Gemini API key for the removed cloud backend.
   settings,
   setQueueErrorMessage,
   isVoiceModeEnabled,
@@ -123,10 +124,8 @@ export function useVoiceMode({
     liveTranscriptionRef.current = '';
     stopRequestedRef.current = false;
 
-    const apiKey =
-      config.getContentGeneratorConfig()?.apiKey ||
-      process.env['GEMINI_API_KEY'] ||
-      '';
+    // Capricorn: transcription is local Whisper only, so no API key is read
+    // (upstream read GEMINI_API_KEY for the Gemini Live cloud backend).
 
     const startAsync = async () => {
       // If there's an active draining service, disconnect it immediately
@@ -161,28 +160,12 @@ export function useVoiceMode({
 
       if (cleanupIfStopped()) return;
 
-      const voiceBackend =
-        settings.experimental.voice?.backend ?? 'gemini-live';
-
-      if (!apiKey && voiceBackend === 'gemini-live') {
-        setQueueErrorMessage(
-          'Cloud voice mode requires a GEMINI_API_KEY. Please set it in your environment or ~/.capricorn/.env.',
-        );
-        setIsRecording(false);
-        isRecordingRef.current = false;
-        setIsConnecting(false);
-        recordingInProgressRef.current = false;
-        lastFailureTimeRef.current = Date.now();
-        return;
-      }
-
-      if (voiceBackend === 'gemini-live') {
-        recorderRef.current = new AudioRecorder();
-      }
-
+      // whisper-stream captures the microphone itself, so no in-process
+      // AudioRecorder is started (upstream only needed one to stream audio
+      // to Gemini Live).
       const currentService = TranscriptionFactory.createProvider(
         settings.experimental.voice,
-        apiKey,
+        '',
       );
       transcriptionServiceRef.current = currentService;
 
@@ -256,14 +239,6 @@ export function useVoiceMode({
 
         setIsConnecting(false);
 
-        const currentVoiceBackend =
-          settings.experimental.voice?.backend ?? 'gemini-live';
-
-        recorderRef.current?.on('data', (chunk) => {
-          if (currentVoiceBackend === 'gemini-live') {
-            currentService.sendAudioChunk(chunk);
-          }
-        });
         recorderRef.current?.on('error', (err) => {
           debugLogger.error('[Voice] Recorder error:', err);
           stopVoiceRecording();
@@ -291,12 +266,7 @@ export function useVoiceMode({
     };
 
     void startAsync();
-  }, [
-    config,
-    settings.experimental.voice,
-    setQueueErrorMessage,
-    stopVoiceRecording,
-  ]);
+  }, [settings.experimental.voice, setQueueErrorMessage, stopVoiceRecording]);
 
   useEffect(
     () => () => {

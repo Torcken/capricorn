@@ -18,7 +18,6 @@ import {
   type WhisperModelProgress,
 } from '@google/gemini-cli-core';
 import { CliSpinner } from './CliSpinner.js';
-import { WarningMessage } from './messages/WarningMessage.js';
 
 interface VoiceModelDialogProps {
   onClose: () => void;
@@ -64,13 +63,11 @@ export function VoiceModelDialog({
   );
   const modelManager = useMemo(() => new WhisperModelManager(), []);
 
+  // Capricorn: Whisper (local) is the only backend.
   const currentBackend =
-    settings.merged.experimental.voice?.backend ?? 'gemini-live';
+    settings.merged.experimental.voice?.backend ?? 'whisper';
   const currentWhisperModel =
     settings.merged.experimental.voice?.whisperModel ?? 'ggml-base.en.bin';
-
-  const [highlightedBackend, setHighlightedBackend] =
-    useState<string>(currentBackend);
 
   const handleKeypress = useCallback(
     (key: Key) => {
@@ -89,24 +86,11 @@ export function VoiceModelDialog({
 
   useKeypress(handleKeypress, { isActive: true });
 
-  const handleBackendSelect = useCallback(
-    (value: string) => {
-      if (value === 'whisper') {
-        setView('whisper-models');
-      } else {
-        setSetting(
-          SettingScope.User,
-          'experimental.voice.backend',
-          'gemini-live',
-        );
-        onClose();
-      }
-    },
-    [setSetting, onClose],
-  );
-
-  const handleBackendHighlight = useCallback((value: string) => {
-    setHighlightedBackend(value);
+  const handleBackendSelect = useCallback((value: string) => {
+    // Capricorn: only 'whisper' is offered; anything else is ignored.
+    if (value === 'whisper') {
+      setView('whisper-models');
+    }
   }, []);
 
   const handleWhisperModelSelect = useCallback(
@@ -153,12 +137,6 @@ export function VoiceModelDialog({
 
   const backendOptions = useMemo(
     () => [
-      {
-        value: 'gemini-live',
-        title: 'Gemini Live API (Cloud)',
-        description: 'Real-time cloud transcription via Gemini Live API.',
-        key: 'gemini-live',
-      },
       {
         value: 'whisper',
         title: 'Whisper (Local)',
@@ -217,15 +195,9 @@ export function VoiceModelDialog({
               <DescriptiveRadioButtonSelect
                 items={backendOptions}
                 onSelect={handleBackendSelect}
-                onHighlight={handleBackendHighlight}
                 initialIndex={currentBackend === 'whisper' ? 1 : 0}
                 showNumbers={true}
               />
-              {highlightedBackend === 'gemini-live' && (
-                <Box marginTop={1}>
-                  <WarningMessage text="When using the Gemini Live backend, voice recordings are sent to Google Cloud for transcription. Enterprise users should verify this aligns with their data privacy and compliance requirements." />
-                </Box>
-              )}
             </>
           ) : (
             <DescriptiveRadioButtonSelect

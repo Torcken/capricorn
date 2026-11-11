@@ -3298,15 +3298,18 @@ describe('Telemetry configuration via environment variables', () => {
     vi.resetAllMocks();
   });
 
-  it('should prioritize GEMINI_TELEMETRY_ENABLED over settings', async () => {
+  // Capricorn: telemetry can never be enabled (no telemetry). Upstream
+  // expected GEMINI_TELEMETRY_ENABLED=true to turn it on.
+  it('keeps telemetry off even when GEMINI_TELEMETRY_ENABLED=true', async () => {
     vi.stubEnv('GEMINI_TELEMETRY_ENABLED', 'true');
+    vi.stubEnv('GEMINI_TELEMETRY_TARGET', 'gcp');
     process.argv = ['node', 'script.js'];
     const argv = await parseArguments(createTestMergedSettings());
     const settings = createTestMergedSettings({
       telemetry: { enabled: false },
     });
     const config = await loadCliConfig(settings, 'test-session', argv);
-    expect(config.getTelemetryEnabled()).toBe(true);
+    expect(config.getTelemetryEnabled()).toBe(false);
   });
 
   it('should prioritize GEMINI_TELEMETRY_TARGET over settings', async () => {
@@ -3389,13 +3392,14 @@ describe('Telemetry configuration via environment variables', () => {
     expect(config.getTelemetryUseCollector()).toBe(true);
   });
 
-  it('should use settings value when GEMINI_TELEMETRY_ENABLED is not set', async () => {
+  // Capricorn: settings cannot enable telemetry either (upstream: true).
+  it('keeps telemetry off even when settings enable it', async () => {
     vi.stubEnv('GEMINI_TELEMETRY_ENABLED', undefined);
     process.argv = ['node', 'script.js'];
     const argv = await parseArguments(createTestMergedSettings());
     const settings = createTestMergedSettings({ telemetry: { enabled: true } });
     const config = await loadCliConfig(settings, 'test-session', argv);
-    expect(config.getTelemetryEnabled()).toBe(true);
+    expect(config.getTelemetryEnabled()).toBe(false);
   });
 
   it('should use settings value when GEMINI_TELEMETRY_TARGET is not set', async () => {
@@ -3409,7 +3413,8 @@ describe('Telemetry configuration via environment variables', () => {
     expect(config.getTelemetryTarget()).toBe('local');
   });
 
-  it("should treat GEMINI_TELEMETRY_ENABLED='1' as true", async () => {
+  // Capricorn: '1' no longer enables telemetry (upstream: true).
+  it("keeps telemetry off for GEMINI_TELEMETRY_ENABLED='1'", async () => {
     vi.stubEnv('GEMINI_TELEMETRY_ENABLED', '1');
     process.argv = ['node', 'script.js'];
     const argv = await parseArguments(createTestMergedSettings());
@@ -3418,7 +3423,7 @@ describe('Telemetry configuration via environment variables', () => {
       'test-session',
       argv,
     );
-    expect(config.getTelemetryEnabled()).toBe(true);
+    expect(config.getTelemetryEnabled()).toBe(false);
   });
 
   it("should treat GEMINI_TELEMETRY_ENABLED='0' as false", async () => {

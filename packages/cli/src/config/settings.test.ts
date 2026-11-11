@@ -869,11 +869,13 @@ describe('Settings Loading and Merging', () => {
     });
 
     it.each([
+      // Capricorn: telemetry is forced off (applyCapricornInvariants), so an
+      // enabled: true in user settings still merges to false.
       {
         scope: 'user',
         path: USER_SETTINGS_PATH,
         content: { telemetry: { enabled: true } },
-        expected: true,
+        expected: false,
       },
       {
         scope: 'workspace',

@@ -464,6 +464,17 @@ describe('A2AAuthProviderFactory', () => {
   });
 
   describe('create', () => {
+    // Capricorn: Google credential auth for remote agents was removed.
+    it('refuses google-credentials auth with an explicit error', async () => {
+      await expect(
+        A2AAuthProviderFactory.create({
+          agentName: 'test-agent',
+          authConfig: { type: 'google-credentials' },
+          targetUrl: 'https://agent.example.invalid',
+        }),
+      ).rejects.toThrow(/not supported by Capricorn/);
+    });
+
     it('should return undefined when no auth config and no security schemes', async () => {
       const result = await A2AAuthProviderFactory.create({
         agentName: 'test-agent',

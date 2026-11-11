@@ -2251,17 +2251,15 @@ const SETTINGS_SCHEMA = {
             label: 'Voice Transcription Backend',
             category: 'Experimental',
             requiresRestart: false,
-            default: 'gemini-live',
+            // Capricorn: local Whisper only; the Gemini Live (Google Cloud)
+            // backend was removed.
+            default: 'whisper',
             description: oneLine`
-              The backend to use for voice transcription. Note: When using the
-              Gemini Live backend, voice recordings are sent to Google Cloud for
-              transcription.
+              The backend to use for voice transcription. Capricorn only
+              supports local Whisper (whisper.cpp's whisper-stream).
             `,
             showInDialog: true,
-            options: [
-              { value: 'gemini-live', label: 'Gemini Live API (Cloud)' },
-              { value: 'whisper', label: 'Whisper (Local)' },
-            ],
+            options: [{ value: 'whisper', label: 'Whisper (Local)' }],
           },
           whisperModel: {
             type: 'enum',

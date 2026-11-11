@@ -46,8 +46,6 @@ import {
   type MCPServerConfig,
   type GeminiCLIExtension,
 } from '../config/config.js';
-import { GoogleCredentialProvider } from '../mcp/google-auth-provider.js';
-import { ServiceAccountImpersonationProvider } from '../mcp/sa-impersonation-provider.js';
 import { DiscoveredMCPTool } from './mcp-tool.js';
 import { McpComplianceTransport } from './mcp-compliance-transport.js';
 
@@ -1032,16 +1030,19 @@ function createTransportRequestInit(
 function createAuthProvider(
   mcpServerConfig: MCPServerConfig,
 ): McpAuthProvider | undefined {
+  // Capricorn: Google credential and service-account impersonation auth
+  // would read Google Application Default Credentials and contact Google's
+  // token endpoints. Capricorn has no Google integration, so these MCP auth
+  // types are refused with an explicit error instead of silently trying.
   if (
     mcpServerConfig.authProviderType ===
-    AuthProviderType.SERVICE_ACCOUNT_IMPERSONATION
-  ) {
-    return new ServiceAccountImpersonationProvider(mcpServerConfig);
-  }
-  if (
+      AuthProviderType.SERVICE_ACCOUNT_IMPERSONATION ||
     mcpServerConfig.authProviderType === AuthProviderType.GOOGLE_CREDENTIALS
   ) {
-    return new GoogleCredentialProvider(mcpServerConfig);
+    throw new Error(
+      `MCP auth type "${mcpServerConfig.authProviderType}" uses Google credentials and is not supported by Capricorn. ` +
+        'Use OAuth (`oauth.enabled`) or static headers instead.',
+    );
   }
   return undefined;
 }

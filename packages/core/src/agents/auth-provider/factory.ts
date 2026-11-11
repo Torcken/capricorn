@@ -12,7 +12,6 @@ import type {
 } from './types.js';
 import { ApiKeyAuthProvider } from './api-key-provider.js';
 import { HttpAuthProvider } from './http-provider.js';
-import { GoogleCredentialsAuthProvider } from './google-credentials-provider.js';
 
 export interface CreateAuthProviderOptions {
   /** Required for OAuth/OIDC token storage. */
@@ -47,12 +46,13 @@ export class A2AAuthProviderFactory {
 
     switch (authConfig.type) {
       case 'google-credentials': {
-        const provider = new GoogleCredentialsAuthProvider(
-          authConfig,
-          options.targetUrl,
+        // Capricorn: Google credential auth reads Application Default
+        // Credentials and calls Google token endpoints; Capricorn has no
+        // Google integration, so refuse it explicitly.
+        throw new Error(
+          'Remote agent auth type "google-credentials" is not supported by Capricorn. ' +
+            'Use apiKey, http or oauth2 instead.',
         );
-        await provider.initialize();
-        return provider;
       }
 
       case 'apiKey': {

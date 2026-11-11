@@ -104,16 +104,16 @@
         },
         "enableAutoUpdate": {
           "title": "Enable Auto Update",
-          "description": "Enable automatic updates.",
-          "markdownDescription": "Enable automatic updates.\n\n- Category: `General`\n- Requires restart: `no`\n- Default: `true`",
-          "default": true,
+          "description": "Enable automatic updates. Disabled in Capricorn: no update polling is performed.",
+          "markdownDescription": "Enable automatic updates. Disabled in Capricorn: no update polling is performed.\n\n- Category: `General`\n- Requires restart: `no`\n- Default: `false`",
+          "default": false,
           "type": "boolean"
         },
         "enableAutoUpdateNotification": {
           "title": "Enable Auto Update Notification",
-          "description": "Enable update notification prompts.",
-          "markdownDescription": "Enable update notification prompts.\n\n- Category: `General`\n- Requires restart: `no`\n- Default: `true`",
-          "default": true,
+          "description": "Enable update notification prompts. Disabled in Capricorn: no update polling is performed.",
+          "markdownDescription": "Enable update notification prompts. Disabled in Capricorn: no update polling is performed.\n\n- Category: `General`\n- Requires restart: `no`\n- Default: `false`",
+          "default": false,
           "type": "boolean"
         },
         "enableNotifications": {
@@ -237,9 +237,9 @@
         },
         "topicUpdateNarration": {
           "title": "Topic & Update Narration",
-          "description": "Enable the Topic & Update communication model for reduced chattiness and structured progress reporting.",
-          "markdownDescription": "Enable the Topic & Update communication model for reduced chattiness and structured progress reporting.\n\n- Category: `General`\n- Requires restart: `no`\n- Default: `true`",
-          "default": true,
+          "description": "Enable the Topic & Update communication model for structured progress reporting. Off by default in Capricorn: each update is an extra local model tool call.",
+          "markdownDescription": "Enable the Topic & Update communication model for structured progress reporting. Off by default in Capricorn: each update is an extra local model tool call.\n\n- Category: `General`\n- Requires restart: `no`\n- Default: `false`",
+          "default": false,
           "type": "boolean"
         },
         "logRagSnippets": {
@@ -331,8 +331,8 @@
         },
         "showStatusInTitle": {
           "title": "Show Thoughts in Title",
-          "description": "Show Gemini CLI model thoughts in the terminal window title during the working phase",
-          "markdownDescription": "Show Gemini CLI model thoughts in the terminal window title during the working phase\n\n- Category: `UI`\n- Requires restart: `no`\n- Default: `false`",
+          "description": "Show Capricorn model thoughts in the terminal window title during the working phase",
+          "markdownDescription": "Show Capricorn model thoughts in the terminal window title during the working phase\n\n- Category: `UI`\n- Requires restart: `no`\n- Default: `false`",
           "default": false,
           "type": "boolean"
         },
@@ -345,8 +345,8 @@
         },
         "showHomeDirectoryWarning": {
           "title": "Show Home Directory Warning",
-          "description": "Show a warning when running Gemini CLI in the home directory.",
-          "markdownDescription": "Show a warning when running Gemini CLI in the home directory.\n\n- Category: `UI`\n- Requires restart: `yes`\n- Default: `true`",
+          "description": "Show a warning when running Capricorn in the home directory.",
+          "markdownDescription": "Show a warning when running Capricorn in the home directory.\n\n- Category: `UI`\n- Requires restart: `yes`\n- Default: `true`",
           "default": true,
           "type": "boolean"
         },
@@ -394,8 +394,8 @@
         },
         "hideContextSummary": {
           "title": "Hide Context Summary",
-          "description": "Hide the context summary (GEMINI.md, MCP servers) above the input.",
-          "markdownDescription": "Hide the context summary (GEMINI.md, MCP servers) above the input.\n\n- Category: `UI`\n- Requires restart: `no`\n- Default: `false`",
+          "description": "Hide the context summary (CAPRICORN.md, MCP servers) above the input.",
+          "markdownDescription": "Hide the context summary (CAPRICORN.md, MCP servers) above the input.\n\n- Category: `UI`\n- Requires restart: `no`\n- Default: `false`",
           "default": false,
           "type": "boolean"
         },
@@ -630,9 +630,9 @@
       "properties": {
         "usageStatisticsEnabled": {
           "title": "Enable Usage Statistics",
-          "description": "Enable collection of usage statistics",
-          "markdownDescription": "Enable collection of usage statistics\n\n- Category: `Privacy`\n- Requires restart: `yes`\n- Default: `true`",
-          "default": true,
+          "description": "Upstream Google usage statistics. Always disabled in Capricorn; this setting has no effect.",
+          "markdownDescription": "Upstream Google usage statistics. Always disabled in Capricorn; this setting has no effect.\n\n- Category: `Privacy`\n- Requires restart: `yes`\n- Default: `false`",
+          "default": false,
           "type": "boolean"
         }
       },
@@ -685,6 +685,59 @@
       },
       "additionalProperties": false
     },
+    "ollama": {
+      "title": "Ollama",
+      "description": "Local Ollama inference settings. Capricorn only runs verified Gemma 4 models on a local Ollama daemon.",
+      "markdownDescription": "Local Ollama inference settings. Capricorn only runs verified Gemma 4 models on a local Ollama daemon.\n\n- Category: `Model`\n- Requires restart: `yes`\n- Default: `{}`",
+      "default": {},
+      "type": "object",
+      "properties": {
+        "endpoint": {
+          "title": "Ollama Endpoint",
+          "description": "Ollama daemon URL (OLLAMA_HOST style). Only loopback hosts are accepted unless ollama.allowRemoteHost is enabled in user settings. Env: CAPRICORN_OLLAMA_HOST, OLLAMA_HOST.",
+          "markdownDescription": "Ollama daemon URL (OLLAMA_HOST style). Only loopback hosts are accepted unless ollama.allowRemoteHost is enabled in user settings. Env: CAPRICORN_OLLAMA_HOST, OLLAMA_HOST.\n\n- Category: `Model`\n- Requires restart: `yes`\n- Default: `http://127.0.0.1:11434`",
+          "default": "http://127.0.0.1:11434",
+          "type": "string"
+        },
+        "allowRemoteHost": {
+          "title": "Allow Remote Ollama Host",
+          "description": "Opt in to a non-loopback Ollama endpoint. Prompts and file contents will then leave this machine. Honoured only in user-level settings, never in project settings.",
+          "markdownDescription": "Opt in to a non-loopback Ollama endpoint. Prompts and file contents will then leave this machine. Honoured only in user-level settings, never in project settings.\n\n- Category: `Model`\n- Requires restart: `yes`\n- Default: `false`",
+          "default": false,
+          "type": "boolean"
+        },
+        "numCtx": {
+          "title": "Context Window (num_ctx)",
+          "description": "Context window to allocate on the daemon, in tokens (minimum 8192). Larger values need substantially more memory for the KV cache.",
+          "markdownDescription": "Context window to allocate on the daemon, in tokens (minimum 8192). Larger values need substantially more memory for the KV cache.\n\n- Category: `Model`\n- Requires restart: `yes`\n- Default: `32768`",
+          "default": 32768,
+          "type": "number"
+        },
+        "think": {
+          "title": "Thinking Mode",
+          "description": "Gemma 4 thinking channel: 'auto' follows the agent's request, 'on' forces it, 'off' disables it (faster).",
+          "markdownDescription": "Gemma 4 thinking channel: 'auto' follows the agent's request, 'on' forces it, 'off' disables it (faster).\n\n- Category: `Model`\n- Requires restart: `no`\n- Default: `auto`",
+          "default": "auto",
+          "type": "string",
+          "enum": ["auto", "on", "off"]
+        },
+        "keepAlive": {
+          "title": "Keep Alive",
+          "description": "How long Ollama keeps the model loaded after a request (Ollama keep_alive, e.g. \"10m\", \"1h\", \"0\").",
+          "markdownDescription": "How long Ollama keeps the model loaded after a request (Ollama keep_alive, e.g. \"10m\", \"1h\", \"0\").\n\n- Category: `Model`\n- Requires restart: `yes`\n- Default: `10m`",
+          "default": "10m",
+          "type": "string"
+        },
+        "requestTimeoutMs": {
+          "title": "Request Timeout (ms)",
+          "description": "Maximum wait for the first byte of a response, including model load time.",
+          "markdownDescription": "Maximum wait for the first byte of a response, including model load time.\n\n- Category: `Model`\n- Requires restart: `yes`\n- Default: `300000`",
+          "default": 300000,
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
     "model": {
       "title": "Model",
       "description": "Settings related to the generative model.",
@@ -694,9 +747,16 @@
       "properties": {
         "name": {
           "title": "Model",
-          "description": "The Gemini model to use for conversations.",
-          "markdownDescription": "The Gemini model to use for conversations.\n\n- Category: `Model`\n- Requires restart: `no`",
+          "description": "The local Gemma 4 model tag to use (e.g. gemma4:12b). Must be installed in Ollama and verified as Gemma 4.",
+          "markdownDescription": "The local Gemma 4 model tag to use (e.g. gemma4:12b). Must be installed in Ollama and verified as Gemma 4.\n\n- Category: `Model`\n- Requires restart: `no`",
           "type": "string"
+        },
+        "maxRunMinutes": {
+          "title": "Max Run Minutes",
+          "description": "Capricorn: wall-clock budget for one prompt, including every model turn and tool call it triggers. 0 disables the limit.",
+          "markdownDescription": "Capricorn: wall-clock budget for one prompt, including every model turn and tool call it triggers. 0 disables the limit.\n\n- Category: `Model`\n- Requires restart: `no`\n- Default: `30`",
+          "default": 30,
+          "type": "number"
         },
         "maxSessionTurns": {
           "title": "Max Session Turns",
@@ -2907,8 +2967,8 @@
         },
         "memoryBoundaryMarkers": {
           "title": "Memory Boundary Markers",
-          "description": "File or directory names that mark the boundary for GEMINI.md discovery. The upward traversal stops at the first directory containing any of these markers. An empty array disables parent traversal.",
-          "markdownDescription": "File or directory names that mark the boundary for GEMINI.md discovery. The upward traversal stops at the first directory containing any of these markers. An empty array disables parent traversal.\n\n- Category: `Context`\n- Requires restart: `yes`\n- Default: `[\n  \".git\"\n]`",
+          "description": "File or directory names that mark the boundary for CAPRICORN.md discovery. The upward traversal stops at the first directory containing any of these markers. An empty array disables parent traversal.",
+          "markdownDescription": "File or directory names that mark the boundary for CAPRICORN.md discovery. The upward traversal stops at the first directory containing any of these markers. An empty array disables parent traversal.\n\n- Category: `Context`\n- Requires restart: `yes`\n- Default: `[\n  \".git\"\n]`",
           "default": [".git"],
           "type": "array",
           "items": {
@@ -2927,8 +2987,8 @@
         },
         "loadMemoryFromIncludeDirectories": {
           "title": "Load Memory From Include Directories",
-          "description": "Controls how /memory reload loads GEMINI.md files. When true, include directories are scanned; when false, only the current directory is used.",
-          "markdownDescription": "Controls how /memory reload loads GEMINI.md files. When true, include directories are scanned; when false, only the current directory is used.\n\n- Category: `Context`\n- Requires restart: `no`\n- Default: `false`",
+          "description": "Controls how /memory reload loads CAPRICORN.md files. When true, include directories are scanned; when false, only the current directory is used.",
+          "markdownDescription": "Controls how /memory reload loads CAPRICORN.md files. When true, include directories are scanned; when false, only the current directory is used.\n\n- Category: `Context`\n- Requires restart: `no`\n- Default: `false`",
           "default": false,
           "type": "boolean"
         },
@@ -3193,6 +3253,26 @@
       "default": {},
       "type": "object",
       "properties": {
+        "network": {
+          "title": "Network",
+          "description": "Outbound network policy. Capricorn blocks every non-loopback connection unless the host is allowed here.",
+          "markdownDescription": "Outbound network policy. Capricorn blocks every non-loopback connection unless the host is allowed here.\n\n- Category: `Security`\n- Requires restart: `yes`\n- Default: `{}`",
+          "default": {},
+          "type": "object",
+          "properties": {
+            "allowedHosts": {
+              "title": "Allowed External Hosts",
+              "description": "External hosts Capricorn itself may connect to (e.g. a remote MCP server). Exact hostnames or \"*.example.com\". Honoured only in user settings.",
+              "markdownDescription": "External hosts Capricorn itself may connect to (e.g. a remote MCP server). Exact hostnames or \"*.example.com\". Honoured only in user settings.\n\n- Category: `Security`\n- Requires restart: `yes`\n- Default: `[]`",
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
         "toolSandboxing": {
           "title": "Tool Sandboxing",
           "description": "Tool-level sandboxing. Isolates individual tools instead of the entire CLI process.",
@@ -3421,11 +3501,11 @@
             },
             "backend": {
               "title": "Voice Transcription Backend",
-              "description": "The backend to use for voice transcription. Note: When using the Gemini Live backend, voice recordings are sent to Google Cloud for transcription.",
-              "markdownDescription": "The backend to use for voice transcription. Note: When using the Gemini Live backend, voice recordings are sent to Google Cloud for transcription.\n\n- Category: `Experimental`\n- Requires restart: `no`\n- Default: `gemini-live`",
-              "default": "gemini-live",
+              "description": "The backend to use for voice transcription. Capricorn only supports local Whisper (whisper.cpp's whisper-stream).",
+              "markdownDescription": "The backend to use for voice transcription. Capricorn only supports local Whisper (whisper.cpp's whisper-stream).\n\n- Category: `Experimental`\n- Requires restart: `no`\n- Default: `whisper`",
+              "default": "whisper",
               "type": "string",
-              "enum": ["gemini-live", "whisper"]
+              "enum": ["whisper"]
             },
             "whisperModel": {
               "title": "Whisper Model",
@@ -3483,9 +3563,9 @@
         },
         "enableAgents": {
           "title": "Enable Agents",
-          "description": "Enable local and remote subagents.",
-          "markdownDescription": "Enable local and remote subagents.\n\n- Category: `Experimental`\n- Requires restart: `yes`\n- Default: `true`",
-          "default": true,
+          "description": "Enable local and remote subagents. Off by default in Capricorn: every subagent runs additional local Gemma 4 inference turns.",
+          "markdownDescription": "Enable local and remote subagents. Off by default in Capricorn: every subagent runs additional local Gemma 4 inference turns.\n\n- Category: `Experimental`\n- Requires restart: `yes`\n- Default: `false`",
+          "default": false,
           "type": "boolean"
         },
         "worktrees": {
@@ -3519,8 +3599,8 @@
         "extensionRegistryURI": {
           "title": "Extension Registry URI",
           "description": "The URI (web URL or local file path) of the extension registry.",
-          "markdownDescription": "The URI (web URL or local file path) of the extension registry.\n\n- Category: `Experimental`\n- Requires restart: `yes`\n- Default: `https://geminicli.com/extensions.json`",
-          "default": "https://geminicli.com/extensions.json",
+          "markdownDescription": "The URI (web URL or local file path) of the extension registry.\n\n- Category: `Experimental`\n- Requires restart: `yes`\n- Default: ``",
+          "default": "",
           "type": "string"
         },
         "extensionReloading": {
@@ -3588,8 +3668,8 @@
             },
             "autoStartServer": {
               "title": "Auto-start LiteRT Server",
-              "description": "Automatically start the LiteRT-LM server when Gemini CLI starts and the Gemma router is enabled.",
-              "markdownDescription": "Automatically start the LiteRT-LM server when Gemini CLI starts and the Gemma router is enabled.\n\n- Category: `Experimental`\n- Requires restart: `yes`\n- Default: `false`",
+              "description": "Unsupported in Capricorn (the LiteRT-LM router was removed; inference always uses Ollama).",
+              "markdownDescription": "Unsupported in Capricorn (the LiteRT-LM router was removed; inference always uses Ollama).\n\n- Category: `Experimental`\n- Requires restart: `yes`\n- Default: `false`",
               "default": false,
               "type": "boolean"
             },
@@ -4148,7 +4228,7 @@
         },
         "extension": {
           "type": "object",
-          "description": "Metadata describing the Gemini CLI extension that owns this MCP server.",
+          "description": "Metadata describing the Capricorn extension that owns this MCP server.",
           "additionalProperties": {
             "type": ["string", "boolean", "number"]
           }
@@ -4270,7 +4350,7 @@
     },
     "TelemetrySettings": {
       "type": "object",
-      "description": "Telemetry configuration for Gemini CLI.",
+      "description": "Telemetry configuration for Capricorn.",
       "additionalProperties": false,
       "properties": {
         "enabled": {
@@ -4374,7 +4454,7 @@
     },
     "CustomTheme": {
       "type": "object",
-      "description": "Custom theme definition used for styling Gemini CLI output. Colors are provided as hex strings or named ANSI colors.",
+      "description": "Custom theme definition used for styling Capricorn output. Colors are provided as hex strings or named ANSI colors.",
       "additionalProperties": false,
       "properties": {
         "type": {
