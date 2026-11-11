@@ -20,6 +20,8 @@ All notable changes to Capricorn are documented here. The format follows
   every item asked for.
 - Gemma 4 system prompt (v3): read the file that holds the answer before
   answering; check the project setup before creating files.
+- `grep_search` adds 2 lines of context around each match for 4–20 matches
+  (upstream: only for 1–3), so the enclosing function is usually visible.
 
 ### Fixed
 

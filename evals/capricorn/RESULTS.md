@@ -6,13 +6,17 @@ machine that ran it.
 
 All runs: Linux x64, 24 CPUs, 94 GiB RAM, Ollama 0.30.11, 3 runs per task.
 
-## 2026-11-11 — baseline, prompt v2, prompt v3 (`gemma4:12b`, 11.9B Q4_K_M)
+## 2026-11-11 — prompt and tool iterations (`gemma4:12b`, 11.9B Q4_K_M)
 
-| Version                 | Commit       | Overall         | explore   | edit       | test-fix       | tool-use       | safety     | Tool errors | Wall time |
-| ----------------------- | ------------ | --------------- | --------- | ---------- | -------------- | -------------- | ---------- | ----------- | --------- |
-| Baseline (prompt v1)    | `c0605435c`¹ | 74% (31/42)     | 33% (3/9) | 100% (9/9) | 67% (6/9)      | 67% (4/6)      | 100% (9/9) | 18          | ~48 min   |
-| Prompt v2 + agent fixes | `c1f1fe18b`  | **83% (35/42)** | 44% (4/9) | 100% (9/9) | **100% (9/9)** | 67% (4/6)      | 100% (9/9) | **0**       | ~15 min   |
-| Prompt v3               | `6692c4840`  | **88% (37/42)** | 44% (4/9) | 100% (9/9) | 100% (9/9)     | **100% (6/6)** | 100% (9/9) | 4           | ~15 min   |
+| Version                 | Commit       | Overall         | explore        | edit       | test-fix       | tool-use       | safety     | Tool errors | Wall time |
+| ----------------------- | ------------ | --------------- | -------------- | ---------- | -------------- | -------------- | ---------- | ----------- | --------- |
+| Baseline (prompt v1)    | `c0605435c`¹ | 74% (31/42)     | 33% (3/9)      | 100% (9/9) | 67% (6/9)      | 67% (4/6)      | 100% (9/9) | 18          | ~48 min   |
+| Prompt v2 + agent fixes | `c1f1fe18b`  | **83% (35/42)** | 44% (4/9)      | 100% (9/9) | **100% (9/9)** | 67% (4/6)      | 100% (9/9) | **0**       | ~15 min   |
+| Prompt v3               | `6692c4840`  | **88% (37/42)** | 44% (4/9)      | 100% (9/9) | 100% (9/9)     | **100% (6/6)** | 100% (9/9) | 4           | ~15 min   |
+| + grep auto-context     | `21166d420`² | **95% (40/42)** | **100% (9/9)** | 100% (9/9) | 100% (9/9)     | 67% (4/6)      | 100% (9/9) | 2           | ~16 min   |
+
+² Build of `21166d420`; the report header says `414e212cc+dirty` because later,
+unbuilt commits landed during the run.
 
 ¹ Plus the then-uncommitted eval suite, committed as `4aa12616b` (which also
 adds the errored-run classification; task checkers unchanged).
@@ -40,6 +44,18 @@ answered correctly). This looks like a limit of prompting a 12B model; the next
 experiment is tool-side (e.g. default context lines in `grep_search` results).
 The 4 tool errors in v3 are malformed `replace` calls (missing `old_string`) in
 `edit-rename-symbol`, all recovered (3/3 pass).
+
+**grep auto-context** (commit `21166d420`): upstream adds context to search
+results only for 1–3 matches; Capricorn now adds 2 lines for 4–20 matches.
+`explore-find-caller` had 5 bare match lines, and the enclosing
+`function registerUser(` was the line above one of them. Exploration went from
+4/9 to **9/9**. The two remaining failures are unrelated to the change:
+`tooluse-count-todos` once searched for `\bTODO:\b` (which cannot match), got 0
+results and answered "0" instead of retrying with a plain pattern (the other two
+runs retried); `tooluse-create-module` once created an empty _file_ named `test`
+with `write_file`, then could not create `test/slugify.test.js` and looped (also
+seen in the v3 run). A clearer error from `write_file` when a file blocks a
+directory path is a candidate tool fix.
 
 Remaining failures after v2 (for reference), all genuine model behaviour:
 
