@@ -68,6 +68,26 @@ Something tried to reach a non-loopback host. Run with
 you configured, add its host to `security.network.allowedHosts` in user
 settings.
 
+## `--sandbox`: "Sandbox image 'capricorn-sandbox:local' is missing"
+
+Build it once: `npm run build:sandbox` in the source checkout (uses the runtime
+from `GEMINI_SANDBOX`, else Docker, else Podman). Capricorn never downloads this
+image. If you build with Podman, run with `GEMINI_SANDBOX=podman` too: Docker
+and Podman keep separate image stores, and `--sandbox` alone prefers Docker.
+
+## `--sandbox`: "EACCES: permission denied" under /home/node/.capricorn
+
+Usually rootless Podman with SELinux on an older Capricorn; current versions add
+`--userns=keep-id` and `--security-opt label=disable` automatically. If you set
+`SANDBOX_FLAGS` with your own `label=` option, make sure the project directory
+is labelled for containers (for example mount it with `:z`).
+
+## `--sandbox`: "this Ollama endpoint is not available inside the sandbox"
+
+Inside the sandbox only inference and model inspection reach Ollama. Pull,
+delete or create models on the host (`capricorn models pull …` outside
+`--sandbox`).
+
 ## My GEMINI.md is ignored
 
 By design. Copy what you need into `CAPRICORN.md`, or opt in with

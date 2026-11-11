@@ -21,6 +21,9 @@ npm run verify:offline
 # Package smoke test: bundle, npm pack, install into a temp prefix, launch
 node scripts/capricorn/pack-smoke.js
 
+# Container sandbox, gated (needs podman/docker and `npm run build:sandbox`)
+CAPRICORN_SANDBOX_E2E=podman npm run test:e2e:sandbox
+
 # Real model smoke test (optional, local Ollama + Gemma 4 required)
 npm run test:smoke:real-model
 CAPRICORN_SMOKE_MODEL=gemma4:e4b npm run test:smoke:real-model
@@ -41,6 +44,7 @@ coverage temp directory and can crash each other.
 | End-to-end  | `e2e/capricorn.e2e.test.ts`, `e2e/interactive.e2e.test.ts`  | The compiled `capricorn` binary in a disposable git repo, isolated `HOME`, mock daemon; the TUI test uses node-pty |
 | Offline     | `scripts/verify-offline.sh`                                 | Same e2e suite with no network interface except loopback                                                           |
 | Real model  | `e2e/real-model.smoke.e2e.test.ts`                          | Your local Ollama and a real Gemma 4 model                                                                         |
+| Sandbox     | `e2e/sandbox.e2e.test.ts` (gated)                           | `capricorn --sandbox` in a real container, mock daemon on a random host port via the Ollama bridge                 |
 
 The mock daemon can script text, tool calls (`toolCallFrame`), errors (HTTP
 status + body, in-band error frames), byte-level chunking, delays, first-byte
@@ -56,6 +60,10 @@ Each lives next to the code it guards, with a comment naming the threat:
 - misleading aliases, cloud models, other families — `modelPolicy.test.ts`
 - egress blocking for fetch/https/raw sockets — `egressGuard.test.ts`
 - `.capricorn` bypass spellings — `safety/built-in.test.ts`
+- sandbox Ollama bridge refuses pull/push/delete —
+  `sandboxOllamaBridge.test.ts`; no registry pull of the local image, no gcloud
+  mount, remote endpoint refused, rootless Podman/SELinux flags —
+  `utils/sandbox.test.ts`
 - Google credentials ignored — `core/contentGenerator.test.ts`,
   `cli/src/config/auth.test.ts`, `validateNonInterActiveAuth.test.ts`
 - end to end: denied shell/edits, malformed and unknown tool calls, workspace

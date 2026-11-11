@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { start_sandbox } from './sandbox.js';
+import { startOllamaBridge } from '../capricorn/sandboxOllamaBridge.js';
 import { IdeBridge, resolveIdeBridgeUpstream } from './ideBridge.js';
 import {
   IDE_BRIDGE_HELPER_FILENAME,
@@ -44,6 +45,11 @@ vi.mock('node:child_process');
 vi.mock('node:os');
 vi.mock('node:fs');
 vi.mock('./ideBridge.js');
+// Capricorn: the host Ollama bridge binds a real Unix socket; node:fs is
+// mocked here, so stub it and assert on how start_sandbox wires it.
+vi.mock('../capricorn/sandboxOllamaBridge.js', () => ({
+  startOllamaBridge: vi.fn(),
+}));
 vi.mock('node:crypto', () => ({
   randomBytes: vi.fn().mockReturnValue(Buffer.from('a1b2c3d4e5f6', 'hex')),
 }));
@@ -83,6 +89,13 @@ vi.mock('node:util', async (importOriginal) => {
             args[2] === 'add'
           ) {
             return { stdout: '', stderr: '' };
+          }
+          // Capricorn: `podman info` rootless/SELinux probe.
+          if (file === 'podman' && args[0] === 'info') {
+            return {
+              stdout: process.env['TEST_PODMAN_INFO'] ?? 'false false',
+              stderr: '',
+            };
           }
           return { stdout: '', stderr: '' };
         };
@@ -743,7 +756,9 @@ describe('sandbox', () => {
       );
     });
 
-    it('should mount gcloud config directory when homedir is defined and config exists', async () => {
+    // Capricorn: upstream mounted ~/.config/gcloud for Google auth; Capricorn
+    // has no Google back-end, so the mount must not happen even when present.
+    it('should not mount gcloud config directory even when it exists', async () => {
       mockedHomedir.mockReturnValue('/home/user');
       vi.mocked(os.tmpdir).mockReturnValue('/mock/tmp');
 
@@ -794,11 +809,182 @@ describe('sandbox', () => {
       });
       expect(dockerCall).toBeDefined();
       const dockerArgs = dockerCall![1] as string[];
-      expect(
-        dockerArgs.some(
-          (arg) => arg.includes(expectedConfigDir) && arg.endsWith(':ro'),
-        ),
-      ).toBe(true);
+      expect(dockerArgs.some((arg) => arg.includes(expectedConfigDir))).toBe(
+        false,
+      );
+    });
+
+    describe('Capricorn: Ollama bridge for container sandboxes', () => {
+      /** Mocks `docker images` (found) then `docker run` (exits 0). */
+      function mockImagePresentAndRun() {
+        interface MockProcessWithStdout extends EventEmitter {
+          stdout: EventEmitter;
+        }
+        const imageCheck = new EventEmitter() as MockProcessWithStdout;
+        imageCheck.stdout = new EventEmitter();
+        vi.mocked(spawn).mockImplementationOnce(() => {
+          setTimeout(() => {
+            imageCheck.stdout.emit('data', Buffer.from('image-id'));
+            imageCheck.emit('close', 0);
+          }, 1);
+          return imageCheck as unknown as ReturnType<typeof spawn>;
+        });
+        const run = new EventEmitter() as unknown as ReturnType<typeof spawn>;
+        run.on = vi.fn().mockImplementation((event, cb) => {
+          if (event === 'close') setTimeout(() => cb(0), 10);
+          return run;
+        });
+        vi.mocked(spawn).mockImplementationOnce(() => run);
+      }
+
+      function runArgs(): string[] {
+        const call = vi
+          .mocked(spawn)
+          .mock.calls.find((c) => (c[1] as string[])?.includes('run'));
+        expect(call).toBeDefined();
+        return call![1] as string[];
+      }
+
+      it('relays a local endpoint through the bridge and points the container at it', async () => {
+        const close = vi.fn(async () => {});
+        vi.mocked(startOllamaBridge).mockImplementation(async (o) => ({
+          socketPath: o.socketPath,
+          close,
+        }));
+        mockImagePresentAndRun();
+        const config = createMockSandboxConfig({
+          command: 'docker',
+          image: 'capricorn-sandbox:local',
+        });
+
+        await expect(
+          start_sandbox(config, [], undefined, ['node', 'capricorn'], {
+            ollamaEndpoint: {
+              baseUrl: 'http://127.0.0.1:11434',
+              isLoopback: true,
+            },
+          }),
+        ).resolves.toBe(0);
+
+        expect(startOllamaBridge).toHaveBeenCalledWith({
+          socketPath: path.join('/tmp/gemini-sandbox-test-tmp', 'ollama.sock'),
+          upstreamBaseUrl: 'http://127.0.0.1:11434',
+        });
+        const args = runArgs();
+        expect(args).toContain('CAPRICORN_OLLAMA_HOST=http://127.0.0.1:11434');
+        const cmd = args.at(-1)!;
+        // The settings-dir name comes from GEMINI_DIR, which this file mocks.
+        expect(cmd).toMatch(
+          /socat TCP4-LISTEN:11434,bind=127\.0\.0\.1,.*UNIX-CONNECT:\/home\/node\/\.[a-z]+\/ollama\.sock/,
+        );
+        // Closed during cleanup.
+        expect(close).toHaveBeenCalled();
+      });
+
+      it('refuses a remote endpoint instead of relaying it as "local"', async () => {
+        // Only the image check runs; the refusal happens before `docker run`.
+        interface MockProcessWithStdout extends EventEmitter {
+          stdout: EventEmitter;
+        }
+        const imageCheck = new EventEmitter() as MockProcessWithStdout;
+        imageCheck.stdout = new EventEmitter();
+        vi.mocked(spawn).mockImplementationOnce(() => {
+          setTimeout(() => {
+            imageCheck.stdout.emit('data', Buffer.from('image-id'));
+            imageCheck.emit('close', 0);
+          }, 1);
+          return imageCheck as unknown as ReturnType<typeof spawn>;
+        });
+        const config = createMockSandboxConfig({
+          command: 'docker',
+          image: 'capricorn-sandbox:local',
+        });
+        await expect(
+          start_sandbox(config, [], undefined, ['node', 'capricorn'], {
+            ollamaEndpoint: {
+              baseUrl: 'http://gpu-box:11434',
+              isLoopback: false,
+            },
+          }),
+        ).rejects.toThrow(/supports only a local Ollama endpoint/);
+        expect(startOllamaBridge).not.toHaveBeenCalled();
+      });
+
+      it('uses keep-id and disables SELinux labels for rootless Podman on SELinux hosts', async () => {
+        vi.stubEnv('TEST_PODMAN_INFO', 'true true');
+        vi.mocked(startOllamaBridge).mockImplementation(async (o) => ({
+          socketPath: o.socketPath,
+          close: vi.fn(async () => {}),
+        }));
+        mockImagePresentAndRun();
+        const config = createMockSandboxConfig({
+          command: 'podman',
+          image: 'capricorn-sandbox:local',
+        });
+        await expect(
+          start_sandbox(config, [], undefined, ['node', 'capricorn']),
+        ).resolves.toBe(0);
+        const args = runArgs();
+        expect(args).toContain('--userns=keep-id');
+        expect(args.join(' ')).toContain('--security-opt label=disable');
+        // keep-id replaces the root + useradd + su dance.
+        expect(args.at(-1)).not.toContain('useradd');
+        expect(args).not.toContain('root');
+      });
+
+      it('keeps upstream user mapping and SELinux labels for rootful Podman without SELinux', async () => {
+        vi.stubEnv('TEST_PODMAN_INFO', 'false false');
+        mockImagePresentAndRun();
+        const config = createMockSandboxConfig({
+          command: 'podman',
+          image: 'capricorn-sandbox:local',
+        });
+        await expect(
+          start_sandbox(config, [], undefined, ['node', 'capricorn']),
+        ).resolves.toBe(0);
+        const args = runArgs();
+        expect(args).not.toContain('--userns=keep-id');
+        expect(args.join(' ')).not.toContain('label=disable');
+      });
+
+      it('lets SANDBOX_FLAGS choose its own SELinux label option', async () => {
+        vi.stubEnv('TEST_PODMAN_INFO', 'true true');
+        vi.stubEnv('SANDBOX_FLAGS', '--security-opt label=type:container_t');
+        mockImagePresentAndRun();
+        const config = createMockSandboxConfig({
+          command: 'podman',
+          image: 'capricorn-sandbox:local',
+        });
+        await expect(
+          start_sandbox(config, [], undefined, ['node', 'capricorn']),
+        ).resolves.toBe(0);
+        expect(runArgs().join(' ')).not.toContain('label=disable');
+      });
+
+      it('never pulls the default local image from a registry', async () => {
+        interface MockProcessWithStdout extends EventEmitter {
+          stdout: EventEmitter;
+        }
+        // `docker images` finds nothing.
+        const imageCheck = new EventEmitter() as MockProcessWithStdout;
+        imageCheck.stdout = new EventEmitter();
+        vi.mocked(spawn).mockImplementationOnce(() => {
+          setTimeout(() => imageCheck.emit('close', 0), 1);
+          return imageCheck as unknown as ReturnType<typeof spawn>;
+        });
+        const config = createMockSandboxConfig({
+          command: 'podman',
+          image: 'capricorn-sandbox:local',
+        });
+        await expect(
+          start_sandbox(config, [], undefined, ['node', 'capricorn']),
+        ).rejects.toThrow(/npm run build:sandbox/);
+        expect(
+          vi
+            .mocked(spawn)
+            .mock.calls.some((c) => (c[1] as string[])?.includes('pull')),
+        ).toBe(false);
+      });
     });
 
     it('should preserve the integration-test prefix for random container names', async () => {

@@ -114,7 +114,26 @@ describe('sandboxUtils', () => {
 
     it('should generate default entrypoint', () => {
       const args = entrypoint('/work', ['node', 'gemini', 'arg1']);
-      expect(args).toEqual(['bash', '-c', 'gemini arg1']);
+      // Capricorn: the sandbox image installs the `capricorn` binary.
+      expect(args).toEqual(['bash', '-c', 'capricorn arg1']);
+    });
+
+    it('relays the Ollama bridge socket onto container loopback before the CLI starts', () => {
+      const args = entrypoint('/work', ['node', 'capricorn', 'arg1'], {
+        ollamaSocket: '/home/node/.capricorn/ollama.sock',
+      });
+      const cmd = args[2];
+      expect(cmd).toContain(
+        'socat TCP4-LISTEN:11434,bind=127.0.0.1,fork,reuseaddr UNIX-CONNECT:/home/node/.capricorn/ollama.sock',
+      );
+      expect(cmd).toContain('/dev/tcp/127.0.0.1/11434');
+      // The relay and readiness wait come before the CLI command.
+      expect(cmd.indexOf('socat')).toBeLessThan(cmd.indexOf('capricorn arg1'));
+    });
+
+    it('does not start the Ollama relay without a bridge socket', () => {
+      const args = entrypoint('/work', ['node', 'capricorn', 'arg1']);
+      expect(args[2]).not.toContain('11434');
     });
 
     it('should include PATH and PYTHONPATH if set', () => {

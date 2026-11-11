@@ -628,7 +628,10 @@ export async function loadCliConfig(
   const worktreeSettings =
     options.worktreeSettings ?? (await resolveWorktreeSettings(cwd));
 
-  if (argv.sandbox) {
+  // Capricorn: don't clobber an explicit `GEMINI_SANDBOX=podman` (or docker,
+  // runsc, …) with `true` when `--sandbox` is also given; upstream did, which
+  // silently switched podman users to Docker auto-detection.
+  if (argv.sandbox && !process.env['GEMINI_SANDBOX']?.trim()) {
     process.env['GEMINI_SANDBOX'] = 'true';
   }
 

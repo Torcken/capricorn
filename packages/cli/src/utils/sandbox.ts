@@ -36,7 +36,8 @@ import {
   parseImageName,
   ports,
   entrypoint,
-  LOCAL_DEV_SANDBOX_IMAGE_NAME,
+  isLocalOnlySandboxImage,
+  SANDBOX_OLLAMA_PORT,
   SANDBOX_NETWORK_NAME,
   SANDBOX_PROXY_NAME,
   BUILTIN_SEATBELT_PROFILES,
@@ -45,6 +46,10 @@ import {
 } from './sandboxUtils.js';
 import { BUILTIN_SEATBELT_PROFILE_CONTENTS } from './sandboxBuiltinProfiles.js';
 import { IdeBridge, resolveIdeBridgeUpstream } from './ideBridge.js';
+import {
+  startOllamaBridge,
+  type OllamaBridge,
+} from '../capricorn/sandboxOllamaBridge.js';
 import {
   IDE_BRIDGE_HELPER_FILENAME,
   IDE_BRIDGE_HELPER_SOURCE,
@@ -58,11 +63,30 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 
+/**
+ * Capricorn-specific inputs to {@link start_sandbox}.
+ */
+export interface CapricornSandboxOptions {
+  /**
+   * The session's Ollama endpoint, already validated by
+   * `resolveOllamaEndpoint`. For Docker/Podman sandboxes it is relayed into the
+   * container through the host bridge (`capricorn/sandboxOllamaBridge.ts`).
+   * When omitted, no bridge is started (upstream behaviour; tests only).
+   */
+  ollamaEndpoint?: { baseUrl: string; isLoopback: boolean };
+}
+
+/** Host-side bridge socket file name, inside the per-session sandbox temp dir. */
+const OLLAMA_BRIDGE_SOCKET = 'ollama.sock';
+/** Unix socket paths are limited to ~108 bytes on Linux, 104 on macOS. */
+const MAX_UNIX_SOCKET_PATH = 100;
+
 export async function start_sandbox(
   config: SandboxConfig,
   nodeArgs: string[] = [],
   cliConfig?: Config,
   cliArgs: string[] = [],
+  capricorn: CapricornSandboxOptions = {},
 ): Promise<number> {
   const patcher = new ConsolePatcher({
     debugMode: cliConfig?.getDebugMode() || !!process.env['DEBUG'],
@@ -74,8 +98,18 @@ export async function start_sandbox(
   let stopIdeBridge: (() => void) | undefined = undefined;
   let tempProfileFile: string | null = null;
   let sandboxTmpDir: string | null = null;
+  let ollamaBridge: OllamaBridge | null = null;
+  let ollamaSocketInContainer: string | undefined;
 
   const cleanup = () => {
+    // Capricorn: stop relaying inference before the socket's directory goes.
+    if (ollamaBridge) {
+      const bridge = ollamaBridge;
+      ollamaBridge = null;
+      void bridge.close().catch(() => {
+        // ignore: the socket lives in the temp dir removed below
+      });
+    }
     if (stopIdeBridge) {
       const stop = stopIdeBridge;
       stopIdeBridge = undefined;
@@ -474,10 +508,10 @@ export async function start_sandbox(
 
     // stop if image is missing
     if (!(await ensureSandboxImageIsPresent(command, image, cliConfig))) {
-      const remedy =
-        image === LOCAL_DEV_SANDBOX_IMAGE_NAME
-          ? 'Try running `npm run build:all` or `npm run build:sandbox` under the gemini-cli repo to build it locally, or check the image name and your network connection.'
-          : 'Please check the image name, your network connection, or notify gemini-cli-dev@google.com if the issue persists.';
+      const remedy = isLocalOnlySandboxImage(image)
+        ? // Capricorn: own remedy text; never point users at Google.
+          'Build it locally with `npm run build:sandbox` in the Capricorn source checkout.'
+        : 'Check the image name. Capricorn never pulls sandbox images unless you configure one explicitly.';
       throw new FatalSandboxError(
         `Sandbox image '${image}' is missing or could not be pulled. ${remedy}`,
       );
@@ -586,27 +620,38 @@ export async function start_sandbox(
 
     args.push('--volume', `${sandboxTmpDir}:${userSettingsDirInSandbox}:rw`);
 
-    // mount gcloud config directory if it exists
-    const gcloudConfigDir = userHomeDirOnHost
-      ? path.join(userHomeDirOnHost, '.config', 'gcloud')
-      : '';
-    if (gcloudConfigDir && fs.existsSync(gcloudConfigDir)) {
-      args.push(
-        '--volume',
-        `${gcloudConfigDir}:${getContainerPath(gcloudConfigDir)}:ro`,
-      );
-    }
+    // Capricorn: upstream mounted ~/.config/gcloud and the
+    // GOOGLE_APPLICATION_CREDENTIALS file here for Google auth. Capricorn has
+    // no Google back-end, so those mounts would only expose credentials.
 
-    // mount ADC file if GOOGLE_APPLICATION_CREDENTIALS is set
-    if (process.env['GOOGLE_APPLICATION_CREDENTIALS']) {
-      const adcFile = process.env['GOOGLE_APPLICATION_CREDENTIALS'];
-      if (fs.existsSync(adcFile)) {
-        args.push('--volume', `${adcFile}:${getContainerPath(adcFile)}:ro`);
-        args.push(
-          '--env',
-          `GOOGLE_APPLICATION_CREDENTIALS=${getContainerPath(adcFile)}`,
+    // Capricorn: relay the host's Ollama daemon into the container. The
+    // sandbox network stays as configured (internal/off by default); the
+    // container reaches inference only through this filtered Unix-socket
+    // bridge in the already-mounted, 0700 per-session temp dir.
+    if (capricorn.ollamaEndpoint && sandboxTmpDir) {
+      if (!capricorn.ollamaEndpoint.isLoopback) {
+        throw new FatalSandboxError(
+          `The container sandbox supports only a local Ollama endpoint; the session uses ${capricorn.ollamaEndpoint.baseUrl}. ` +
+            'Run without --sandbox, or point Capricorn at a local daemon.',
         );
       }
+      const socketPath = path.join(sandboxTmpDir, OLLAMA_BRIDGE_SOCKET);
+      if (socketPath.length > MAX_UNIX_SOCKET_PATH) {
+        throw new FatalSandboxError(
+          `Temporary directory path is too long for the Ollama bridge socket (${socketPath}). Set TMPDIR to a shorter path.`,
+        );
+      }
+      ollamaBridge = await startOllamaBridge({
+        socketPath,
+        upstreamBaseUrl: capricorn.ollamaEndpoint.baseUrl,
+      });
+      ollamaSocketInContainer = `${userSettingsDirInSandbox}/${OLLAMA_BRIDGE_SOCKET}`;
+      // Highest-precedence endpoint override (see capricorn/runtime.ts), so a
+      // host-only `ollama.endpoint` or OLLAMA_HOST cannot leak in.
+      args.push(
+        '--env',
+        `CAPRICORN_OLLAMA_HOST=http://127.0.0.1:${SANDBOX_OLLAMA_PORT}`,
+      );
     }
 
     // mount paths listed in SANDBOX_MOUNTS
@@ -923,15 +968,40 @@ export async function start_sandbox(
       args.push('--authfile', emptyAuthFilePath);
     }
 
+    // Capricorn: make rootless Podman (the default on Fedora/RHEL) work.
+    //  - UID: upstream starts as root, `useradd`s the host UID and `su`s to
+    //    it. Under rootless Podman that in-container UID maps to a *subuid* on
+    //    the host, so the workspace and settings mounts are unreadable.
+    //    `--userns=keep-id` maps the host user onto itself instead.
+    //  - SELinux: files under $HOME are labelled user_home_t, which container_t
+    //    may not read. `:z` would permanently relabel the user's project tree;
+    //    instead disable label separation for this one container. Namespaces,
+    //    rootless mode, mount scope and the network setting are unaffected.
+    //    Users who prefer relabelling can pass their own `label=` option in
+    //    SANDBOX_FLAGS, which suppresses this default.
+    let podmanKeepId = false;
+    if (command === 'podman') {
+      const host = await getPodmanHostSecurity();
+      if (host.rootless) {
+        args.push('--userns=keep-id');
+        podmanKeepId = true;
+      }
+      if (host.selinux && !process.env['SANDBOX_FLAGS']?.includes('label=')) {
+        args.push('--security-opt', 'label=disable');
+      }
+    }
+
     // Determine if the current user's UID/GID should be passed to the sandbox.
     // See shouldUseCurrentUserInSandbox for more details.
     let userFlag = '';
-    const finalEntrypoint = entrypoint(workdir, cliArgs);
+    const finalEntrypoint = entrypoint(workdir, cliArgs, {
+      ollamaSocket: ollamaSocketInContainer,
+    });
 
     if (process.env['GEMINI_CLI_INTEGRATION_TEST'] === 'true') {
       args.push('--user', 'root');
       userFlag = '--user root';
-    } else if (await shouldUseCurrentUserInSandbox()) {
+    } else if (!podmanKeepId && (await shouldUseCurrentUserInSandbox())) {
       // For the user-creation logic to work, the container must start as root.
       // The entrypoint script then handles dropping privileges to the correct user.
       args.push('--user', 'root');
@@ -1367,6 +1437,28 @@ async function start_lxc_sandbox(
 }
 
 // Helper functions to ensure sandbox image is present
+/**
+ * Capricorn: asks Podman whether it runs rootless and with SELinux enabled.
+ * Any failure (old Podman, odd output) yields `false`/`false`, i.e. upstream
+ * behaviour.
+ */
+async function getPodmanHostSecurity(): Promise<{
+  rootless: boolean;
+  selinux: boolean;
+}> {
+  try {
+    const { stdout } = await execFileAsync('podman', [
+      'info',
+      '--format',
+      '{{.Host.Security.Rootless}} {{.Host.Security.SELinuxEnabled}}',
+    ]);
+    const [rootless, selinux] = String(stdout).trim().split(/\s+/);
+    return { rootless: rootless === 'true', selinux: selinux === 'true' };
+  } catch {
+    return { rootless: false, selinux: false };
+  }
+}
+
 async function imageExists(sandbox: string, image: string): Promise<boolean> {
   return new Promise((resolve) => {
     const args = ['images', '-q', image];
@@ -1483,7 +1575,9 @@ async function ensureSandboxImageIsPresent(
   }
 
   debugLogger.log(`Sandbox image ${image} not found locally.`);
-  if (image === LOCAL_DEV_SANDBOX_IMAGE_NAME) {
+  // Capricorn: never pull the default or any `:local` image (see
+  // isLocalOnlySandboxImage).
+  if (isLocalOnlySandboxImage(image)) {
     // user needs to build the image themselves
     return false;
   }

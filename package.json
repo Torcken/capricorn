@@ -67,6 +67,7 @@
     "clean": "node scripts/clean.js",
     "pre-commit": "node scripts/pre-commit.js",
     "test:e2e:capricorn": "vitest run --config e2e/vitest.config.ts",
+    "test:e2e:sandbox": "vitest run --config e2e/vitest.config.ts e2e/sandbox.e2e.test.ts",
     "test:smoke:real-model": "cross-env CAPRICORN_REAL_MODEL=1 vitest run --config e2e/vitest.config.ts e2e/real-model.smoke.e2e.test.ts",
     "verify:offline": "sh scripts/verify-offline.sh"
   },

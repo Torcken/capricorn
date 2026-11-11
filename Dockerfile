@@ -41,7 +41,9 @@ RUN HUSKY=0 npm run build && \
 # ---- Stage 2: Runtime ----
 FROM docker.io/library/node:20-slim
 
-ARG SANDBOX_NAME="gemini-cli-sandbox"
+# Capricorn: sandbox image for `capricorn --sandbox` (built locally by
+# `npm run build:sandbox`, tagged capricorn-sandbox:local; never pulled).
+ARG SANDBOX_NAME="capricorn-sandbox"
 ARG CLI_VERSION_ARG
 ENV SANDBOX="$SANDBOX_NAME"
 ENV CLI_VERSION=$CLI_VERSION_ARG
@@ -77,22 +79,25 @@ RUN mkdir -p /usr/local/share/npm-global \
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin
 
-# create container-internal .gemini directory owned by non-root node user
-RUN mkdir -p /home/node/.gemini \
-  && chown -R node:node /home/node/.gemini
+# create container-internal .capricorn directory owned by non-root node user
+# (the per-session sanitized settings dir and Ollama bridge socket mount here)
+RUN mkdir -p /home/node/.capricorn \
+  && chown -R node:node /home/node/.capricorn
 
 # switch to non-root user node
 USER node
 
-# install gemini-cli and clean up
+# install Capricorn and clean up. Internal package names keep their upstream
+# @google/gemini-cli* names (see docs/UPSTREAM.md); the binary is `capricorn`.
+# socat (above) relays the host Ollama bridge onto container loopback.
 COPY --chown=node:node packages/cli/dist/google-gemini-cli-*.tgz /tmp/gemini-cli.tgz
 COPY --chown=node:node packages/core/dist/google-gemini-cli-core-*.tgz /tmp/gemini-core.tgz
 RUN npm install -g /tmp/gemini-core.tgz \
   && npm install -g /tmp/gemini-cli.tgz \
   && node -e "const fs=require('node:fs'); JSON.parse(fs.readFileSync('/usr/local/share/npm-global/lib/node_modules/@google/gemini-cli/package.json','utf8')); JSON.parse(fs.readFileSync('/usr/local/share/npm-global/lib/node_modules/@google/gemini-cli-core/package.json','utf8'));" \
-  && gemini --version > /dev/null \
+  && capricorn --version > /dev/null \
   && npm cache clean --force \
   && rm -f /tmp/gemini-{cli,core}.tgz
 
 # default entrypoint when none specified
-ENTRYPOINT ["/usr/local/share/npm-global/bin/gemini"]
+ENTRYPOINT ["/usr/local/share/npm-global/bin/capricorn"]

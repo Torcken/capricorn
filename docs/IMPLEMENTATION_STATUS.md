@@ -21,7 +21,9 @@ fully tested · **deferred** · **blocked**.
 | Package smoke (bundle, pack, install, launch)                                       | done                                   | `scripts/capricorn/pack-smoke.js` (Linux)               |
 | Real-model smoke (`gemma4:12b`, read→fix→test→summary + denial)                     | done (Linux, 1 run)                    | `e2e/.results/real-model-smoke.json`                    |
 | macOS / Windows                                                                     | unverified                             | CI matrix written, not yet run                          |
-| Sandbox with `capricorn-sandbox:local` image                                        | unverified                             | defaults changed; image build not run                   |
+| Container sandbox (`capricorn-sandbox:local`, Ollama bridge, network off)           | done (Linux: rootless Podman, Docker)  | `sandbox*.test.ts`, gated `e2e/sandbox.e2e.test.ts`     |
+| Container sandbox on Docker Desktop (macOS/Windows), runsc, LXC; macOS Seatbelt     | unverified                             | not run; see docs/SECURITY.md#sandbox                   |
+| README quickstart in a fresh clone                                                  | done (Linux)                           | clone → `npm ci` → build → bundle → doctor → `run`      |
 | Hardware-aware onboarding, local web fetch, eval suite                              | deferred                               | docs/ROADMAP.md                                         |
 | Removal of unreachable Google code (code_assist, OAuth, Clearcut)                   | deferred                               | docs/UPSTREAM.md                                        |
 | npm publication                                                                     | blocked                                | needs package-name ownership and maintainer credentials |
@@ -43,6 +45,20 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   `models list` command). `npm run typecheck`, `npm run lint` and
   `npx prettier --check .` pass. E2E 25/25 (the real-model smoke file is skipped
   unless `CAPRICORN_REAL_MODEL=1`).
+
+- **After the sandbox fixes (2026-11-11):** cli 4 failed / 7467 (the same four
+  upstream failures; +19 new tests), core unchanged; typecheck, lint and
+  prettier pass; e2e 25 passed, 3 gated skips.
+- **Sandbox and quickstart (2026-11-11):** a fresh clone passed `npm ci` (31 s),
+  `npm run build`, `npm run bundle`; `capricorn doctor` reported "ready" against
+  Ollama 0.30.11 and `capricorn run` answered correctly with `gemma4:12b`.
+  `npm run build:sandbox` built `capricorn-sandbox:local` with rootless Podman
+  5.8.1 (SELinux enforcing); `capricorn --sandbox` answered a prompt from inside
+  the container, and probes from inside the running container confirmed: no
+  internet, no route to the host's Ollama port, `/api/pull` and `/api/delete`
+  refused by the bridge, only the project and session settings mounted. The same
+  checks passed with rootful Docker 29. Gated sandbox e2e 1/1 with each of
+  Podman and Docker.
 
 ## Known limitations
 

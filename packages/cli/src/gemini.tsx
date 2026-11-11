@@ -38,6 +38,7 @@ import {
   getProjectHash,
   loadConversationRecord,
   type MessageRecord,
+  resolveOllamaEndpoint,
 } from '@google/gemini-cli-core';
 
 import { loadCliConfig, parseArguments } from './config/config.js';
@@ -84,6 +85,7 @@ import {
 import { validateAuthMethod } from './config/auth.js';
 import { installCapricornNetworkPolicy } from './capricorn/networkPolicy.js';
 import { readlineConfirm, runPreflight } from './capricorn/preflight.js';
+import { resolveRuntime } from './capricorn/runtime.js';
 import { runAcpClient } from './acp/acpStdioTransport.js';
 import { validateNonInteractiveAuth } from './validateNonInterActiveAuth.js';
 import { appEvents, AppEvent } from './utils/events.js';
@@ -738,7 +740,19 @@ export async function main() {
       const sandboxArgs = injectStdinIntoArgs(process.argv, stdinData);
 
       await relaunchOnExitCode(() =>
-        start_sandbox(sandboxConfig, memoryArgs, partialConfig, sandboxArgs),
+        start_sandbox(sandboxConfig, memoryArgs, partialConfig, sandboxArgs, {
+          // Capricorn: the container reaches this (validated) endpoint only
+          // through the filtered host bridge; see sandboxOllamaBridge.ts.
+          // resolveOllamaEndpoint throws for a remote host without the
+          // user-scope opt-in, exactly as the agent itself would.
+          ollamaEndpoint: (() => {
+            const runtime = resolveRuntime(settings, argv.model);
+            return resolveOllamaEndpoint(
+              runtime.settings.endpoint,
+              runtime.settings.allowRemoteHost,
+            );
+          })(),
+        }),
       );
       await runExitCleanup();
       process.exit(ExitCodes.SUCCESS);

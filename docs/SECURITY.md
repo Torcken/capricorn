@@ -73,9 +73,44 @@ Optional OS-level isolation (`--sandbox`, setting `tools.sandbox`):
 - **macOS:** Seatbelt profiles (`sandbox-macos-*.sb`); `~/.capricorn` and
   credential files are write-/read-protected inside the sandbox.
 - **Linux/Windows/macOS:** Docker or Podman with the locally built image
-  `capricorn-sandbox:local` (`npm run build:sandbox`). Capricorn never pulls a
-  sandbox image from a registry by default. Network access inside the sandbox is
-  **off** unless `tools.sandbox.networkAccess` is true.
+  `capricorn-sandbox:local` (`npm run build:sandbox`). Capricorn never pulls the
+  default image (or any `:local` tag) from a registry. Network access inside the
+  sandbox is **off** (an internal container network) unless
+  `tools.sandbox.networkAccess` is true. Select the runtime with
+  `GEMINI_SANDBOX=podman` or `=docker`; `--sandbox` alone auto-detects Docker
+  first.
+
+How inference works in the container sandbox: the whole CLI re-runs inside the
+container, where `127.0.0.1` is the container itself and the host is
+unreachable. The host process (outside the container, under the egress guard)
+serves a Unix socket in the per-session, `0700` settings directory that is
+mounted into the container; `socat` re-exposes it as `127.0.0.1:11434` inside.
+The bridge is an HTTP filter: only `GET /api/version`, `/api/tags`, `/api/ps`
+and `POST /api/show`, `/api/chat` are forwarded. `pull`, `push`, `delete`,
+`create`, `copy` and blob uploads get HTTP 403, because pull/push would make the
+host daemon use the network on the container's behalf. Manage models on the
+host. The container sandbox refuses a remote (opt-in) Ollama endpoint.
+
+What the container gets: the project directory and the sanitized settings
+directory, nothing else from your home (no credentials, no `~/.config/gcloud`).
+On **rootless Podman** the container runs with `--userns=keep-id` (your UID). On
+**SELinux** hosts (Fedora, RHEL) Capricorn adds `--security-opt label=disable`
+for that container instead of relabelling your project with `:z`; this removes
+SELinux confinement of the container (other isolation is unchanged). To keep
+SELinux confinement, pass your own `label=` option in `SANDBOX_FLAGS` (Capricorn
+then adds none) and label the project for containers yourself (e.g.
+`chcon -Rt container_file_t <project>`).
+
+Verified (2026-11-11, Fedora 43, SELinux enforcing) with rootless Podman 5.8 and
+rootful Docker 29: a prompt answered by `gemma4:12b` from inside the sandbox;
+from inside the container, the internet, raw IPs and the host's Ollama port were
+unreachable and `/api/pull`/`/api/delete` were refused. Not yet verified: Docker
+Desktop on macOS/Windows (Unix-socket bind mounts across the VM boundary may not
+work there), gVisor (`runsc`) and LXC.
+
+macOS Seatbelt profiles: the `*-proxied` profiles only allow outbound
+connections to the proxy on `localhost:8877`, which also blocks Ollama; use an
+`*-open` profile, or have your proxy forward to Ollama. (Not verified on macOS.)
 
 Without the sandbox, approved commands run with your user's full privileges. The
 risk classification shown in approval prompts is advisory; it is not an

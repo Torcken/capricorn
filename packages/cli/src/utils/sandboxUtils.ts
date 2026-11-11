@@ -16,7 +16,27 @@ import {
   resolveToRealPath,
 } from '@google/gemini-cli-core';
 
-export const LOCAL_DEV_SANDBOX_IMAGE_NAME = 'gemini-cli-sandbox';
+/**
+ * Capricorn: the default, locally built sandbox image (`npm run build:sandbox`;
+ * also `config.sandboxImageUri` in packages/cli/package.json).
+ */
+export const LOCAL_DEV_SANDBOX_IMAGE_NAME = 'capricorn-sandbox:local';
+
+/**
+ * Capricorn: returns true for images that must be built locally and are never
+ * pulled. Without this, `podman pull capricorn-sandbox:local` would resolve the
+ * unqualified name against public registries (docker.io, quay.io, …): a
+ * network call the user never asked for, and possibly a squatted image.
+ *
+ * @param image Image reference as configured.
+ */
+export function isLocalOnlySandboxImage(image: string): boolean {
+  return (
+    image === LOCAL_DEV_SANDBOX_IMAGE_NAME ||
+    image === 'gemini-cli-sandbox' ||
+    image.endsWith(':local')
+  );
+}
 export const SANDBOX_NETWORK_NAME = 'gemini-cli-sandbox';
 export const SANDBOX_PROXY_NAME = 'gemini-cli-sandbox-proxy';
 export const BUILTIN_SEATBELT_PROFILES = [
@@ -372,7 +392,26 @@ export function ports(): string[] {
     .map((p) => p.trim());
 }
 
-export function entrypoint(workdir: string, cliArgs: string[]): string[] {
+/**
+ * Port the in-container CLI uses to reach Ollama through the host bridge.
+ * Capricorn: the in-container CLI is pointed here via `CAPRICORN_OLLAMA_HOST`.
+ */
+export const SANDBOX_OLLAMA_PORT = 11434;
+
+/**
+ * Builds the `bash -c` command that runs the CLI inside the container.
+ *
+ * @param workdir Host working directory (mounted at the same path).
+ * @param cliArgs Original `process.argv`; the first two entries are dropped.
+ * @param options.ollamaSocket Capricorn: container path of the host Ollama
+ *   bridge socket (see `capricorn/sandboxOllamaBridge.ts`). When set, socat
+ *   re-exposes it on `127.0.0.1:${SANDBOX_OLLAMA_PORT}` before the CLI starts.
+ */
+export function entrypoint(
+  workdir: string,
+  cliArgs: string[],
+  options: { ollamaSocket?: string } = {},
+): string[] {
   const isWindows = os.platform() === 'win32';
   const containerWorkdir = getContainerPath(workdir);
   const shellCmds = [];
@@ -421,6 +460,17 @@ export function entrypoint(workdir: string, cliArgs: string[]): string[] {
     ),
   );
 
+  // Capricorn: relay the host Ollama bridge onto container loopback, then wait
+  // (up to ~5 s) until the port accepts connections so the CLI's first
+  // /api/version probe cannot race socat's startup.
+  if (options.ollamaSocket) {
+    const sock = quote([options.ollamaSocket]);
+    shellCmds.push(
+      `socat TCP4-LISTEN:${SANDBOX_OLLAMA_PORT},bind=127.0.0.1,fork,reuseaddr UNIX-CONNECT:${sock} 2> /dev/null &`,
+      `for _ in $(seq 50); do (exec 3<>/dev/tcp/127.0.0.1/${SANDBOX_OLLAMA_PORT}) 2> /dev/null && break; sleep 0.1; done;`,
+    );
+  }
+
   const quotedCliArgs = cliArgs.slice(2).map((arg) => quote([arg]));
   const isDebugMode =
     process.env['DEBUG'] === 'true' || process.env['DEBUG'] === '1';
@@ -430,8 +480,9 @@ export function entrypoint(workdir: string, cliArgs: string[]): string[] {
         ? 'npm run debug --'
         : 'npm rebuild && npm run start --'
       : isDebugMode
-        ? `node --inspect-brk=0.0.0.0:${process.env['DEBUG_PORT'] || '9229'} $(which gemini)`
-        : 'gemini';
+        ? `node --inspect-brk=0.0.0.0:${process.env['DEBUG_PORT'] || '9229'} $(which capricorn)`
+        : // Capricorn: the image installs the `capricorn` binary (Dockerfile).
+          'capricorn';
 
   const args = [...shellCmds, cliCmd, ...quotedCliArgs];
   return ['bash', '-c', args.join(' ')];

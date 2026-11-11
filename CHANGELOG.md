@@ -6,6 +6,26 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Container sandbox (`--sandbox` with Podman/Docker) could not run at all: the
+  image still installed and launched a `gemini` binary, and the in-container CLI
+  had no route to Ollama. The host now relays Ollama into the container through
+  a filtered Unix-socket bridge (inference and read-only endpoints only; model
+  pull/push/delete refused), keeping the sandbox network off.
+- The default sandbox image `capricorn-sandbox:local` is never pulled from a
+  registry (Podman would have resolved the unqualified name against public
+  registries).
+- `GEMINI_SANDBOX=podman` is no longer overridden by `--sandbox`.
+- Rootless Podman: run as the host user (`--userns=keep-id`); on SELinux hosts
+  disable label separation for the sandbox container instead of failing with
+  `EACCES`.
+
+### Removed
+
+- The container sandbox no longer mounts `~/.config/gcloud` or the
+  `GOOGLE_APPLICATION_CREDENTIALS` file.
+
 ## [0.1.0-alpha.0] - 2026-11-10 (not published)
 
 First Capricorn build, forked from Gemini CLI v0.67.0 (`dc6602ce`).

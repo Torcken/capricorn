@@ -1076,6 +1076,26 @@ describe('loadCliConfig', () => {
       expect(config.getSkipNextSpeakerCheck()).toBe(false);
     });
   });
+
+  // Capricorn: upstream overwrote GEMINI_SANDBOX with "true" on --sandbox,
+  // so `GEMINI_SANDBOX=podman capricorn --sandbox` silently used Docker.
+  describe('--sandbox and GEMINI_SANDBOX', () => {
+    it('keeps an explicit GEMINI_SANDBOX command when --sandbox is given', async () => {
+      vi.stubEnv('GEMINI_SANDBOX', 'podman');
+      process.argv = ['node', 'script.js', '--sandbox'];
+      const argv = await parseArguments(createTestMergedSettings());
+      await loadCliConfig(createTestMergedSettings(), 'test-session', argv);
+      expect(process.env['GEMINI_SANDBOX']).toBe('podman');
+    });
+
+    it('sets GEMINI_SANDBOX=true for --sandbox when it is unset', async () => {
+      vi.stubEnv('GEMINI_SANDBOX', '');
+      process.argv = ['node', 'script.js', '--sandbox'];
+      const argv = await parseArguments(createTestMergedSettings());
+      await loadCliConfig(createTestMergedSettings(), 'test-session', argv);
+      expect(process.env['GEMINI_SANDBOX']).toBe('true');
+    });
+  });
 });
 
 describe('mergeMcpServers', () => {
