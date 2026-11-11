@@ -24,7 +24,10 @@ fully tested · **deferred** · **blocked**.
 | Container sandbox (`capricorn-sandbox:local`, Ollama bridge, network off)           | done (Linux: rootless Podman, Docker)  | `sandbox*.test.ts`, gated `e2e/sandbox.e2e.test.ts`     |
 | Container sandbox on Docker Desktop (macOS/Windows), runsc, LXC; macOS Seatbelt     | unverified                             | not run; see docs/SECURITY.md#sandbox                   |
 | README quickstart in a fresh clone                                                  | done (Linux)                           | clone → `npm ci` → build → bundle → doctor → `run`      |
-| Hardware-aware onboarding, local web fetch, eval suite                              | deferred                               | docs/ROADMAP.md                                         |
+| Behavioural eval suite (14 tasks, outcome-based checkers)                           | done                                   | `evals/capricorn/`, `e2e/evals-*.e2e.test.ts`           |
+| Prompt tuning from evals (`gemma4:12b`: 74% → 83%)                                  | in progress                            | `evals/capricorn/RESULTS.md`                            |
+| Settings-reachable Google paths (voice, telemetry, MCP/agent auth) closed           | done                                   | unit tests per path                                     |
+| Hardware-aware onboarding, local web fetch                                          | deferred                               | docs/ROADMAP.md                                         |
 | Removal of unreachable Google code (code_assist, OAuth, Clearcut)                   | deferred                               | docs/UPSTREAM.md                                        |
 | npm publication                                                                     | blocked                                | needs package-name ownership and maintainer credentials |
 
@@ -46,6 +49,11 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   `npx prettier --check .` pass. E2E 25/25 (the real-model smoke file is skipped
   unless `CAPRICORN_REAL_MODEL=1`).
 
+- **After closing Google paths, eval suite, prompt v2 (2026-11-11):** core 7
+  failed / 8630 and cli 4 failed / 7466 (the same upstream failures); typecheck,
+  lint and prettier pass; e2e 65 passed, 3 gated skips. Evals: see
+  `evals/capricorn/RESULTS.md`. `gemma4:latest` could not be evaluated: Ollama
+  0.30.11 fails to load it on the test machine.
 - **After the sandbox fixes (2026-11-11):** cli 4 failed / 7467 (the same four
   upstream failures; +19 new tests), core unchanged; typecheck, lint and
   prettier pass; e2e 25 passed, 3 gated skips.

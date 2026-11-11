@@ -6,7 +6,26 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Behavioural eval suite for local Gemma 4 models (`npm run eval:capricorn`,
+  `evals/capricorn/`): 14 tasks with deterministic, outcome-based checkers; the
+  suite itself is validated in the e2e tests.
+
+### Changed
+
+- Gemma 4 system prompt (v2): rules follow the session's real tools (shell is
+  only mentioned when available; read-only sessions get a "describe, don't edit"
+  rule), plans are written inline and followed by action, answers must name
+  every item asked for.
+
 ### Fixed
+
+- Headless runs could hang until the time limit: the model could call
+  `enter_plan_mode` and then never leave Plan Mode. The tool is now only offered
+  in interactive sessions.
+- Gemma 4 channel markers (`<|channel>thought`, `<channel|>`) leaking into
+  thinking output are stripped.
 
 - Container sandbox (`--sandbox` with Podman/Docker) could not run at all: the
   image still installed and launched a `gemini` binary, and the in-container CLI
@@ -23,6 +42,12 @@ All notable changes to Capricorn are documented here. The format follows
 
 ### Removed
 
+- Gemini Live voice transcription (Google Cloud); local Whisper is the only
+  backend.
+- OpenTelemetry export (including the Google Cloud target) can no longer be
+  enabled by settings, `GEMINI_TELEMETRY_*`/`OTEL_*` variables or flags.
+- Google credential and service-account impersonation auth for MCP servers and
+  remote agents (now an explicit error).
 - The container sandbox no longer mounts `~/.config/gcloud` or the
   `GOOGLE_APPLICATION_CREDENTIALS` file.
 

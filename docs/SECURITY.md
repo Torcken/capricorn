@@ -140,9 +140,14 @@ isolation boundary.
 
 Capricorn sends no analytics, crash reports or update checks, and contacts no
 Google service. Network traffic in normal operation is limited to the local
-Ollama daemon. `capricorn models pull` asks _Ollama_ to download a model from
-its registry; that is the only command that intentionally causes internet
-traffic, and only when you run it.
+Ollama daemon. Settings cannot re-enable Google paths: OpenTelemetry export is
+forced off (whatever `telemetry.*`, `GEMINI_TELEMETRY_*` or `OTEL_*` say), voice
+transcription is local Whisper only, and Google-credential auth for MCP servers
+and remote agents is refused. The voice dialog's optional Whisper model download
+(from huggingface.co) only happens when you choose it, and is blocked unless you
+add that host to `security.network.allowedHosts`. `capricorn models pull` asks
+_Ollama_ to download a model from its registry; that is the only command that
+intentionally causes internet traffic, and only when you run it.
 
 Local data: settings and trust decisions in `~/.capricorn/`, session transcripts
 under `~/.capricorn/tmp/<project>/chats/` (they contain your prompts, model

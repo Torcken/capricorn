@@ -11,8 +11,12 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
 - **Local web fetch tool:** a `web_fetch` replacement that downloads a page
   locally (opt-in, allowlisted hosts, approval per request) instead of
   upstream's hosted URL-context path.
-- **Prompt tuning with an eval suite:** fixed task set (exploration, edit,
-  test-fix, refusal) run against each Gemma 4 preset; publish results.
+- **Prompt tuning with the eval suite** (suite done, see `evals/capricorn/`):
+  keep improving exploration (read the file that holds the answer) and
+  project-convention matching; measure every installed Gemma 4 preset; publish
+  results in `evals/capricorn/RESULTS.md`.
+- **`doctor` load check:** optionally load the selected model once, since
+  metadata can verify as Gemma 4 while Ollama still cannot run it.
 - **Remove unreachable Google code** (Code Assist, Google OAuth, Clearcut) and
   its tests, module by module.
 - **Platform coverage:** CI runs on macOS and Windows exist; manual real-model
