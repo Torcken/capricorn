@@ -550,11 +550,13 @@ export function frameToResponse(
   frame: OllamaChatResponse,
   ids: ToolCallIdAllocator,
   seenToolCallIds: Set<string> = new Set(),
+  sanitizeThinking: (delta: string) => string = (d) => d,
 ): GenerateContentResponse {
   const parts: Part[] = [];
   const msg = frame.message;
-  if (msg?.thinking) {
-    parts.push({ text: msg.thinking, thought: true });
+  const thinking = msg?.thinking ? sanitizeThinking(msg.thinking) : '';
+  if (thinking) {
+    parts.push({ text: thinking, thought: true });
   }
   if (msg?.content) {
     parts.push({ text: msg.content });
@@ -580,6 +582,39 @@ export function frameToResponse(
   const usage = frame.done ? toUsage(frame) : undefined;
   if (usage) response.usageMetadata = usage;
   return response;
+}
+
+/**
+ * Creates a stateful filter for one response's `thinking` deltas that removes
+ * Gemma 4 channel control tokens.
+ *
+ * Gemma 4 opens its reasoning with `<|channel>thought` and closes it with
+ * `<channel|>`. Ollama normally consumes these, but in some turns (observed
+ * after tool results, Ollama 0.30.11) they arrive verbatim as thinking text,
+ * often split across deltas (`"<|channel>"`, then `"thought"`). Left in, they
+ * show up in the UI and are sent back to the model in later turns. The filter
+ * keeps one bit of state so a channel name in the *next* delta is dropped too.
+ * Ordinary prose such as "a thought" is untouched: `thought` is only removed
+ * directly after an opener.
+ *
+ * @returns A function mapping each raw delta to its cleaned text (possibly '').
+ */
+export function createThinkingSanitizer(): (delta: string) => string {
+  let afterOpener = false;
+  return (delta: string): string => {
+    let out = delta;
+    if (afterOpener) {
+      afterOpener = false;
+      out = out.replace(/^\s*thought\b[ \t]*/, '');
+    }
+    out = out.replace(/<channel\|>/g, '');
+    if (out.includes('<|channel>')) {
+      // An opener at the very end means its name arrives in the next delta.
+      afterOpener = /<\|channel>\s*$/.test(out);
+      out = out.replace(/<\|channel>(\s*thought\b[ \t]*)?/g, '');
+    }
+    return out;
+  };
 }
 
 // ---------------------------------------------------------------------------

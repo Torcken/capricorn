@@ -47,6 +47,7 @@ import { debugLogger } from '../../utils/debugLogger.js';
 import type { OllamaClient } from './client.js';
 import {
   createToolCallIdAllocator,
+  createThinkingSanitizer,
   frameToResponse,
   normalizeContents,
   systemInstructionToText,
@@ -137,6 +138,8 @@ export class OllamaContentGenerator implements ContentGenerator {
     const response = frameToResponse(
       { ...frame, done: true },
       createToolCallIdAllocator(),
+      new Set(),
+      createThinkingSanitizer(),
     );
     response.modelVersion = verdict.model;
     return response;
@@ -171,13 +174,15 @@ export class OllamaContentGenerator implements ContentGenerator {
       // completely new response.
       const ids = createToolCallIdAllocator();
       const seen = new Set<string>();
+      // Gemma 4 channel markers can leak into thinking deltas; see converter.
+      const sanitizeThinking = createThinkingSanitizer();
       let yielded = false;
       try {
         for await (const frame of this.client.chatStream(body, signal)) {
           if (frame.done) {
             this.calibrate(estimate, frame.prompt_eval_count);
           }
-          const chunk = frameToResponse(frame, ids, seen);
+          const chunk = frameToResponse(frame, ids, seen, sanitizeThinking);
           chunk.modelVersion = model;
           // Skip empty intermediate frames (keep-alives) so upstream does not
           // see zero-part chunks mid-stream; always emit the terminal frame,

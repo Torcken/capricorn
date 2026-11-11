@@ -106,4 +106,44 @@ describe('Capricorn system prompt', () => {
   it('stays compact (a fraction of the ~32K-character upstream prompt)', () => {
     expect(getCoreSystemPrompt(base).length).toBeLessThan(6000);
   });
+
+  // Eval findings: Gemma 4 called run_shell_command when it was not
+  // registered, and entered Plan Mode after being told to "state a plan".
+  describe('tool availability', () => {
+    it('tells the model to run tests with the shell only when it exists', () => {
+      expect(
+        renderCapricornRules(false, undefined, { shell: true, edit: true }),
+      ).toMatch(/run the project's relevant tests.*with `run_shell_command`/);
+      const noShell = renderCapricornRules(false, undefined, {
+        shell: false,
+        edit: true,
+      });
+      expect(noShell).toContain('Shell commands are not available');
+      expect(noShell).toContain('do not call `run_shell_command`');
+    });
+
+    it('adds a read-only rule when no edit tool is registered', () => {
+      expect(
+        renderCapricornRules(false, undefined, { shell: false, edit: false }),
+      ).toContain('You cannot modify files in this session');
+      expect(
+        renderCapricornRules(false, undefined, { shell: true, edit: true }),
+      ).not.toContain('You cannot modify files');
+    });
+
+    it('asks for an inline plan followed by action, not a mode switch', () => {
+      expect(renderCapricornRules(true)).toContain(
+        'in your reply, then carry it out step by step in the same turn',
+      );
+    });
+
+    it('is wired through getCoreSystemPrompt', () => {
+      expect(
+        getCoreSystemPrompt({
+          ...base,
+          capricornTools: { shell: false, edit: false },
+        }),
+      ).toContain('You cannot modify files in this session');
+    });
+  });
 });

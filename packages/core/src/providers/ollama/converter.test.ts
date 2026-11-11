@@ -9,6 +9,7 @@ import { FinishReason, Type, type Content } from '@google/genai';
 import {
   MALFORMED_ARGS_MARKER,
   createToolCallIdAllocator,
+  createThinkingSanitizer,
   frameToResponse,
   geminiSchemaToJsonSchema,
   normalizeArguments,
@@ -376,5 +377,76 @@ describe('tool call validation (untrusted model output)', () => {
       ids,
     );
     expect(fc.name).toMatch(/^invalid_tool_name_/);
+  });
+});
+
+describe('createThinkingSanitizer (Gemma 4 channel markers)', () => {
+  /** Runs a sequence of deltas through one sanitizer. */
+  function clean(deltas: string[]): string[] {
+    const s = createThinkingSanitizer();
+    return deltas.map(s);
+  }
+
+  it('drops an opener and its channel name split across deltas (as observed)', () => {
+    expect(clean(['<|channel>', 'thought', 'The', ' user', ' wants'])).toEqual([
+      '',
+      '',
+      'The',
+      ' user',
+      ' wants',
+    ]);
+  });
+
+  it('drops an opener and name in a single delta, and the closer', () => {
+    expect(clean(['<|channel>thought\nPlan: fix it<channel|>'])).toEqual([
+      '\nPlan: fix it',
+    ]);
+  });
+
+  it('leaves ordinary prose about thoughts untouched', () => {
+    expect(clean(['I had a', ' thought', ' about this'])).toEqual([
+      'I had a',
+      ' thought',
+      ' about this',
+    ]);
+  });
+
+  it('only drops "thought" directly after an opener, once', () => {
+    expect(clean(['<|channel>', 'thought', ' thought'])).toEqual([
+      '',
+      '',
+      ' thought',
+    ]);
+  });
+
+  it('is applied by frameToResponse and omits a thought part that becomes empty', () => {
+    const s = createThinkingSanitizer();
+    const ids = createToolCallIdAllocator();
+    const r1 = frameToResponse(
+      {
+        message: { role: 'assistant', content: '', thinking: '<|channel>' },
+        done: false,
+      },
+      ids,
+      new Set(),
+      s,
+    );
+    expect(r1.candidates?.[0]?.content?.parts).toEqual([]);
+    const r2 = frameToResponse(
+      {
+        message: {
+          role: 'assistant',
+          content: '',
+          thinking: 'thought Look at cart.js',
+        },
+        done: false,
+      },
+      ids,
+      new Set(),
+      s,
+    );
+    expect(r2.candidates?.[0]?.content?.parts).toEqual([
+      { text: 'Look at cart.js', thought: true },
+    ]);
   });
 });

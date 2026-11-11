@@ -28,6 +28,8 @@ import {
   GLOB_TOOL_NAME,
   GREP_TOOL_NAME,
   AGENT_TOOL_NAME,
+  SHELL_TOOL_NAME,
+  EDIT_TOOL_NAMES,
 } from '../tools/tool-names.js';
 import { resolveModel, supportsModernFeatures } from '../config/models.js';
 import { DiscoveredMCPTool } from '../tools/mcp-tool.js';
@@ -147,6 +149,11 @@ export class PromptProvider {
           interactive: interactiveMode,
           approvalMode,
         })),
+        // Capricorn: tell the Gemma 4 prompt what this session can do.
+        capricornTools: {
+          shell: enabledToolNames.has(SHELL_TOOL_NAME),
+          edit: [...EDIT_TOOL_NAMES].some((n) => enabledToolNames.has(n)),
+        },
         coreMandates: this.withSection('coreMandates', () => ({
           interactive: interactiveMode,
           hasSkills: skills.length > 0,

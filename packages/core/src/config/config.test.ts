@@ -1588,10 +1588,13 @@ describe('Server Config (config.ts)', () => {
       );
       expect(wasRegistered).toBe(true);
     });
-    it('should register EnterPlanModeTool and ExitPlanModeTool when plan is enabled', async () => {
+    // Capricorn: EnterPlanModeTool is only registered for interactive
+    // sessions (see config.ts); upstream registered it unconditionally.
+    it('should register EnterPlanModeTool and ExitPlanModeTool when plan is enabled (interactive)', async () => {
       const params: ConfigParameters = {
         ...baseParams,
         plan: true,
+        interactive: true,
       };
       const config = new Config(params);
 
@@ -1607,6 +1610,28 @@ describe('Server Config (config.ts)', () => {
         (call) => call[0].constructor.name,
       );
       expect(registeredTools).toContain('EnterPlanModeTool');
+      expect(registeredTools).toContain('ExitPlanModeTool');
+    });
+
+    it('does not offer EnterPlanModeTool in headless runs', async () => {
+      const config = new Config({
+        ...baseParams,
+        plan: true,
+        interactive: false,
+      });
+
+      await config.initialize();
+
+      const registerToolMock = (
+        (await vi.importMock('../tools/tool-registry')) as {
+          ToolRegistry: { prototype: { registerTool: Mock } };
+        }
+      ).ToolRegistry.prototype.registerTool;
+
+      const registeredTools = registerToolMock.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(registeredTools).not.toContain('EnterPlanModeTool');
       expect(registeredTools).toContain('ExitPlanModeTool');
     });
 

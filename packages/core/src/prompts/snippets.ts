@@ -53,6 +53,20 @@ export interface SystemPromptOptions {
   sandbox?: SandboxOptions;
   interactiveYoloMode?: boolean;
   gitRepo?: GitRepoOptions;
+  /**
+   * Capricorn: which action tools this session really has, so the Gemma 4
+   * prompt never tells the model to use a tool that is not registered (it
+   * then calls it anyway and wastes turns on "tool not found").
+   */
+  capricornTools?: CapricornToolAvailability;
+}
+
+/** Capricorn: availability of the tools the Gemma 4 rules refer to. */
+export interface CapricornToolAvailability {
+  /** `run_shell_command` is registered (default mode or an allowlist). */
+  shell: boolean;
+  /** `replace` or `write_file` is registered. */
+  edit: boolean;
 }
 
 export interface PreambleOptions {

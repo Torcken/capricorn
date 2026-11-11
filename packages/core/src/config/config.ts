@@ -4128,9 +4128,16 @@ export class Config implements McpContext, AgentLoopContext {
       maybeRegister(ExitPlanModeTool, () =>
         registry.registerTool(new ExitPlanModeTool(this, this.messageBus)),
       );
-      maybeRegister(EnterPlanModeTool, () =>
-        registry.registerTool(new EnterPlanModeTool(this, this.messageBus)),
-      );
+      // Capricorn: only offer enter_plan_mode when a person is present. In a
+      // headless run nobody can approve leaving Plan Mode, and Gemma 4 was
+      // observed (eval testfix-two-modules) entering it mid-task and then
+      // looping on denied writes until the time limit. `--approval-mode plan`
+      // still works headless: it does not need this tool.
+      if (this.isInteractive()) {
+        maybeRegister(EnterPlanModeTool, () =>
+          registry.registerTool(new EnterPlanModeTool(this, this.messageBus)),
+        );
+      }
     }
 
     if (this.isTrackerEnabled()) {
