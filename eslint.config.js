@@ -62,7 +62,10 @@ export default tseslint.config(
       '.integration-tests/**',
       '**/.vscode-test/**',
       'dist/**',
-      'evals/**',
+      // Capricorn: upstream ignored 'evals/**'; ignore its entries one level
+      // down instead so our own eval suite can be re-included and linted.
+      'evals/*',
+      '!evals/capricorn/',
       'packages/test-utils/**',
       '.gemini/**',
       '**/*.d.ts',

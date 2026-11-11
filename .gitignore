@@ -72,3 +72,6 @@ conductor/
 
 # Capricorn: local smoke-test results
 e2e/.results/
+
+# Capricorn eval raw results (publish curated summaries in evals/capricorn/RESULTS.md)
+evals/capricorn/results/

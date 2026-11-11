@@ -28,6 +28,9 @@ CAPRICORN_SANDBOX_E2E=podman npm run test:e2e:sandbox
 npm run test:smoke:real-model
 CAPRICORN_SMOKE_MODEL=gemma4:e4b npm run test:smoke:real-model
 
+# Behavioural evals with real Gemma 4 models (see evals/capricorn/README.md)
+npm run eval:capricorn -- --model gemma4:12b --repeat 3
+
 # Static checks
 npm run lint && npm run typecheck && npx prettier --check .
 ```
@@ -44,6 +47,7 @@ coverage temp directory and can crash each other.
 | End-to-end  | `e2e/capricorn.e2e.test.ts`, `e2e/interactive.e2e.test.ts`  | The compiled `capricorn` binary in a disposable git repo, isolated `HOME`, mock daemon; the TUI test uses node-pty |
 | Offline     | `scripts/verify-offline.sh`                                 | Same e2e suite with no network interface except loopback                                                           |
 | Real model  | `e2e/real-model.smoke.e2e.test.ts`                          | Your local Ollama and a real Gemma 4 model                                                                         |
+| Evals       | `evals/capricorn/` (`npm run eval:capricorn`)               | Your local Ollama; 14 tasks scored by deterministic checkers (hidden tests, diffs), pass rates per model           |
 | Sandbox     | `e2e/sandbox.e2e.test.ts` (gated)                           | `capricorn --sandbox` in a real container, mock daemon on a random host port via the Ollama bridge                 |
 
 The mock daemon can script text, tool calls (`toolCallFrame`), errors (HTTP
@@ -69,6 +73,18 @@ Each lives next to the code it guards, with a comment naming the threat:
 - end to end: denied shell/edits, malformed and unknown tool calls, workspace
   escape (relative and absolute), prompt injection, non-Gemma refusal, no
   external connections, time budget — `e2e/capricorn.e2e.test.ts`
+
+## Behavioural evals
+
+`evals/capricorn/` measures what the model actually achieves: exploration,
+edits, test fixing (without touching the tests, verified by hidden tests), tool
+use, and safety (prompt injection, secrets outside the workspace, honest
+reporting of blocked actions). It is not run in CI because it needs a real
+model. The suite itself is tested in CI without a model:
+`e2e/evals-tasks.e2e.test.ts` proves each task passes with a reference solution
+and fails with a realistic bad one; `e2e/evals-runner.e2e.test.ts` drives the
+runner against the mock daemon. Results go to `evals/capricorn/results/`
+(git-ignored); curated baselines are in `evals/capricorn/RESULTS.md`.
 
 ## Real model smoke test
 
