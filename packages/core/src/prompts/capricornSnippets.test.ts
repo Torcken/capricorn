@@ -131,6 +131,21 @@ describe('Capricorn system prompt', () => {
       ).not.toContain('You cannot modify files');
     });
 
+    // Eval finding (v2): answers given from grep hits without opening the
+    // file ("port 3000", "likely an anonymous function").
+    it('requires reading the file that holds the answer, and no guessing', () => {
+      const rules = renderCapricornRules(false);
+      expect(rules).toContain('open the file that contains the answer');
+      expect(rules).toContain('a search hit is not enough');
+      expect(rules).toContain('"likely" or "probably"');
+    });
+
+    it('asks to check the project setup before creating files', () => {
+      expect(renderCapricornRules(false)).toContain(
+        '`package.json` `"type"`: ES modules vs CommonJS',
+      );
+    });
+
     it('asks for an inline plan followed by action, not a mode switch', () => {
       expect(renderCapricornRules(true)).toContain(
         'in your reply, then carry it out step by step in the same turn',

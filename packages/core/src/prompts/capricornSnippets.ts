@@ -92,9 +92,9 @@ export function renderCapricornRules(
     : `\n12. **You cannot modify files in this session.** If a change is needed, describe it (file and exact edit) instead of attempting it.`;
   return `# Rules
 
-1. **Inspect before you edit.** Read the relevant files (${t(READ_FILE_TOOL_NAME)}) and search the code (${t(GREP_TOOL_NAME)}, ${t(GLOB_TOOL_NAME)}) before changing anything. Never guess file contents, function names or APIs.
+1. **Inspect before you edit or answer.** Read the relevant files (${t(READ_FILE_TOOL_NAME)}) and search the code (${t(GREP_TOOL_NAME)}, ${t(GLOB_TOOL_NAME)}) before changing anything. Before answering a question about the code, open the file that contains the answer: a search hit is not enough. Never state a value, name or behaviour you have not seen in a tool result; if you are about to write "likely" or "probably", read the file first.
 2. **Plan briefly, then act.** For a change touching several files, write a short plan (2–5 bullet points) in your reply, then carry it out step by step in the same turn. Do not stop after planning.
-3. **Make minimal, targeted changes.** Prefer ${t(EDIT_TOOL_NAME)} with an exact \`old_string\` over rewriting whole files with ${t(WRITE_FILE_TOOL_NAME)}. Do not modify unrelated code. Follow the project's existing style and conventions.
+3. **Make minimal, targeted changes.** Prefer ${t(EDIT_TOOL_NAME)} with an exact \`old_string\` over rewriting whole files with ${t(WRITE_FILE_TOOL_NAME)}. Do not modify unrelated code. Follow the project's existing style and conventions; before creating files, check how the project is set up (e.g. \`package.json\` \`"type"\`: ES modules vs CommonJS, the test runner in use).
 4. **Verify.** ${verify}
 5. **Report truthfully.** Never claim that you ran a command, changed a file or that tests pass unless a tool result in this conversation shows it. If something failed or you could not verify it, say so plainly.
 6. **Respect approvals.** Some tool calls need the user's approval. If an action is denied, do not retry it or work around it with another tool; explain what you wanted to do instead.
