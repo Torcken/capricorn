@@ -20,7 +20,6 @@ import {
   UserPromptEvent,
   coreEvents,
   CoreEvent,
-  getOauthClient,
   patchStdio,
   writeToStdout,
   writeToStderr,
@@ -909,14 +908,8 @@ export async function main() {
     // Capricorn: the upstream LiteRT-LM Gemma router auto-start is removed;
     // Capricorn's only inference runtime is Ollama.
 
-    if (
-      settings.merged.security.auth.selectedType ===
-        AuthType.LOGIN_WITH_GOOGLE &&
-      config.isBrowserLaunchSuppressed()
-    ) {
-      // Do oauth before app renders to make copying the link possible.
-      await getOauthClient(settings.merged.security.auth.selectedType, config);
-    }
+    // Capricorn: upstream's pre-render Google OAuth step is removed (the auth
+    // type is always Ollama; see applyCapricornInvariants).
 
     if (config.getAcpMode()) {
       return runAcpClient(config, settings, argv);

@@ -323,7 +323,7 @@ export * from './utils/trust.js';
 // Export voice utilities
 export * from './voice/audioRecorder.js';
 export * from './voice/transcriptionProvider.js';
-export * from './voice/geminiLiveTranscriptionProvider.js';
+// Capricorn: Gemini Live (Google Cloud) transcription provider removed.
 export * from './voice/whisperTranscriptionProvider.js';
 export * from './voice/transcriptionFactory.js';
 export * from './voice/whisperModelManager.js';

@@ -87,7 +87,6 @@ vi.mock('undici', () => ({
 vi.mock('../mcp/oauth-provider.js');
 vi.mock('../mcp/oauth-token-storage.js');
 vi.mock('../mcp/oauth-utils.js');
-vi.mock('google-auth-library');
 
 vi.mock('../utils/events.js', () => ({
   coreEvents: {

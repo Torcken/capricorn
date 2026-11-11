@@ -4,28 +4,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {
-  UserTierId,
-  IneligibleTierReasonCode,
-  type ClientMetadata,
-  type GeminiUserTier,
-  type IneligibleTier,
-  type LoadCodeAssistResponse,
-  type OnboardUserRequest,
-} from './types.js';
-import { CodeAssistServer, type HttpOptions } from './server.js';
-import type { AuthClient } from 'google-auth-library';
-import { ChangeAuthRequestedError } from '../utils/errors.js';
-import { ValidationRequiredError } from '../utils/googleQuotaErrors.js';
-import { debugLogger } from '../utils/debugLogger.js';
-import { createCache, type CacheService } from '../utils/cache.js';
+/**
+ * @fileoverview Capricorn: Google account / Cloud project onboarding removed.
+ *
+ * Upstream's `setupUser` loaded and onboarded the user's Code Assist tier
+ * through Google APIs. Capricorn has no Google sign-in, so it always rejects.
+ * The error classes and `UserData` type are kept unchanged because other code
+ * (error handling, UI) still recognises them.
+ */
+
+import type { GeminiUserTier, IneligibleTier, UserTierId } from './types.js';
 import type { Config } from '../config/config.js';
-import {
-  logOnboardingStart,
-  logOnboardingSuccess,
-  OnboardingStartEvent,
-  OnboardingSuccessEvent,
-} from '../telemetry/index.js';
+import { CodeAssistNotSupportedError, type HttpOptions } from './server.js';
 
 export class ProjectIdRequiredError extends Error {
   constructor() {
@@ -45,10 +35,6 @@ export class InvalidNumericProjectIdError extends Error {
   }
 }
 
-/**
- * Error thrown when user cancels the validation process.
- * This is a non-recoverable error that should result in auth failure.
- */
 export class ValidationCancelledError extends Error {
   constructor() {
     super('User cancelled account validation');
@@ -75,285 +61,17 @@ export interface UserData {
   hasOnboardedPreviously?: boolean;
 }
 
-// Cache to store the results of setupUser to avoid redundant network calls.
-// The cache is keyed by the AuthClient instance. Inside each entry, we use
-// another cache keyed by project ID to ensure correctness if environment changes.
-let userDataCache = createCache<
-  AuthClient,
-  CacheService<string | undefined, Promise<UserData>>
->({
-  storage: 'weakmap',
-});
+/** No-op: there is no user-data cache any more. */
+export function resetUserDataCacheForTesting(): void {}
 
 /**
- * Resets the user data cache. Used exclusively for test isolation.
- * @internal
- */
-export function resetUserDataCacheForTesting() {
-  userDataCache = createCache<
-    AuthClient,
-    CacheService<string | undefined, Promise<UserData>>
-  >({
-    storage: 'weakmap',
-  });
-}
-
-/**
- * Sets up the user by loading their Code Assist configuration and onboarding if needed.
- *
- * Tier eligibility:
- * - FREE tier: Eligibility is determined by the Code Assist server response.
- * - STANDARD tier: User is always eligible if they have a valid project ID.
- *
- * If no valid project ID is available (from env var or server response):
- * - Surfaces ineligibility reasons for the FREE tier from the server.
- * - Throws ProjectIdRequiredError if no ineligibility reasons are available.
- *
- * Handles VALIDATION_REQUIRED via the optional validation handler, allowing
- * retry, auth change, or cancellation.
- *
- * @param client - The authenticated client to use for API calls
- * @param config - The CLI configuration
- * @param httpOptions - Optional HTTP options
- * @returns The user's project ID, tier ID, and tier name
- * @throws {ValidationRequiredError} If account validation is required
- * @throws {ProjectIdRequiredError} If no project ID is available and required
- * @throws {ValidationCancelledError} If user cancels validation
- * @throws {ChangeAuthRequestedError} If user requests to change auth method
+ * Capricorn: always rejects; there is no Google account to set up.
+ * @throws {CodeAssistNotSupportedError}
  */
 export async function setupUser(
-  client: AuthClient,
-  config: Config,
-  httpOptions: HttpOptions = {},
+  _client: unknown,
+  _config: Config,
+  _httpOptions: HttpOptions = {},
 ): Promise<UserData> {
-  const projectId =
-    process.env['GOOGLE_CLOUD_PROJECT'] ||
-    process.env['GOOGLE_CLOUD_PROJECT_ID'] ||
-    undefined;
-
-  if (projectId && /^\d+$/.test(projectId)) {
-    throw new InvalidNumericProjectIdError(projectId);
-  }
-
-  const projectCache = userDataCache.getOrCreate(client, () =>
-    createCache<string | undefined, Promise<UserData>>({
-      storage: 'map',
-      defaultTtl: 30000, // 30 seconds
-    }),
-  );
-
-  return projectCache.getOrCreate(projectId, () =>
-    _doSetupUser(client, projectId, config, httpOptions),
-  );
-}
-
-/**
- * Internal implementation of the user setup logic.
- */
-async function _doSetupUser(
-  client: AuthClient,
-  projectId: string | undefined,
-  config: Config,
-  httpOptions: HttpOptions = {},
-): Promise<UserData> {
-  const caServer = new CodeAssistServer(
-    client,
-    projectId,
-    httpOptions,
-    '',
-    undefined,
-    undefined,
-  );
-  const coreClientMetadata: ClientMetadata = {
-    ideType: 'IDE_UNSPECIFIED',
-    platform: 'PLATFORM_UNSPECIFIED',
-    pluginType: 'GEMINI',
-  };
-
-  const validationHandler = config.getValidationHandler();
-  const MAX_VALIDATION_ATTEMPTS = 3;
-  let validationAttempts = 0;
-
-  let loadRes: LoadCodeAssistResponse;
-  while (true) {
-    loadRes = await caServer.loadCodeAssist({
-      cloudaicompanionProject: projectId,
-      metadata: {
-        ...coreClientMetadata,
-        duetProject: projectId,
-      },
-    });
-
-    try {
-      validateLoadCodeAssistResponse(loadRes);
-      break;
-    } catch (e) {
-      if (
-        e instanceof ValidationRequiredError &&
-        validationHandler &&
-        validationAttempts < MAX_VALIDATION_ATTEMPTS
-      ) {
-        validationAttempts++;
-        const intent = await validationHandler(
-          e.validationLink,
-          e.validationDescription,
-        );
-        if (intent === 'verify') {
-          continue;
-        }
-        if (intent === 'change_auth') {
-          throw new ChangeAuthRequestedError();
-        }
-        throw new ValidationCancelledError();
-      }
-      throw e;
-    }
-  }
-
-  if (loadRes.currentTier) {
-    if (!loadRes.paidTier?.id && !loadRes.currentTier.id) {
-      debugLogger.warn(
-        'Warning: Code Assist API did not return a user tier ID. Defaulting to STANDARD tier.',
-      );
-    }
-
-    if (!loadRes.cloudaicompanionProject) {
-      if (projectId) {
-        return {
-          projectId,
-          userTier:
-            loadRes.paidTier?.id ??
-            loadRes.currentTier.id ??
-            UserTierId.STANDARD,
-          userTierName: loadRes.paidTier?.name ?? loadRes.currentTier.name,
-          paidTier: loadRes.paidTier ?? undefined,
-          hasOnboardedPreviously:
-            loadRes.currentTier.hasOnboardedPreviously ?? true,
-        };
-      }
-
-      // If user is not setup for standard tier, inform them about all other tiers they are ineligible for.
-      throwIneligibleOrProjectIdError(loadRes);
-    }
-    return {
-      projectId: loadRes.cloudaicompanionProject,
-      userTier:
-        loadRes.paidTier?.id ?? loadRes.currentTier.id ?? UserTierId.STANDARD,
-      userTierName: loadRes.paidTier?.name ?? loadRes.currentTier.name,
-      paidTier: loadRes.paidTier ?? undefined,
-      hasOnboardedPreviously:
-        loadRes.currentTier.hasOnboardedPreviously ?? true,
-    };
-  }
-
-  const tier = getOnboardTier(loadRes);
-
-  if (!tier.id) {
-    debugLogger.warn(
-      'Warning: Code Assist API did not return an onboarding tier ID. Defaulting to STANDARD tier.',
-    );
-  }
-
-  let onboardReq: OnboardUserRequest;
-  if (tier.id === UserTierId.FREE) {
-    // The free tier uses a managed google cloud project. Setting a project in the `onboardUser` request causes a `Precondition Failed` error.
-    onboardReq = {
-      tierId: tier.id,
-      cloudaicompanionProject: undefined,
-      metadata: coreClientMetadata,
-    };
-  } else {
-    onboardReq = {
-      tierId: tier.id,
-      cloudaicompanionProject: projectId,
-      metadata: {
-        ...coreClientMetadata,
-        duetProject: projectId,
-      },
-    };
-  }
-
-  logOnboardingStart(config, new OnboardingStartEvent());
-  const onboardingStartTime = Date.now();
-
-  let lroRes = await caServer.onboardUser(onboardReq);
-  if (!lroRes.done && lroRes.name) {
-    const operationName = lroRes.name;
-    while (!lroRes.done) {
-      await new Promise((f) => setTimeout(f, 5000));
-      lroRes = await caServer.getOperation(operationName);
-    }
-  }
-
-  logOnboardingSuccess(
-    config,
-    new OnboardingSuccessEvent(tier.name, Date.now() - onboardingStartTime),
-  );
-
-  if (!lroRes.response?.cloudaicompanionProject?.id) {
-    if (projectId) {
-      return {
-        projectId,
-        userTier: tier.id ?? UserTierId.STANDARD,
-        userTierName: tier.name,
-        hasOnboardedPreviously: tier.hasOnboardedPreviously ?? false,
-      };
-    }
-
-    throwIneligibleOrProjectIdError(loadRes);
-  }
-
-  return {
-    projectId: lroRes.response.cloudaicompanionProject.id,
-    userTier: tier.id ?? UserTierId.STANDARD,
-    userTierName: tier.name,
-    hasOnboardedPreviously: tier.hasOnboardedPreviously ?? false,
-  };
-}
-
-function throwIneligibleOrProjectIdError(res: LoadCodeAssistResponse): never {
-  if (res.ineligibleTiers && res.ineligibleTiers.length > 0) {
-    throw new IneligibleTierError(res.ineligibleTiers);
-  }
-  throw new ProjectIdRequiredError();
-}
-
-function getOnboardTier(res: LoadCodeAssistResponse): GeminiUserTier {
-  for (const tier of res.allowedTiers || []) {
-    if (tier.isDefault) {
-      return tier;
-    }
-  }
-  return {
-    name: '',
-    description: '',
-    id: UserTierId.LEGACY,
-    userDefinedCloudaicompanionProject: true,
-  };
-}
-
-function validateLoadCodeAssistResponse(res: LoadCodeAssistResponse): void {
-  if (!res) {
-    throw new Error('LoadCodeAssist returned empty response');
-  }
-  if (
-    !res.currentTier &&
-    res.ineligibleTiers &&
-    res.ineligibleTiers.length > 0
-  ) {
-    const validationTier = res.ineligibleTiers.find(
-      (t) =>
-        t.validationUrl &&
-        t.reasonCode === IneligibleTierReasonCode.VALIDATION_REQUIRED,
-    );
-    const validationUrl = validationTier?.validationUrl;
-    if (validationTier && validationUrl) {
-      throw new ValidationRequiredError(
-        `Account validation required: ${validationTier.reasonMessage}`,
-        undefined,
-        validationUrl,
-        validationTier.reasonMessage,
-      );
-    }
-  }
+  throw new CodeAssistNotSupportedError();
 }

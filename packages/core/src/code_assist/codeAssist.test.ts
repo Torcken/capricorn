@@ -6,9 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthType } from '../core/contentGenerator.js';
-import { getOauthClient } from './oauth2.js';
-import { setupUser } from './setup.js';
-import { CodeAssistServer } from './server.js';
+import { CodeAssistNotSupportedError, CodeAssistServer } from './server.js';
 import {
   createCodeAssistContentGenerator,
   getCodeAssistServer,
@@ -16,17 +14,12 @@ import {
 import type { Config } from '../config/config.js';
 import { LoggingContentGenerator } from '../core/loggingContentGenerator.js';
 import { ModelMappingContentGenerator } from '../core/modelMappingContentGenerator.js';
-import { UserTierId } from './types.js';
 
 // Mock dependencies
-vi.mock('./oauth2.js');
-vi.mock('./setup.js');
 vi.mock('./server.js');
 vi.mock('../core/loggingContentGenerator.js');
 vi.mock('../core/modelMappingContentGenerator.js');
 
-const mockedGetOauthClient = vi.mocked(getOauthClient);
-const mockedSetupUser = vi.mocked(setupUser);
 const MockedCodeAssistServer = vi.mocked(CodeAssistServer);
 const MockedLoggingContentGenerator = vi.mocked(LoggingContentGenerator);
 const MockedModelMappingContentGenerator = vi.mocked(
@@ -38,94 +31,17 @@ describe('codeAssist', () => {
     vi.resetAllMocks();
   });
 
+  // Capricorn: Google sign-in / Code Assist generators were removed;
+  // upstream's creation tests are replaced by a refusal test.
   describe('createCodeAssistContentGenerator', () => {
-    const httpOptions = {};
-    const mockValidationHandler = vi.fn();
-    const mockConfig = {
-      getValidationHandler: () => mockValidationHandler,
-    } as unknown as Config;
-    const mockAuthClient = { a: 'client' };
-    const mockUserData = {
-      projectId: 'test-project',
-      userTier: UserTierId.FREE,
-      userTierName: 'free-tier-name',
-      hasOnboardedPreviously: false,
-    };
-
-    it('should create a server for LOGIN_WITH_GOOGLE', async () => {
-      mockedGetOauthClient.mockResolvedValue(mockAuthClient as never);
-      mockedSetupUser.mockResolvedValue(mockUserData);
-
-      const generator = await createCodeAssistContentGenerator(
-        httpOptions,
-        AuthType.LOGIN_WITH_GOOGLE,
-        mockConfig,
-        'session-123',
-      );
-
-      expect(getOauthClient).toHaveBeenCalledWith(
-        AuthType.LOGIN_WITH_GOOGLE,
-        mockConfig,
-      );
-      expect(setupUser).toHaveBeenCalledWith(
-        mockAuthClient,
-        mockConfig,
-        httpOptions,
-      );
-      expect(MockedCodeAssistServer).toHaveBeenCalledWith(
-        mockAuthClient,
-        'test-project',
-        httpOptions,
-        'session-123',
-        'free-tier',
-        'free-tier-name',
-        undefined,
-        mockConfig,
-      );
-      expect(generator).toBeInstanceOf(MockedCodeAssistServer);
-    });
-
-    it('should create a server for COMPUTE_ADC', async () => {
-      mockedGetOauthClient.mockResolvedValue(mockAuthClient as never);
-      mockedSetupUser.mockResolvedValue(mockUserData);
-
-      const generator = await createCodeAssistContentGenerator(
-        httpOptions,
-        AuthType.COMPUTE_ADC,
-        mockConfig,
-      );
-
-      expect(getOauthClient).toHaveBeenCalledWith(
-        AuthType.COMPUTE_ADC,
-        mockConfig,
-      );
-      expect(setupUser).toHaveBeenCalledWith(
-        mockAuthClient,
-        mockConfig,
-        httpOptions,
-      );
-      expect(MockedCodeAssistServer).toHaveBeenCalledWith(
-        mockAuthClient,
-        'test-project',
-        httpOptions,
-        undefined, // No session ID
-        'free-tier',
-        'free-tier-name',
-        undefined,
-        mockConfig,
-      );
-      expect(generator).toBeInstanceOf(MockedCodeAssistServer);
-    });
-
-    it('should throw an error for unsupported auth types', async () => {
-      await expect(
-        createCodeAssistContentGenerator(
-          httpOptions,
-          'api-key' as AuthType, // Use literal string to avoid enum resolution issues
-          mockConfig,
-        ),
-      ).rejects.toThrow('Unsupported authType: api-key');
-    });
+    it.each([AuthType.LOGIN_WITH_GOOGLE, AuthType.COMPUTE_ADC])(
+      'refuses %s',
+      async (authType) => {
+        await expect(
+          createCodeAssistContentGenerator({}, authType, {} as Config),
+        ).rejects.toBeInstanceOf(CodeAssistNotSupportedError);
+      },
+    );
   });
 
   describe('getCodeAssistServer', () => {

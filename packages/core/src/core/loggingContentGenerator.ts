@@ -32,7 +32,6 @@ import {
   logApiResponse,
 } from '../telemetry/loggers.js';
 import type { ContentGenerator } from './contentGenerator.js';
-import { CodeAssistServer } from '../code_assist/server.js';
 import { toContents } from '../code_assist/converter.js';
 import { isStructuredError } from '../utils/quotaErrorDetection.js';
 import { runInDevTraceSpan, type SpanMetadata } from '../telemetry/trace.js';
@@ -193,37 +192,32 @@ export class LoggingContentGenerator implements ContentGenerator {
     );
   }
 
+  /**
+   * Server address recorded with API request/response telemetry events.
+   *
+   * Capricorn: requests always go to the configured Ollama daemon, so report
+   * that. Upstream chose between the Code Assist server, Vertex AI and the
+   * public Gemini API host, and would have labelled Ollama traffic with the
+   * Gemini API host.
+   */
   private _getEndpointUrl(
-    req: GenerateContentParameters,
-    method: 'generateContent' | 'generateContentStream',
+    _req: GenerateContentParameters,
+    _method: 'generateContent' | 'generateContentStream',
   ): ServerDetails {
-    // Case 1: Authenticated with a Google account (`gcloud auth login`).
-    // Requests are routed through the internal CodeAssistServer.
-    if (this.wrapped instanceof CodeAssistServer) {
-      const url = new URL(this.wrapped.getMethodUrl(method));
+    try {
+      const raw = this.config.getOllamaSettings().endpoint;
+      const url = new URL(
+        /^[a-z][a-z0-9+.-]*:\/\//i.test(raw) ? raw : `http://${raw}`,
+      );
       const port = url.port
         ? parseInt(url.port, 10)
         : url.protocol === 'https:'
           ? 443
           : 80;
       return { address: url.hostname, port };
+    } catch {
+      return { address: 'unknown', port: 0 };
     }
-
-    const genConfig = this.config.getContentGeneratorConfig();
-
-    // Case 2: Using an API key for Vertex AI.
-    if (genConfig?.vertexai) {
-      const location = process.env['GOOGLE_CLOUD_LOCATION'];
-      if (location) {
-        return { address: `${location}-aiplatform.googleapis.com`, port: 443 };
-      } else {
-        return { address: 'unknown', port: 0 };
-      }
-    }
-
-    // Case 3: Default to the public Gemini API endpoint.
-    // This is used when an API key is provided but not for Vertex AI.
-    return { address: `generativelanguage.googleapis.com`, port: 443 };
   }
 
   private _logApiResponse(

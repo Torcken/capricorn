@@ -134,11 +134,13 @@ export class ClearcutLogger {
 
   enqueueHelper(..._args: unknown[]): void {}
   enqueueLogEvent(..._args: unknown[]): void {}
-  enqueueLogEventAfterExperimentsLoadAsync(..._args: unknown[]): void {}
+  async enqueueLogEventAfterExperimentsLoadAsync(
+    ..._args: unknown[]
+  ): Promise<void> {}
   createBasicLogEvent(..._args: unknown[]): void {}
   flushIfNeeded(..._args: unknown[]): void {}
-  flushToClearcut(..._args: unknown[]): void {}
-  logStartSessionEvent(..._args: unknown[]): void {}
+  async flushToClearcut(..._args: unknown[]): Promise<void> {}
+  async logStartSessionEvent(..._args: unknown[]): Promise<void> {}
   logNewPromptEvent(..._args: unknown[]): void {}
   logToolCallEvent(..._args: unknown[]): void {}
   logFileOperationEvent(..._args: unknown[]): void {}
@@ -161,15 +163,15 @@ export class ClearcutLogger {
   logContentRetryEvent(..._args: unknown[]): void {}
   logContentRetryFailureEvent(..._args: unknown[]): void {}
   logNetworkRetryAttemptEvent(..._args: unknown[]): void {}
-  logExtensionInstallEvent(..._args: unknown[]): void {}
-  logExtensionUninstallEvent(..._args: unknown[]): void {}
-  logExtensionUpdateEvent(..._args: unknown[]): void {}
+  async logExtensionInstallEvent(..._args: unknown[]): Promise<void> {}
+  async logExtensionUninstallEvent(..._args: unknown[]): Promise<void> {}
+  async logExtensionUpdateEvent(..._args: unknown[]): Promise<void> {}
   logToolOutputTruncatedEvent(..._args: unknown[]): void {}
   logToolOutputMaskingEvent(..._args: unknown[]): void {}
   logModelRoutingEvent(..._args: unknown[]): void {}
-  logExtensionEnableEvent(..._args: unknown[]): void {}
+  async logExtensionEnableEvent(..._args: unknown[]): Promise<void> {}
   logModelSlashCommandEvent(..._args: unknown[]): void {}
-  logExtensionDisableEvent(..._args: unknown[]): void {}
+  async logExtensionDisableEvent(..._args: unknown[]): Promise<void> {}
   logEditStrategyEvent(..._args: unknown[]): void {}
   logEditCorrectionEvent(..._args: unknown[]): void {}
   logAgentStartEvent(..._args: unknown[]): void {}

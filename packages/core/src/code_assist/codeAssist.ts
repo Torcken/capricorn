@@ -4,41 +4,34 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { AuthType, type ContentGenerator } from '../core/contentGenerator.js';
-import { getOauthClient } from './oauth2.js';
-import { setupUser } from './setup.js';
-import { CodeAssistServer, type HttpOptions } from './server.js';
+import type { AuthType, ContentGenerator } from '../core/contentGenerator.js';
+import {
+  CodeAssistNotSupportedError,
+  CodeAssistServer,
+  type HttpOptions,
+} from './server.js';
 import type { Config } from '../config/config.js';
 import { LoggingContentGenerator } from '../core/loggingContentGenerator.js';
 import { ModelMappingContentGenerator } from '../core/modelMappingContentGenerator.js';
 
+/**
+ * Capricorn: always rejects. Upstream built a Code Assist content generator
+ * from the user's Google sign-in; Capricorn's only generator is Ollama.
+ * @throws {CodeAssistNotSupportedError}
+ */
 export async function createCodeAssistContentGenerator(
-  httpOptions: HttpOptions,
-  authType: AuthType,
-  config: Config,
-  sessionId?: string,
+  _httpOptions: HttpOptions,
+  _authType: AuthType,
+  _config: Config,
+  _sessionId?: string,
 ): Promise<ContentGenerator> {
-  if (
-    authType === AuthType.LOGIN_WITH_GOOGLE ||
-    authType === AuthType.COMPUTE_ADC
-  ) {
-    const authClient = await getOauthClient(authType, config);
-    const userData = await setupUser(authClient, config, httpOptions);
-    return new CodeAssistServer(
-      authClient,
-      userData.projectId,
-      httpOptions,
-      sessionId,
-      userData.userTier,
-      userData.userTierName,
-      userData.paidTier,
-      config,
-    );
-  }
-
-  throw new Error(`Unsupported authType: ${authType}`);
+  throw new CodeAssistNotSupportedError();
 }
 
+/**
+ * Returns the Code Assist server behind the configured generator, if any.
+ * In Capricorn the generator is always Ollama, so this returns `undefined`.
+ */
 export function getCodeAssistServer(
   config: Config,
 ): CodeAssistServer | undefined {
