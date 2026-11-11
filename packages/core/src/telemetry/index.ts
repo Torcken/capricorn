@@ -25,11 +25,7 @@ export {
   parseTelemetryTargetValue,
   parseOtlpHeaders,
 } from './config.js';
-export {
-  GcpTraceExporter,
-  GcpMetricExporter,
-  GcpLogExporter,
-} from './gcp-exporters.js';
+// Capricorn: Google Cloud exporters (gcp-exporters.ts) removed.
 export {
   logCliConfiguration,
   logUserPrompt,

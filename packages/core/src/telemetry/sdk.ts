@@ -36,7 +36,13 @@ import {
   PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics';
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
-import type { JWTInput } from 'google-auth-library';
+/**
+ * Capricorn: the only credential field telemetry ever read (upstream used
+ * google-auth-library's `JWTInput` for Google Cloud export, removed here).
+ */
+interface TelemetryCredentials {
+  client_email?: string;
+}
 import type { Config } from '../config/config.js';
 import { SERVICE_NAME } from './constants.js';
 import { initializeMetrics } from './metrics.js';
@@ -46,11 +52,6 @@ import {
   FileMetricExporter,
   FileSpanExporter,
 } from './file-exporters.js';
-import {
-  GcpTraceExporter,
-  GcpMetricExporter,
-  GcpLogExporter,
-} from './gcp-exporters.js';
 import { TelemetryTarget } from './index.js';
 import { debugLogger } from '../utils/debugLogger.js';
 import {
@@ -58,7 +59,6 @@ import {
   getMemoryMonitor,
 } from './memory-monitor.js';
 import { startGlobalEventLoopMonitoring } from './event-loop-monitor.js';
-import { authEvents } from '../code_assist/oauth2.js';
 import { coreEvents, CoreEvent } from '../utils/events.js';
 import {
   logKeychainAvailability,
@@ -99,9 +99,6 @@ let spanProcessor: BatchSpanProcessor | undefined;
 let logRecordProcessor: BatchLogRecordProcessor | undefined;
 let metricReader: PeriodicExportingMetricReader | undefined;
 let telemetryInitialized = false;
-let callbackRegistered = false;
-let authListener: ((newCredentials: JWTInput) => Promise<void>) | undefined =
-  undefined;
 let keychainAvailabilityListener:
   | ((event: KeychainAvailabilityEvent) => void)
   | undefined = undefined;
@@ -165,7 +162,7 @@ function parseOtlpEndpoint(
 
 export async function initializeTelemetry(
   config: Config,
-  credentials?: JWTInput,
+  credentials?: TelemetryCredentials,
 ): Promise<void> {
   if (!config.getTelemetryEnabled()) {
     return;
@@ -192,22 +189,16 @@ export async function initializeTelemetry(
     return;
   }
 
-  // If using CLI auth and no credentials provided, defer initialization
-  if (config.getTelemetryUseCliAuth() && !credentials) {
-    // Register a callback to initialize telemetry when the user logs in.
-    // This is done only once.
-    if (!callbackRegistered) {
-      callbackRegistered = true;
-      authListener = async (newCredentials: JWTInput) => {
-        if (config.getTelemetryEnabled() && config.getTelemetryUseCliAuth()) {
-          debugLogger.log('Telemetry reinit with credentials.');
-          await initializeTelemetry(config, newCredentials);
-        }
-      };
-      authEvents.on('post_auth', authListener);
-    }
-    debugLogger.log(
-      'CLI auth is requested but no credentials, deferring telemetry initialization.',
+  // Capricorn: "CLI auth" meant exporting with the user's Google sign-in, and
+  // `target: gcp` meant direct export to Google Cloud. Neither exists in
+  // Capricorn (telemetry is also forced off in loadCliConfig); refuse both.
+  if (
+    config.getTelemetryUseCliAuth() ||
+    (config.getTelemetryTarget() === TelemetryTarget.GCP &&
+      !config.getTelemetryUseCollector())
+  ) {
+    debugLogger.error(
+      'Google Cloud telemetry export is not supported by Capricorn. Disabling telemetry.',
     );
     return;
   }
@@ -240,46 +231,23 @@ export async function initializeTelemetry(
 
   const otlpEndpoint = config.getTelemetryOtlpEndpoint();
   const otlpProtocol = config.getTelemetryOtlpProtocol();
-  const telemetryTarget = config.getTelemetryTarget();
-  const useCollector = config.getTelemetryUseCollector();
 
   const parsedEndpoint = parseOtlpEndpoint(otlpEndpoint, otlpProtocol);
   const telemetryOutfile = config.getTelemetryOutfile();
   const useOtlp = !!parsedEndpoint && !telemetryOutfile;
 
-  const gcpProjectId =
-    process.env['OTLP_GOOGLE_CLOUD_PROJECT'] ||
-    process.env['GOOGLE_CLOUD_PROJECT'];
-  const useDirectGcpExport =
-    telemetryTarget === TelemetryTarget.GCP && !useCollector;
-
   let spanExporter:
     | OTLPTraceExporter
     | OTLPTraceExporterHttp
-    | GcpTraceExporter
     | FileSpanExporter
     | ConsoleSpanExporter;
   let logExporter:
     | OTLPLogExporter
     | OTLPLogExporterHttp
-    | GcpLogExporter
     | FileLogExporter
     | ConsoleLogRecordExporter;
 
-  if (useDirectGcpExport) {
-    debugLogger.log(
-      'Creating GCP exporters with projectId:',
-      gcpProjectId,
-      'using',
-      credentials ? 'provided credentials' : 'ADC',
-    );
-    spanExporter = new GcpTraceExporter(gcpProjectId, credentials);
-    logExporter = new GcpLogExporter(gcpProjectId, credentials);
-    metricReader = new PeriodicExportingMetricReader({
-      exporter: new GcpMetricExporter(gcpProjectId, credentials),
-      exportIntervalMillis: 30000,
-    });
-  } else if (useOtlp) {
+  if (useOtlp) {
     const otlpHeaders = config.getTelemetryOtlpHeaders?.() ?? {};
     const hasHeaders = Object.keys(otlpHeaders).length > 0;
 
@@ -468,10 +436,6 @@ export async function shutdownTelemetry(
     metrics.disable();
     propagation.disable();
     diag.disable();
-    if (authListener) {
-      authEvents.off('post_auth', authListener);
-      authListener = undefined;
-    }
     if (keychainAvailabilityListener) {
       coreEvents.off(
         CoreEvent.TelemetryKeychainAvailability,
@@ -486,7 +450,6 @@ export async function shutdownTelemetry(
       );
       tokenStorageTypeListener = undefined;
     }
-    callbackRegistered = false;
     activeTelemetryEmail = undefined;
   }
 }

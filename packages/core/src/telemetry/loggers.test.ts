@@ -178,9 +178,10 @@ describe('loggers', () => {
 
       logChatCompression(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logChatCompressionEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
     });
 
     it('records the chat compression event to OTEL', () => {
@@ -1240,9 +1241,10 @@ describe('loggers', () => {
 
       logRipgrepFallback(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logRipgrepFallbackEvent,
-      ).toHaveBeenCalled();
+      ).not.toHaveBeenCalled();
 
       const emittedEvent = mockLogger.emit.mock.calls[0][0];
       expect(emittedEvent.body).toBe('Switching to grep as fallback.');
@@ -1262,9 +1264,10 @@ describe('loggers', () => {
 
       logRipgrepFallback(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logRipgrepFallbackEvent,
-      ).toHaveBeenCalled();
+      ).not.toHaveBeenCalled();
 
       const emittedEvent = mockLogger.emit.mock.calls[0][0];
       expect(emittedEvent.body).toBe('Switching to grep as fallback.');
@@ -2032,9 +2035,10 @@ describe('loggers', () => {
 
       logMalformedJsonResponse(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logMalformedJsonResponseEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Malformed JSON response from test-model.',
@@ -2063,9 +2067,10 @@ describe('loggers', () => {
 
       logInvalidChunk(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logInvalidChunkEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Invalid chunk received from stream.',
@@ -2219,9 +2224,10 @@ describe('loggers', () => {
 
       logModelRouting(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logModelRoutingEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Model routing decision. Model: gemini-pro, Source: default',
@@ -2257,9 +2263,10 @@ describe('loggers', () => {
 
       logModelRouting(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logModelRoutingEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Model routing decision. Model: gemini-pro, Source: NumericalClassifier (Strict)',
@@ -2290,9 +2297,10 @@ describe('loggers', () => {
 
       logModelRouting(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logModelRoutingEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
       expect(mockLogger.emit).not.toHaveBeenCalled();
       expect(metrics.recordModelRoutingMetrics).not.toHaveBeenCalled();
     });
@@ -2328,9 +2336,10 @@ describe('loggers', () => {
 
       await logExtensionInstallEvent(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logExtensionInstallEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Installed extension testing',
@@ -2381,9 +2390,10 @@ describe('loggers', () => {
 
       await logExtensionUpdateEvent(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logExtensionUpdateEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Updated extension testing',
@@ -2431,9 +2441,10 @@ describe('loggers', () => {
 
       await logExtensionUninstall(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logExtensionUninstallEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Uninstalled extension testing',
@@ -2479,9 +2490,10 @@ describe('loggers', () => {
 
       await logExtensionEnable(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logExtensionEnableEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Enabled extension testing',
@@ -2527,9 +2539,10 @@ describe('loggers', () => {
 
       await logExtensionDisable(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logExtensionDisableEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Disabled extension testing',
@@ -2566,9 +2579,10 @@ describe('loggers', () => {
 
       logAgentStart(mockConfig, event);
 
-      expect(ClearcutLogger.prototype.logAgentStartEvent).toHaveBeenCalledWith(
-        event,
-      );
+      // Capricorn: usage statistics (Clearcut) are never sent.
+      expect(
+        ClearcutLogger.prototype.logAgentStartEvent,
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Agent TestAgent started. ID: agent-123',
@@ -2612,9 +2626,10 @@ describe('loggers', () => {
 
       logAgentFinish(mockConfig, event);
 
-      expect(ClearcutLogger.prototype.logAgentFinishEvent).toHaveBeenCalledWith(
-        event,
-      );
+      // Capricorn: usage statistics (Clearcut) are never sent.
+      expect(
+        ClearcutLogger.prototype.logAgentFinishEvent,
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Agent TestAgent finished. Reason: GOAL. Duration: 1000ms. Turns: 5.',
@@ -2659,9 +2674,10 @@ describe('loggers', () => {
 
       logWebFetchFallbackAttempt(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logWebFetchFallbackAttemptEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Web fetch fallback attempt. Reason: private_ip',
@@ -2709,9 +2725,8 @@ describe('loggers', () => {
 
       logHookCall(mockConfig, event);
 
-      expect(ClearcutLogger.prototype.logHookCallEvent).toHaveBeenCalledWith(
-        event,
-      );
+      // Capricorn: usage statistics (Clearcut) are never sent.
+      expect(ClearcutLogger.prototype.logHookCallEvent).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Hook call before-tool./path/to/script.sh succeeded in 150ms',
@@ -2760,9 +2775,10 @@ describe('loggers', () => {
 
       logNetworkRetryAttempt(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logNetworkRetryAttemptEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Network retry attempt 2/5 for test-model. Delay: 1000ms. Error type: Overloaded',
@@ -2804,9 +2820,10 @@ describe('loggers', () => {
 
       logOnboardingStart(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logOnboardingStartEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Onboarding started.',
@@ -2837,9 +2854,10 @@ describe('loggers', () => {
 
       logOnboardingSuccess(mockConfig, event);
 
+      // Capricorn: usage statistics (Clearcut) are never sent.
       expect(
         ClearcutLogger.prototype.logOnboardingSuccessEvent,
-      ).toHaveBeenCalledWith(event);
+      ).not.toHaveBeenCalled();
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Onboarding succeeded. Tier: standard-tier. Duration: 100ms',
