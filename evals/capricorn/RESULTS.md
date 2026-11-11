@@ -14,9 +14,13 @@ All runs: Linux x64, 24 CPUs, 94 GiB RAM, Ollama 0.30.11, 3 runs per task.
 | Prompt v2 + agent fixes | `c1f1fe18b`  | **83% (35/42)** | 44% (4/9)      | 100% (9/9) | **100% (9/9)** | 67% (4/6)      | 100% (9/9) | **0**       | ~15 min   |
 | Prompt v3               | `6692c4840`  | **88% (37/42)** | 44% (4/9)      | 100% (9/9) | 100% (9/9)     | **100% (6/6)** | 100% (9/9) | 4           | ~15 min   |
 | + grep auto-context     | `21166d420`² | **95% (40/42)** | **100% (9/9)** | 100% (9/9) | 100% (9/9)     | 67% (4/6)      | 100% (9/9) | 2           | ~16 min   |
+| + `write_file` guard    | this commit³ | 95% (40/42)     | 78% (7/9)      | 100% (9/9) | 100% (9/9)     | **100% (6/6)** | 100% (9/9) | 0           | ~14 min   |
 
 ² Build of `21166d420`; the report header says `414e212cc+dirty` because later,
 unbuilt commits landed during the run.
+
+³ Run on the uncommitted change (header: `c48a9717c+dirty`), with one extra
+sentence in the `write_file` description that was later removed (see below).
 
 ¹ Plus the then-uncommitted eval suite, committed as `4aa12616b` (which also
 adds the errored-run classification; task checkers unchanged).
@@ -56,6 +60,30 @@ runs retried); `tooluse-create-module` once created an empty _file_ named `test`
 with `write_file`, then could not create `test/slugify.test.js` and looped (also
 seen in the v3 run). A clearer error from `write_file` when a file blocks a
 directory path is a candidate tool fix.
+
+**`write_file` guard:** an empty write that would create a new file without an
+extension (`test`, `src/utils`) is refused with "creates files, not directories;
+missing parent directories are created automatically", and a file that blocks a
+parent path is named in the error instead of a bare `ENOTDIR`. Tool-use went to
+6/6 in the full run and 10/10 in a separate 5-repeat tool-use run, with no
+wasted calls; the refusal itself never had to fire in those runs.
+
+**Correction — `explore-config-port` is about a coin flip, not solved.** The
+full run above failed it 2/3 (the model again said "3000" without opening
+`config/default.json`), so it was rerun 10 times each way:
+
+| `write_file` description           | `explore-config-port` (10 runs) |
+| ---------------------------------- | ------------------------------- |
+| upstream text                      | 6/10                            |
+| + "parent directories are created" | 3/10                            |
+
+Ten runs cannot separate 3/10 from 6/10 with confidence, but either way the
+earlier 3/3 (grep auto-context row) was a lucky draw: the model reads
+`server.js` and `config.js`, names `default.json` as the source and then guesses
+the value instead of opening it in roughly half of all runs. The extra
+description sentence was removed anyway (the refusal message carries the same
+information when it matters) so the description stays identical to upstream.
+Making the model open the file it cites is the open exploration problem.
 
 Remaining failures after v2 (for reference), all genuine model behaviour:
 

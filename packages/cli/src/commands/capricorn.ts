@@ -94,7 +94,7 @@ function describeError(e: unknown): string {
 
 export const doctorCommand: CommandModule<
   object,
-  { json?: boolean; model?: string }
+  { json?: boolean; model?: string; load?: boolean }
 > = {
   command: 'doctor',
   describe:
@@ -110,7 +110,16 @@ export const doctorCommand: CommandModule<
         type: 'string',
         description: 'Check this model instead of the configured one.',
       })
-      .version(false) as Argv<{ json?: boolean; model?: string }>,
+      .option('load', {
+        type: 'boolean',
+        description:
+          'Also load the model in Ollama to prove it runs (can take minutes and several GB of memory).',
+      })
+      .version(false) as Argv<{
+      json?: boolean;
+      model?: string;
+      load?: boolean;
+    }>,
   handler: async (argv) => {
     const settings = loadSettings();
     const { runtime, client, clientError } = openRuntime(settings, argv.model);
@@ -121,6 +130,7 @@ export const doctorCommand: CommandModule<
       version: await getVersion(),
       cwd: process.cwd(),
       workspaceTrusted: isWorkspaceTrusted(settings.merged).isTrusted,
+      loadModel: argv.load === true,
     });
     out(argv.json ? JSON.stringify(report, null, 2) : renderReport(report));
     await exitCli(report.ok ? CapricornExit.OK : CapricornExit.FAILED);

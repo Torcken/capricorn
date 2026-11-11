@@ -11,6 +11,9 @@ All notable changes to Capricorn are documented here. The format follows
 - Behavioural eval suite for local Gemma 4 models (`npm run eval:capricorn`,
   `evals/capricorn/`): 14 tasks with deterministic, outcome-based checkers; the
   suite itself is validated in the e2e tests.
+- `capricorn doctor --load` loads the selected model once with the configured
+  `num_ctx` (check `models.load`), catching models that verify as Gemma 4 but
+  that this Ollama build cannot run, or that do not fit in memory.
 
 ### Changed
 
@@ -30,6 +33,11 @@ All notable changes to Capricorn are documented here. The format follows
   in interactive sessions.
 - API request events were labelled with the Gemini API host even though requests
   go to Ollama; they now carry the Ollama endpoint.
+- `write_file` no longer lets the model "create a directory" by writing an empty
+  extensionless file (which then blocked every write into that directory): such
+  writes are refused with an explanation that parent directories are created
+  automatically, and a file blocking a parent path is named in the error instead
+  of a bare `ENOTDIR`.
 - Gemma 4 channel markers (`<|channel>thought`, `<channel|>`) leaking into
   thinking output are stripped.
 

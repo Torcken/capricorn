@@ -78,6 +78,11 @@ export interface DiagnosticsInput {
   cwd: string;
   /** Whether the current folder is trusted, if known. */
   workspaceTrusted?: boolean;
+  /**
+   * Also load the selected model in Ollama (`doctor --load`). Opt-in: it can
+   * take minutes and several GB of memory.
+   */
+  loadModel?: boolean;
   signal?: AbortSignal;
 }
 
@@ -114,11 +119,19 @@ export async function runDiagnostics(
     checks.push(checkInstalledModels(models, discoveryError));
     checks.push(checkSelectedModel(models, input.runtime, discoveryError));
     checks.push(checkContextWindow(models, input.runtime));
+    if (input.loadModel) {
+      checks.push(
+        await safe('models.load', 'Model load', () =>
+          checkModelLoad(input.client!, models, input.runtime, input.signal),
+        ),
+      );
+    }
   } else {
     for (const [id, title] of [
       ['models.installed', 'Gemma 4 models'],
       ['models.selected', 'Selected model'],
       ['models.context', 'Context window'],
+      ...(input.loadModel ? [['models.load', 'Model load'] as const] : []),
     ] as const) {
       checks.push({
         id,
@@ -344,6 +357,96 @@ function checkSelectedModel(
       requested: selection.requested,
       alternatives: selection.alternatives.map((a) => a.model),
     },
+  };
+}
+
+/**
+ * Loads the selected model once with the configured `num_ctx`.
+ *
+ * Metadata verification (`/api/show`) proves a tag *is* Gemma 4, not that this
+ * Ollama build can *run* it: a newer GGUF layout can fail to load on an older
+ * daemon (seen: "Gemma4Assistant requires ctx_other" on 0.30.11), and a large
+ * `num_ctx` can exceed memory. A chat request with no messages makes Ollama
+ * load the model without generating, which surfaces both failures here
+ * instead of at the first prompt. The model stays loaded for the daemon's
+ * normal keep-alive, so a session started right after does not reload it.
+ */
+async function checkModelLoad(
+  client: OllamaClient,
+  models: DiscoveredModel[],
+  runtime: CapricornRuntime,
+  signal?: AbortSignal,
+): Promise<DiagnosticCheck> {
+  const selection = selectModel(models, runtime.settings.model);
+  if (selection.kind !== 'selected') {
+    return {
+      id: 'models.load',
+      title: 'Model load',
+      status: 'skip',
+      message: 'Skipped: no usable model selected.',
+    };
+  }
+  const tag = selection.model.model;
+  const max = selection.model.maxContextLength;
+  const numCtx = max
+    ? Math.min(runtime.settings.numCtx, max)
+    : runtime.settings.numCtx;
+  const started = Date.now();
+  try {
+    await client.chat(
+      {
+        model: tag,
+        messages: [],
+        stream: false,
+        options: { num_ctx: numCtx },
+        ...(runtime.settings.keepAlive
+          ? { keep_alive: runtime.settings.keepAlive }
+          : {}),
+      },
+      signal,
+    );
+  } catch (e) {
+    return {
+      id: 'models.load',
+      title: 'Model load',
+      status: 'fail',
+      message: `Ollama could not load ${tag} with num_ctx ${numCtx}: ${
+        e instanceof OllamaError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : String(e)
+      }`,
+      remediation:
+        'Update Ollama (newer Gemma 4 builds may need a newer daemon), lower `ollama.numCtx`, or choose a smaller model with `capricorn models use <tag>`.',
+      data: { model: tag, numCtx },
+    };
+  }
+  const seconds = (Date.now() - started) / 1000;
+  // /api/ps is informational only: a failure here must not fail the check.
+  let footprint = '';
+  let size: number | undefined;
+  let sizeVram: number | undefined;
+  try {
+    const ps = await client.listRunning(signal);
+    const entry = ps.models.find((m) => m.name === tag);
+    size = entry?.size;
+    sizeVram = entry?.size_vram;
+    if (size) {
+      const gpu = sizeVram ? Math.round((sizeVram / size) * 100) : 0;
+      // Reported as Ollama's own figure: some builds report less than the
+      // model's real footprint (seen on 0.30.11).
+      footprint = `; Ollama reports ${formatGiB(size)} in use, ${gpu === 0 ? 'on CPU' : `${gpu}% on GPU`}`;
+    }
+  } catch {
+    // ignore
+  }
+  return {
+    id: 'models.load',
+    title: 'Model load',
+    status: 'pass',
+    message: `${tag} loaded with num_ctx ${numCtx} in ${seconds.toFixed(1)} s${footprint}`,
+    data: { model: tag, numCtx, seconds, size, sizeVram },
   };
 }
 

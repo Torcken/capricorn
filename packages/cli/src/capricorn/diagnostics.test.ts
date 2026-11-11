@@ -129,6 +129,98 @@ describe('runDiagnostics', () => {
   });
 });
 
+describe('runDiagnostics with loadModel (doctor --load)', () => {
+  it('does not load the model unless asked', async () => {
+    const report = await runDiagnostics({
+      runtime: runtime(),
+      client: new OllamaClient({ endpoint: mock.url }),
+      version: 'test',
+      cwd: process.cwd(),
+    });
+    expect(report.checks.some((c) => c.id === 'models.load')).toBe(false);
+    expect(mock.chatRequests()).toHaveLength(0);
+  });
+
+  it('loads the model with no messages and the effective num_ctx', async () => {
+    mock.enqueueChat({
+      frames: [
+        {
+          message: { role: 'assistant', content: '' },
+          done: true,
+          done_reason: 'load',
+        },
+      ],
+    });
+    const report = await runDiagnostics({
+      runtime: runtime('gemma4:e4b', 200_000),
+      client: new OllamaClient({ endpoint: mock.url }),
+      version: 'test',
+      cwd: process.cwd(),
+      loadModel: true,
+    });
+    const load = byId(report, 'models.load');
+    expect(load.status).toBe('pass');
+    expect(load.message).toMatch(/gemma4:e4b loaded with num_ctx 131072 in/);
+    const [req] = mock.chatRequests();
+    expect(req.body).toMatchObject({
+      model: 'gemma4:e4b',
+      messages: [],
+      stream: false,
+      options: { num_ctx: 131072 },
+    });
+    expect(report.ok).toBe(true);
+  });
+
+  it('fails with a remediation when Ollama cannot load the model', async () => {
+    mock.enqueueChat({
+      frames: [],
+      status: 500,
+      errorBody: {
+        error:
+          'llama runner process has terminated: Gemma4Assistant requires ctx_other',
+      },
+    });
+    const report = await runDiagnostics({
+      runtime: runtime(),
+      client: new OllamaClient({ endpoint: mock.url }),
+      version: 'test',
+      cwd: process.cwd(),
+      loadModel: true,
+    });
+    const load = byId(report, 'models.load');
+    expect(load.status).toBe('fail');
+    expect(load.message).toContain('could not load gemma4:12b');
+    expect(load.message).toContain('Gemma4Assistant requires ctx_other');
+    expect(load.remediation).toContain('Update Ollama');
+    expect(report.ok).toBe(false);
+  });
+
+  it('skips the load when the selected model is unusable', async () => {
+    const report = await runDiagnostics({
+      runtime: runtime('gemma4:fake'),
+      client: new OllamaClient({ endpoint: mock.url }),
+      version: 'test',
+      cwd: process.cwd(),
+      loadModel: true,
+    });
+    expect(byId(report, 'models.load').status).toBe('skip');
+    expect(mock.chatRequests()).toHaveLength(0);
+  });
+
+  it('skips the load when Ollama is not reachable', async () => {
+    await mock.close();
+    const report = await runDiagnostics({
+      runtime: runtime(),
+      client: new OllamaClient({ endpoint: mock.url, metadataTimeoutMs: 500 }),
+      version: 'test',
+      cwd: process.cwd(),
+      loadModel: true,
+    });
+    expect(byId(report, 'models.load').status).toBe('skip');
+    mock = await startMockOllama(); // afterEach closes it again
+  });
+});
+
 describe('compareVersions', () => {
   it('compares dotted versions numerically', () => {
     expect(compareVersions('0.30.11', '0.12.0')).toBeGreaterThan(0);

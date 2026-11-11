@@ -15,8 +15,6 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
   keep improving exploration (read the file that holds the answer) and
   project-convention matching; measure every installed Gemma 4 preset; publish
   results in `evals/capricorn/RESULTS.md`.
-- **`doctor` load check:** optionally load the selected model once, since
-  metadata can verify as Gemma 4 while Ollama still cannot run it.
 - **Finish removing Google code:** the OAuth/Code Assist/Clearcut network code
   and Google auth/Cloud dependencies are gone (inert stand-ins remain, see
   docs/UPSTREAM.md); still to do: upstream billing/quota helpers, the A2A

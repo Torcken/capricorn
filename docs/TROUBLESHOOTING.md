@@ -30,6 +30,15 @@ Capricorn only runs local Gemma 4 models. `capricorn models list --all` explains
 every rejection. A Gemma 4 model you re-tagged yourself is fine; a `:cloud` tag
 is never accepted.
 
+## `doctor` says ready, but the first prompt fails to load the model
+
+`doctor` verifies the model from its metadata; it does not run it. Run
+`capricorn doctor --load` to load it once with your `num_ctx`. A failure such as
+"llama runner process has terminated" or "… requires ctx_other" means this
+Ollama build cannot run that model file: update Ollama, or use another Gemma 4
+tag (`capricorn models use <tag>`). An out-of-memory failure means a smaller
+model or a lower `ollama.numCtx` (see below).
+
 ## Out of memory / "model requires more system memory"
 
 - Use a smaller model (`gemma4:e4b`).

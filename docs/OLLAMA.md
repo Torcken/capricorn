@@ -4,14 +4,14 @@
 
 Capricorn talks to Ollama's native REST API on `http://127.0.0.1:11434`:
 
-| Endpoint           | Used for                                                            |
-| ------------------ | ------------------------------------------------------------------- |
-| `GET /api/version` | `doctor`, `status`                                                  |
-| `GET /api/tags`    | Listing installed models                                            |
-| `POST /api/show`   | Gemma 4 verification (architecture, capabilities, context length)   |
-| `POST /api/chat`   | All inference (streamed NDJSON, tools, thinking, structured output) |
-| `GET /api/ps`      | Currently loaded models and memory (`status`)                       |
-| `POST /api/pull`   | `capricorn models pull` only                                        |
+| Endpoint           | Used for                                                                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/version` | `doctor`, `status`                                                                                                                          |
+| `GET /api/tags`    | Listing installed models                                                                                                                    |
+| `POST /api/show`   | Gemma 4 verification (architecture, capabilities, context length)                                                                           |
+| `POST /api/chat`   | All inference (streamed NDJSON, tools, thinking, structured output); `doctor --load` sends one with no messages, which only loads the model |
+| `GET /api/ps`      | Currently loaded models and memory (`status`, `doctor --load`)                                                                              |
+| `POST /api/pull`   | `capricorn models pull` only                                                                                                                |
 
 Every chat request sets `options.num_ctx` explicitly (default 32768), because
 Ollama's implicit context is small and silently truncates long prompts.
