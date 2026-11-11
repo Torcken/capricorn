@@ -339,6 +339,81 @@ describe('WriteFileTool', () => {
       expect(invocation).toBeDefined();
       expect(invocation.params).toEqual(params);
     });
+
+    // Capricorn: a file blocking a parent path is reported by name, and an
+    // empty extensionless write ("create a directory" mistake) is refused.
+    describe('Capricorn: blocked parent paths', () => {
+      it('names the file that blocks the parent path', () => {
+        fs.writeFileSync(path.join(rootDir, 'test'), '');
+        const params = {
+          file_path: path.join(rootDir, 'test', 'slugify.test.js'),
+          content: 'x',
+        };
+        expect(() => tool.build(params)).toThrow(
+          `'${path.join(rootDir, 'test')}' is an existing file, not a directory`,
+        );
+      });
+
+      it('finds a blocking file further up the chain', () => {
+        fs.writeFileSync(path.join(rootDir, 'lib'), 'data');
+        const params = {
+          file_path: path.join(rootDir, 'lib', 'a', 'b', 'c.js'),
+          content: 'x',
+        };
+        expect(() => tool.build(params)).toThrow(
+          `'${path.join(rootDir, 'lib')}' is an existing file`,
+        );
+      });
+
+      it('refuses an empty write to a new extensionless path', () => {
+        const params = { file_path: path.join(rootDir, 'test'), content: '' };
+        expect(() => tool.build(params)).toThrow(
+          /creates files, not directories\. Missing parent directories are created automatically/,
+        );
+      });
+
+      it.each([
+        ['an empty file with an extension', 'empty.js', ''],
+        ['an empty dotfile', '.gitkeep', ''],
+        ['an extensionless file with content', 'Makefile', 'all:\n'],
+        ['an extensionless file with a newline', 'NOTES', '\n'],
+      ])('allows %s', (_label, name, content) => {
+        const params = { file_path: path.join(rootDir, name), content };
+        expect(tool.build(params)).toBeDefined();
+      });
+
+      it('allows emptying an existing extensionless file', () => {
+        fs.writeFileSync(path.join(rootDir, 'VERSION'), '1.0.0\n');
+        const params = {
+          file_path: path.join(rootDir, 'VERSION'),
+          content: '',
+        };
+        expect(tool.build(params)).toBeDefined();
+      });
+
+      it('creates missing parent directories', async () => {
+        const filePath = path.join(rootDir, 'deep', 'er', 'file.js');
+        const invocation = tool.build({ file_path: filePath, content: 'ok' });
+        const result = await invocation.execute({
+          abortSignal: new AbortController().signal,
+        });
+        expect(result.error).toBeUndefined();
+        expect(fs.readFileSync(filePath, 'utf8')).toBe('ok');
+      });
+
+      it('explains ENOTDIR when the blocking file appears after validation', async () => {
+        const filePath = path.join(rootDir, 'late', 'file.js');
+        const invocation = tool.build({ file_path: filePath, content: 'ok' });
+        fs.writeFileSync(path.join(rootDir, 'late'), '');
+        const result = await invocation.execute({
+          abortSignal: new AbortController().signal,
+        });
+        expect(result.error).toBeDefined();
+        expect(result.llmContent).toContain(
+          `'${path.join(rootDir, 'late')}' is an existing file, not a directory`,
+        );
+      });
+    });
   });
 
   describe('getCorrectedFileContent', () => {

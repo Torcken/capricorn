@@ -106,6 +106,67 @@ export function isWriteFileToolParams(
   );
 }
 
+/**
+ * Capricorn: returns the nearest existing ancestor of `filePath` when it is
+ * not a directory (for example a file named `test` blocking `test/a.test.js`),
+ * or `undefined` when the parent chain is usable.
+ *
+ * Without this check the write fails later with a bare `ENOTDIR` that small
+ * models misread; naming the blocking file lets them recover.
+ */
+export function findBlockingAncestor(filePath: string): string | undefined {
+  let dir = path.dirname(filePath);
+  for (;;) {
+    let stats: fs.Stats | undefined;
+    try {
+      stats = fs.statSync(dir);
+    } catch (err) {
+      if (
+        !isNodeError(err) ||
+        (err.code !== 'ENOENT' && err.code !== 'ENOTDIR')
+      ) {
+        return undefined; // Unknown state: let the write report the real error.
+      }
+    }
+    if (stats) {
+      return stats.isDirectory() ? undefined : dir;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      return undefined;
+    }
+    dir = parent;
+  }
+}
+
+/**
+ * Capricorn: the message for {@link findBlockingAncestor}'s result, worded so
+ * the model can act on it.
+ */
+export function blockingAncestorMessage(
+  filePath: string,
+  blocker: string,
+): string {
+  return `Cannot write '${filePath}': '${blocker}' is an existing file, not a directory, so nothing can be created inside it. Write to a path that does not go through '${blocker}', or (if '${blocker}' was created by mistake and a shell tool is available) remove it first.`;
+}
+
+/**
+ * Capricorn: true for an empty write that would create a new file whose name
+ * has no extension (`test`, `src/utils`). Small models do this when they mean
+ * "create a directory", which then blocks every write into that directory.
+ * Dotfiles (`.gitkeep`) are not affected.
+ */
+export function looksLikeDirectoryIntent(
+  filePath: string,
+  content: string,
+): boolean {
+  if (content !== '' || fs.existsSync(filePath)) {
+    return false;
+  }
+  const base = path.basename(filePath);
+  return !base.startsWith('.') && path.extname(base) === '';
+}
+
 interface GetCorrectedFileContentResult {
   originalContent: string;
   correctedContent: string;
@@ -429,9 +490,16 @@ class WriteFileToolInvocation extends BaseToolInvocation<
 
     if (correctedContentResult.error) {
       const errDetails = correctedContentResult.error;
-      const errorMsg = errDetails.code
-        ? `Error checking existing file '${this.resolvedPath}': ${errDetails.message} (${errDetails.code})`
-        : `Error checking existing file: ${errDetails.message}`;
+      // Capricorn: explain ENOTDIR (a file blocks the parent path).
+      const blocker =
+        errDetails.code === 'ENOTDIR'
+          ? findBlockingAncestor(this.resolvedPath)
+          : undefined;
+      const errorMsg = blocker
+        ? blockingAncestorMessage(this.resolvedPath, blocker)
+        : errDetails.code
+          ? `Error checking existing file '${this.resolvedPath}': ${errDetails.message} (${errDetails.code})`
+          : `Error checking existing file: ${errDetails.message}`;
       return {
         llmContent: errorMsg,
         returnDisplay: errorMsg,
@@ -601,6 +669,13 @@ class WriteFileToolInvocation extends BaseToolInvocation<
         } else if (error.code === 'EISDIR') {
           errorMsg = `Target is a directory, not a file: ${this.resolvedPath} (${error.code})`;
           errorType = ToolErrorType.TARGET_IS_DIRECTORY;
+        } else if (error.code === 'ENOTDIR' || error.code === 'EEXIST') {
+          // Capricorn: a file blocks the parent path (mkdir reports EEXIST
+          // or ENOTDIR depending on where in the chain the file sits).
+          const blocker = findBlockingAncestor(this.resolvedPath);
+          if (blocker) {
+            errorMsg = blockingAncestorMessage(this.resolvedPath, blocker);
+          }
         }
 
         // Include stack trace in debug mode for better troubleshooting
@@ -695,6 +770,15 @@ export class WriteFileTool
         if (stats.isDirectory()) {
           return `Path is a directory, not a file: ${resolvedPath}`;
         }
+      }
+      // Capricorn: catch a file blocking the parent path before approval.
+      const blocker = findBlockingAncestor(resolvedPath);
+      if (blocker) {
+        return blockingAncestorMessage(resolvedPath, blocker);
+      }
+      // Capricorn: refuse empty extensionless files, the usual "mkdir" mistake.
+      if (looksLikeDirectoryIntent(resolvedPath, params.content)) {
+        return `Refusing to create an empty file named '${path.basename(resolvedPath)}': ${WRITE_FILE_TOOL_NAME} creates files, not directories. Missing parent directories are created automatically, so write the file you need directly (for example '${path.join(params.file_path, 'example.js')}'). If you really need an empty file with this name, use "\\n" as the content.`;
       }
     } catch (statError: unknown) {
       return `Error accessing path properties for validation: ${resolvedPath}. Reason: ${
