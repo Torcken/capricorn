@@ -18,6 +18,8 @@ All notable changes to Capricorn are documented here. The format follows
   only mentioned when available; read-only sessions get a "describe, don't edit"
   rule), plans are written inline and followed by action, answers must name
   every item asked for.
+- Gemma 4 system prompt (v3): read the file that holds the answer before
+  answering; check the project setup before creating files.
 
 ### Fixed
 

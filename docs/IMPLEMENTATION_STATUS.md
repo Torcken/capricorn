@@ -25,7 +25,7 @@ fully tested · **deferred** · **blocked**.
 | Container sandbox on Docker Desktop (macOS/Windows), runsc, LXC; macOS Seatbelt     | unverified                             | not run; see docs/SECURITY.md#sandbox                   |
 | README quickstart in a fresh clone                                                  | done (Linux)                           | clone → `npm ci` → build → bundle → doctor → `run`      |
 | Behavioural eval suite (14 tasks, outcome-based checkers)                           | done                                   | `evals/capricorn/`, `e2e/evals-*.e2e.test.ts`           |
-| Prompt tuning from evals (`gemma4:12b`: 74% → 83%)                                  | in progress                            | `evals/capricorn/RESULTS.md`                            |
+| Prompt tuning from evals (`gemma4:12b`: 74% → 88%)                                  | in progress                            | `evals/capricorn/RESULTS.md`                            |
 | Settings-reachable Google paths (voice, telemetry, MCP/agent auth) closed           | done                                   | unit tests per path                                     |
 | Hardware-aware onboarding, local web fetch                                          | deferred                               | docs/ROADMAP.md                                         |
 | Removal of unreachable Google code (code_assist, OAuth, Clearcut)                   | deferred                               | docs/UPSTREAM.md                                        |
