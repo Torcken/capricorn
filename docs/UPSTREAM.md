@@ -81,9 +81,20 @@ The repository history starts with the unmodified upstream commit, so
 - **`@google/genai` types** as the internal message model. The agent loop,
   history, tools and UI are written against them; translation happens only at
   the provider boundary (ADR 0001).
-- **Unreachable Google code** (e.g. `code_assist/`, OAuth helpers). It is no
-  longer constructed by any runtime path. It will be removed incrementally, with
-  its tests, to keep each change reviewable.
+- **Inert stand-ins for removed Google modules.** Google sign-in
+  (`code_assist/oauth2.ts`), the Code Assist client (`code_assist/server.ts`),
+  account onboarding (`code_assist/setup.ts`) and the Clearcut usage logger keep
+  their exported names so upstream call sites compile unchanged, but they
+  contain no network code: requesting a Google client throws, and the logger
+  never exists. The Google Cloud telemetry exporters, Google-credential MCP /
+  agent auth providers and Gemini Live transcription were deleted outright, and
+  `google-auth-library` / `@google-cloud/*` are no longer dependencies of
+  `packages/core`. `security/noGoogleServices.test.ts` keeps it that way.
+- **Still present, all unreachable:** upstream billing/quota helpers
+  (`billing/`, `utils/googleQuotaErrors.ts`: string handling only, listed as
+  exceptions in the guard test); the A2A server's optional Google Cloud Storage
+  persistence (`packages/a2a-server`, not part of the `capricorn` package); and
+  `google-auth-library` as a transitive dependency of `@google/genai`.
 - **Environment variable names** used by the retained test harness
   (`GEMINI_CLI_HOME`, `GEMINI_CLI_TRUST_WORKSPACE`, …). Capricorn-prefixed
   equivalents exist where they are user-facing (`CAPRICORN_HOME`,

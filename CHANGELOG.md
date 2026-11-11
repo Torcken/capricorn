@@ -28,6 +28,8 @@ All notable changes to Capricorn are documented here. The format follows
 - Headless runs could hang until the time limit: the model could call
   `enter_plan_mode` and then never leave Plan Mode. The tool is now only offered
   in interactive sessions.
+- API request events were labelled with the Gemini API host even though requests
+  go to Ollama; they now carry the Ollama endpoint.
 - Gemma 4 channel markers (`<|channel>thought`, `<channel|>`) leaking into
   thinking output are stripped.
 
@@ -52,6 +54,11 @@ All notable changes to Capricorn are documented here. The format follows
   enabled by settings, `GEMINI_TELEMETRY_*`/`OTEL_*` variables or flags.
 - Google credential and service-account impersonation auth for MCP servers and
   remote agents (now an explicit error).
+- Google sign-in, Code Assist client, account onboarding and Clearcut usage
+  logger network code (inert stand-ins keep the upstream API), Google Cloud
+  telemetry exporters and Gemini Live transcription; `google-auth-library` and
+  `@google-cloud/*` dependencies of the core package.
+
 - The container sandbox no longer mounts `~/.config/gcloud` or the
   `GOOGLE_APPLICATION_CREDENTIALS` file.
 

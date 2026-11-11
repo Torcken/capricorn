@@ -17,8 +17,12 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
   results in `evals/capricorn/RESULTS.md`.
 - **`doctor` load check:** optionally load the selected model once, since
   metadata can verify as Gemma 4 while Ollama still cannot run it.
-- **Remove unreachable Google code** (Code Assist, Google OAuth, Clearcut) and
-  its tests, module by module.
+- **Finish removing Google code:** the OAuth/Code Assist/Clearcut network code
+  and Google auth/Cloud dependencies are gone (inert stand-ins remain, see
+  docs/UPSTREAM.md); still to do: upstream billing/quota helpers, the A2A
+  server's Google Cloud Storage persistence (or the A2A server itself), and
+  replacing runtime use of `@google/genai` classes so its bundled client code
+  (and `google-auth-library`) can be dropped.
 - **Platform coverage:** CI runs on macOS and Windows exist; manual real-model
   validation on each still needed. Windows sandbox story.
 - **Context management:** calibrated budgets per model, smarter selection of

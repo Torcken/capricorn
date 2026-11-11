@@ -133,8 +133,12 @@ isolation boundary.
   group/world-writable.
 - **Sandbox coverage varies by platform**; see above. No universal OS isolation
   is claimed.
-- **Retained upstream code** that is unreachable in Capricorn (Google OAuth,
-  Code Assist) is still in the source tree; see docs/UPSTREAM.md.
+- **Bundled third-party Google client code.** Capricorn uses `@google/genai`'s
+  types and a few of its classes, so its bundled Gemini/Vertex client code and
+  `google-auth-library` (with their default Google endpoints) are still in the
+  package, unreachable from Capricorn; the egress guard would block them.
+  Capricorn's own Google sign-in, Code Assist and usage-statistics code has no
+  network code left; see docs/UPSTREAM.md.
 
 ## Privacy
 

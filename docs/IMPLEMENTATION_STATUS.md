@@ -28,7 +28,7 @@ fully tested · **deferred** · **blocked**.
 | Prompt tuning from evals (`gemma4:12b`: 74% → 95%)                                  | in progress                            | `evals/capricorn/RESULTS.md`                            |
 | Settings-reachable Google paths (voice, telemetry, MCP/agent auth) closed           | done                                   | unit tests per path                                     |
 | Hardware-aware onboarding, local web fetch                                          | deferred                               | docs/ROADMAP.md                                         |
-| Removal of unreachable Google code (code_assist, OAuth, Clearcut)                   | deferred                               | docs/UPSTREAM.md                                        |
+| Removal of Google network code (OAuth, Code Assist, Clearcut, GCP export) and deps  | done (see UPSTREAM.md for leftovers)   | docs/UPSTREAM.md                                        |
 | npm publication                                                                     | blocked                                | needs package-name ownership and maintainer credentials |
 
 ## Test results
@@ -49,6 +49,13 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   `npx prettier --check .` pass. E2E 25/25 (the real-model smoke file is skipped
   unless `CAPRICORN_REAL_MODEL=1`).
 
+- **After removing Google network code (2026-11-11, `7188c8c`):** core 7 failed
+  / 8389 (fewer tests: the deleted Google modules' tests went with them) and cli
+  4 failed / 7466, the same upstream failures; typecheck, lint, prettier pass;
+  e2e 65 passed, 3 gated skips; fresh bundle passes `doctor` and a real
+  `gemma4:12b` fix. `packages/a2a-server` (not part of the quality gate, not in
+  the `capricorn` package) has 3 failing tests that stem from the Ollama-only
+  back-end and workspace `.env` handling; not verified against the fork base.
 - **After closing Google paths, eval suite, prompt v2 (2026-11-11):** core 7
   failed / 8630 and cli 4 failed / 7466 (the same upstream failures); typecheck,
   lint and prettier pass; e2e 65 passed, 3 gated skips. Evals: see
