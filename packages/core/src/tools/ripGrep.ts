@@ -42,7 +42,11 @@ import {
 } from './constants.js';
 import { RIP_GREP_DEFINITION } from './definitions/coreTools.js';
 import { resolveToolDeclaration } from './definitions/resolver.js';
-import { type GrepMatch, formatGrepResults } from './grep-utils.js';
+import {
+  type GrepMatch,
+  autoContextLines,
+  formatGrepResults,
+} from './grep-utils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -362,15 +366,16 @@ class GrepToolInvocation extends BaseToolInvocation<
     searchDirAbs: string,
     signal: AbortSignal,
   ): Promise<GrepMatch[]> {
+    // Capricorn: thresholds shared with the JS fallback (grep-utils), which
+    // also adds a small default context for 4–20 matches.
+    const contextLines = autoContextLines(matchCount);
     if (
-      matchCount >= 1 &&
-      matchCount <= 3 &&
+      contextLines !== undefined &&
       !this.params.names_only &&
       this.params.context === undefined &&
       this.params.before === undefined &&
       this.params.after === undefined
     ) {
-      const contextLines = matchCount === 1 ? 50 : 15;
       const uniqueFiles = Array.from(
         new Set(allMatches.map((m) => m.absolutePath)),
       );

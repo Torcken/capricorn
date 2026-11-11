@@ -626,6 +626,51 @@ describe('GrepTool', () => {
       expect(result.llmContent).toContain('L60- Line 60');
     });
 
+    // Capricorn: 4–20 matches get 2 lines of context (eval finding: the
+    // enclosing function was one line above a bare match line).
+    it('adds 2 lines of context for 4–20 matches, showing the enclosing function', async () => {
+      await fs.writeFile(
+        path.join(tempRootDir, 'register.js'),
+        [
+          "import { hashPassword } from './hash.js';",
+          '',
+          'export function registerUser(store, email, password) {',
+          '  const user = { hash: hashPassword(password, salt) };',
+          '  return user;',
+          '}',
+        ].join('\n'),
+      );
+      await fs.writeFile(
+        path.join(tempRootDir, 'hash.js'),
+        [
+          'export function hashPassword(p, s) {}',
+          'function hashPasswordForCompare(p, s) {}',
+          'hashPasswordForCompare(1, 2);',
+        ].join('\n'),
+      );
+
+      const params: GrepToolParams = { pattern: 'hashPassword' };
+      const result = await grepTool.build(params).execute({ abortSignal });
+
+      expect(result.llmContent).toContain('Found 5 matches');
+      expect(result.llmContent).toContain(
+        'L3- export function registerUser(store, email, password) {',
+      );
+    });
+
+    it('adds no automatic context above 20 matches', async () => {
+      const lines = Array.from({ length: 60 }, (_, i) =>
+        i % 2 === 0 ? `hit ${i}` : `filler ${i}`,
+      );
+      await fs.writeFile(path.join(tempRootDir, 'many.txt'), lines.join('\n'));
+
+      const params: GrepToolParams = { pattern: 'hit' };
+      const result = await grepTool.build(params).execute({ abortSignal });
+
+      expect(result.llmContent).toContain('Found 30 matches');
+      expect(result.llmContent).not.toContain('filler');
+    });
+
     it('should truncate excessively long lines', async () => {
       const longString = 'a'.repeat(3000);
       await fs.writeFile(

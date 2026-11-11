@@ -58,6 +58,27 @@ export async function readFileLines(
   }
 }
 
+/** Capricorn: match counts up to which a small default context is added. */
+export const AUTO_CONTEXT_SMALL_MAX_MATCHES = 20;
+
+/**
+ * Number of context lines to add automatically for `matchCount` matches, or
+ * `undefined` for none. Upstream: 50 lines for 1 match, 15 for 2–3.
+ *
+ * Capricorn adds 2 lines for 4–20 matches. Eval finding (explore-find-caller,
+ * gemma4:12b, 0/3 in two prompt versions): with 5 bare match lines the model
+ * answered "called on line 6" without ever opening the file, although the
+ * enclosing `function registerUser(` was the line just above. Two lines on
+ * each side usually show the enclosing declaration for short functions and
+ * cost about 5 lines per match.
+ */
+export function autoContextLines(matchCount: number): number | undefined {
+  if (matchCount === 1) return 50;
+  if (matchCount >= 2 && matchCount <= 3) return 15;
+  if (matchCount >= 4 && matchCount <= AUTO_CONTEXT_SMALL_MAX_MATCHES) return 2;
+  return undefined;
+}
+
 /**
  * Automatically enriches grep results with surrounding context if the match count is low
  * and no specific context was requested. This optimization can enable the agent
@@ -74,16 +95,15 @@ export async function enrichWithAutoContext(
   },
 ): Promise<void> {
   const { names_only, context, before, after } = params;
+  const contextLines = autoContextLines(matchCount);
 
   if (
-    matchCount >= 1 &&
-    matchCount <= 3 &&
+    contextLines !== undefined &&
     !names_only &&
     context === undefined &&
     before === undefined &&
     after === undefined
   ) {
-    const contextLines = matchCount === 1 ? 50 : 15;
     for (const filePath in matchesByFile) {
       const fileMatches = matchesByFile[filePath];
       if (fileMatches.length === 0) continue;
