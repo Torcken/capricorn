@@ -44,6 +44,16 @@ function plain(s: string): string {
   return s.replace(ANSI, '');
 }
 
+/** The named variables from this process's environment, where set. */
+function pick(names: string[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const name of names) {
+    const value = process.env[name];
+    if (value !== undefined) out[name] = value;
+  }
+  return out;
+}
+
 function spawnTui() {
   const term = pty.spawn(process.execPath, ['--no-deprecation', CLI_ENTRY], {
     name: 'xterm-256color',
@@ -51,8 +61,13 @@ function spawnTui() {
     rows: 40,
     cwd: env.repo,
     env: {
+      // Windows needs these to open sockets and temp files. child_process
+      // adds them automatically (libuv does), but node-pty passes only what
+      // it is given; without SystemRoot, fetch to the mock daemon fails.
+      ...pick(['SystemRoot', 'SYSTEMDRIVE', 'TEMP', 'TMP', 'windir']),
       PATH: process.env['PATH'] ?? '',
       HOME: env.home,
+      USERPROFILE: env.home,
       CAPRICORN_OLLAMA_HOST: env.mock.url,
       GEMINI_CLI_NO_RELAUNCH: 'true',
       GEMINI_CLI_TRUST_WORKSPACE: 'true',
