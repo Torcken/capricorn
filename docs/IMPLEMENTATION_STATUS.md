@@ -99,6 +99,13 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   prebuilt `@lydell/node-pty`. Also found: the e2e job's offline verification
   had never actually run in CI (skipped with a warning for the same AppArmor
   reason); it now lifts the restriction and fails instead of skipping.
+- **CI follow-ups (2026-11-12).** The CLI unit suite (~110 min on a 4-CPU hosted
+  runner) hit the 60-minute job limit; it now runs as 4 parallel shards with
+  coverage off. A flaky dialog test made a real call to the Ollama daemon; it is
+  now stubbed. On Windows the interactive e2e test needed `SystemRoot` & co.
+  passed to `node-pty`; with that, startup and a streamed answer pass. **Known
+  gap:** on Windows CI the TUI never reported an exit (neither Ctrl+C nor
+  `/quit`; undiagnosed), so the exit is asserted on Linux and macOS only.
 - **After removing `packages/a2a-server` (2026-11-12):** core 7 failed / 8421
   and cli 4 failed / 7471 (the same upstream failures); typecheck, lint and
   prettier pass; build and bundle succeed; e2e and `verify:offline` 71 passed, 3

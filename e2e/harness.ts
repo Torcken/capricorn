@@ -147,7 +147,14 @@ export async function createEnv(
     exists: (rel) => fs.existsSync(path.join(repo, rel)),
     cleanup: async () => {
       await mock.close();
-      fs.rmSync(root, { recursive: true, force: true });
+      // Retries: on Windows a just-killed child can hold its cwd briefly
+      // (EBUSY).
+      fs.rmSync(root, {
+        recursive: true,
+        force: true,
+        maxRetries: 10,
+        retryDelay: 500,
+      });
     },
   };
 }
