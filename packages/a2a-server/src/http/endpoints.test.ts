@@ -4,16 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  afterEach,
-  vi,
-} from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import request from 'supertest';
 import type express from 'express';
 import * as fs from 'node:fs';
@@ -33,20 +24,6 @@ import { logger } from '../utils/logger.js';
 vi.mock('../utils/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
-
-vi.mock('../persistence/gcs.js', () => {
-  class MockGCSTaskStore {
-    load = vi.fn();
-    save = vi.fn();
-  }
-  class MockNoOpTaskStore {
-    constructor(public store: unknown) {}
-  }
-  return {
-    GCSTaskStore: MockGCSTaskStore,
-    NoOpTaskStore: MockNoOpTaskStore,
-  };
-});
 
 // Mock Task.create to avoid its complex setup
 vi.mock('../agent/task.js', () => {
@@ -190,62 +167,29 @@ describe('Agent Server Endpoints', () => {
     expect(response.body.url).toBe(`http://localhost:${port}/`);
   });
 
-  describe('GET /tasks/metadata with non-InMemoryTaskStore', () => {
-    let nonInMemoryApp: express.Express;
-    let nonInMemoryServer: Server;
-    let nonInMemoryWorkspace: string;
-    let originalCwd: string;
-
-    beforeEach(async () => {
-      originalCwd = process.cwd();
-      nonInMemoryWorkspace = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'gemini-agent-gcs-test-'),
-      );
-      vi.stubEnv('CODER_AGENT_WORKSPACE_PATH', nonInMemoryWorkspace);
-      vi.stubEnv('GCS_BUCKET_NAME', 'test-bucket');
-      nonInMemoryApp = await createApp();
-      await new Promise<void>((resolve) => {
-        nonInMemoryServer = nonInMemoryApp.listen(0, () => {
-          resolve();
-        });
-      });
+  // Capricorn: the GCS task store was removed, so the "non-InMemoryTaskStore"
+  // case no longer exists; a configured bucket is refused instead.
+  it('refuses to start when GCS_BUCKET_NAME is set', async () => {
+    vi.stubEnv('GCS_BUCKET_NAME', 'test-bucket');
+    const exit = vi.spyOn(process, 'exit').mockImplementation((code) => {
+      throw new Error(`exit ${code}`);
     });
-
-    afterEach(async () => {
-      vi.unstubAllEnvs();
-      if (nonInMemoryServer) {
-        await new Promise<void>((resolve, reject) => {
-          nonInMemoryServer.close((err) => {
-            if (err) return reject(err);
-            resolve();
-          });
-        });
-      }
-      if (originalCwd) {
-        process.chdir(originalCwd);
-      }
-      if (nonInMemoryWorkspace) {
-        try {
-          fs.rmSync(nonInMemoryWorkspace, { recursive: true, force: true });
-        } catch (e) {
-          debugLogger.warn(
-            `Could not remove temp dir '${nonInMemoryWorkspace}':`,
-            e,
-          );
-        }
-      }
-    });
-
-    it('should return 501 and not fall through to send a second response', async () => {
+    const cwd = process.cwd();
+    try {
       vi.mocked(logger.error).mockClear();
-      const response = await request(nonInMemoryApp).get('/tasks/metadata');
-      expect(response.status).toBe(501);
-      expect(response.body).toEqual({
-        error:
-          'Listing all task metadata is only supported when using InMemoryTaskStore.',
-      });
-      // Without return, the handler falls through and triggers ERR_HTTP_HEADERS_SENT
-      expect(logger.error).not.toHaveBeenCalled();
-    });
+      await expect(createApp()).rejects.toThrow('exit 1');
+      expect(vi.mocked(logger.error)).toHaveBeenCalledWith(
+        '[CoreAgent] Error during startup:',
+        expect.objectContaining({
+          message: expect.stringMatching(
+            /does not support Google Cloud Storage/,
+          ),
+        }),
+      );
+    } finally {
+      exit.mockRestore();
+      vi.unstubAllEnvs();
+      process.chdir(cwd);
+    }
   });
 });

@@ -92,9 +92,11 @@ The repository history starts with the unmodified upstream commit, so
   `packages/core`. `security/noGoogleServices.test.ts` keeps it that way.
 - **Still present, all unreachable:** upstream billing/quota helpers
   (`billing/`, `utils/googleQuotaErrors.ts`: string handling only, listed as
-  exceptions in the guard test); the A2A server's optional Google Cloud Storage
-  persistence (`packages/a2a-server`, not part of the `capricorn` package); and
-  `google-auth-library` as a transitive dependency of `@google/genai`.
+  exceptions in the guard test); the A2A server's Google auth selection
+  (`packages/a2a-server`, not part of the `capricorn` package; it fails at
+  startup because only the Ollama back-end exists, so the server does not run);
+  and `google-auth-library` as a transitive dependency of `@google/genai`. The
+  A2A server's Google Cloud Storage persistence was removed.
 - **Environment variable names** used by the retained test harness
   (`GEMINI_CLI_HOME`, `GEMINI_CLI_TRUST_WORKSPACE`, …). Capricorn-prefixed
   equivalents exist where they are user-facing (`CAPRICORN_HOME`,

@@ -19,7 +19,6 @@ import { A2AExpressApp, type UserBuilder } from '@a2a-js/sdk/server/express'; //
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger.js';
 import type { AgentSettings } from '../types.js';
-import { GCSTaskStore, NoOpTaskStore } from '../persistence/gcs.js';
 import { CoderAgentExecutor } from '../agent/executor.js';
 import { requestStorage } from './requestStorage.js';
 import { loadConfig, loadEnvironment, setTargetDir } from '../config/config.js';
@@ -220,9 +219,6 @@ export async function createApp() {
       'CODER_AGENT_WORKSPACE_PATH',
       'GCS_BUCKET_NAME',
       'LOG_LEVEL',
-      'GOOGLE_APPLICATION_CREDENTIALS',
-      'GOOGLE_CLOUD_PROJECT',
-      'GEMINI_CLI_USE_COMPUTE_ADC',
     ];
     for (const key of allowedServerKeys) {
       if (globalEnv[key] !== undefined) {
@@ -246,22 +242,19 @@ export async function createApp() {
       await git.initialize();
     }
 
-    // loadEnvironment() is called within getConfig now
-    const bucketName = process.env['GCS_BUCKET_NAME'];
-    let taskStoreForExecutor: TaskStore;
-    let taskStoreForHandler: TaskStore;
-
-    if (bucketName) {
-      logger.info(`Using GCSTaskStore with bucket: ${bucketName}`);
-      const gcsTaskStore = new GCSTaskStore(bucketName);
-      taskStoreForExecutor = gcsTaskStore;
-      taskStoreForHandler = new NoOpTaskStore(gcsTaskStore);
-    } else {
-      logger.info('Using InMemoryTaskStore');
-      const inMemoryTaskStore = new InMemoryTaskStore();
-      taskStoreForExecutor = inMemoryTaskStore;
-      taskStoreForHandler = inMemoryTaskStore;
+    // Capricorn: upstream persisted tasks to Google Cloud Storage when
+    // GCS_BUCKET_NAME was set. That network path (and @google-cloud/storage)
+    // was removed; tasks live in memory only. A configured bucket is refused
+    // rather than ignored so nobody believes their tasks are being persisted.
+    if (process.env['GCS_BUCKET_NAME']) {
+      throw new Error(
+        'GCS_BUCKET_NAME is set, but Capricorn does not support Google Cloud Storage task persistence. Unset it; tasks are kept in memory.',
+      );
     }
+    logger.info('Using InMemoryTaskStore');
+    const taskStore: TaskStore = new InMemoryTaskStore();
+    const taskStoreForExecutor = taskStore;
+    const taskStoreForHandler = taskStore;
 
     const agentExecutor = new CoderAgentExecutor(taskStoreForExecutor);
 
