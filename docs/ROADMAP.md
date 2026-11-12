@@ -20,8 +20,8 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
   docs/UPSTREAM.md), as are the upstream A2A server package and all bundled
   `@google/genai` SDK code (only its types remain); still to do: the unreachable
   upstream billing/quota helpers.
-- **Platform coverage:** CI runs on macOS and Windows exist; manual real-model
-  validation on each still needed. Windows sandbox story.
+- **Platform coverage:** Linux and macOS are supported (CI on both); manual
+  real-model validation on macOS still needed. Windows is not supported.
 - **Context management:** calibrated budgets per model, smarter selection of
   repository context, compaction quality checks.
 - **Startup time:** profile and trim inherited initialization.

@@ -74,6 +74,8 @@ All notable changes to Capricorn are documented here. The format follows
 
 ### Removed
 
+- Windows support claim and the Windows CI job: Capricorn supports Linux and
+  macOS only.
 - Gemini Live voice transcription (Google Cloud); local Whisper is the only
   backend.
 - OpenTelemetry export (including the Google Cloud target) can no longer be

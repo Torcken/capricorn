@@ -20,7 +20,8 @@ fully tested · **deferred** · **blocked**.
 | Interactive TUI start → answer → Ctrl+C                                             | done                                   | `e2e/interactive.e2e.test.ts`                           |
 | Package smoke (bundle, pack, install, launch)                                       | done                                   | `scripts/capricorn/pack-smoke.js` (Linux)               |
 | Real-model smoke (`gemma4:12b`, read→fix→test→summary + denial)                     | done (Linux, 1 run)                    | `e2e/.results/real-model-smoke.json`                    |
-| macOS / Windows                                                                     | unverified                             | CI matrix written, not yet run                          |
+| macOS                                                                               | done (CI: unit subset, e2e)            | CI `Smoke (macos-latest)`; no real-model run yet        |
+| Windows                                                                             | not supported                          | dropped from CI (decision 2026-11-12)                   |
 | Container sandbox (`capricorn-sandbox:local`, Ollama bridge, network off)           | done (Linux: rootless Podman, Docker)  | `sandbox*.test.ts`, gated `e2e/sandbox.e2e.test.ts`     |
 | Container sandbox on Docker Desktop (macOS/Windows), runsc, LXC; macOS Seatbelt     | unverified                             | not run; see docs/SECURITY.md#sandbox                   |
 | README quickstart in a fresh clone                                                  | done (Linux)                           | clone → `npm ci` → build → bundle → doctor → `run`      |
@@ -106,6 +107,7 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   passed to `node-pty`; with that, startup and a streamed answer pass. **Known
   gap:** on Windows CI the TUI never reported an exit (neither Ctrl+C nor
   `/quit`; undiagnosed), so the exit is asserted on Linux and macOS only.
+  Windows was then declared unsupported and removed from CI.
 - **After removing `packages/a2a-server` (2026-11-12):** core 7 failed / 8421
   and cli 4 failed / 7471 (the same upstream failures); typecheck, lint and
   prettier pass; build and bundle succeed; e2e and `verify:offline` 71 passed, 3

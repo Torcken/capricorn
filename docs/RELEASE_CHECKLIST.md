@@ -22,7 +22,7 @@ link to the CI run) next to each box in the release PR.
       `npx prettier --check .` pass.
 - [ ] Unit tests: `npm run test:ci -w` for core and cli pass with no failures
       (CI, Node 20).
-- [ ] `npm run test:e2e:capricorn` passes on Linux, macOS and Windows (CI).
+- [ ] `npm run test:e2e:capricorn` passes on Linux and macOS (CI).
 - [ ] `npm run verify:offline` passes (Linux).
 - [ ] `node scripts/capricorn/pack-smoke.js` passes.
 - [ ] Real-model smoke test passes with `gemma4:12b` and `gemma4:e4b` on at
