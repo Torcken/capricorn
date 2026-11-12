@@ -9,7 +9,9 @@ import { FinishReason, Type, type Content } from '@google/genai';
 import {
   MALFORMED_ARGS_MARKER,
   createToolCallIdAllocator,
+  createContentChannelSplitter,
   createThinkingSanitizer,
+  LEAKED_THINKING_BUFFER_CHARS,
   frameToResponse,
   geminiSchemaToJsonSchema,
   normalizeArguments,
@@ -448,5 +450,89 @@ describe('createThinkingSanitizer (Gemma 4 channel markers)', () => {
     expect(r2.candidates?.[0]?.content?.parts).toEqual([
       { text: 'Look at cart.js', thought: true },
     ]);
+  });
+});
+
+describe('createContentChannelSplitter (thinking leaked into content)', () => {
+  const frame = (
+    content: string,
+    extra: { thinking?: string; done?: boolean } = {},
+  ) => ({
+    message: { role: 'assistant', content, thinking: extra.thinking },
+    done: extra.done ?? false,
+  });
+  /** Runs frames through one splitter; returns [thinking, content]. */
+  const run = (frames: Array<ReturnType<typeof frame>>) => {
+    const split = createContentChannelSplitter();
+    let thinking = '';
+    let content = '';
+    const perFrame: string[] = [];
+    for (const f of frames) {
+      const out = split(f);
+      thinking += out.message?.thinking ?? '';
+      content += out.message?.content ?? '';
+      perFrame.push(out.message?.content ?? '');
+    }
+    return { thinking, content, perFrame };
+  };
+
+  it('moves text before <channel|> into thinking (the eval failure)', () => {
+    const r = run([
+      frame('There are 6 `TODO:` comments.\n\nWait, let me re-count'),
+      frame(': total = 5.<chan'),
+      frame('nel|>5 `TODO:` comments'),
+      frame(' were found.', { done: true }),
+    ]);
+    expect(r.thinking).toBe(
+      'There are 6 `TODO:` comments.\n\nWait, let me re-count: total = 5.',
+    );
+    expect(r.content).toBe('5 `TODO:` comments were found.');
+    // Nothing of the reasoning was released as content before the marker.
+    expect(r.perFrame.slice(0, 2)).toEqual(['', '']);
+  });
+
+  it('strips a leaked opener from the recovered thinking', () => {
+    const r = run([
+      frame('<|channel>thought\nplan it<channel|>Answer.', { done: true }),
+    ]);
+    expect(r.thinking).toBe('plan it');
+    expect(r.content).toBe('Answer.');
+  });
+
+  it('releases held content unchanged when the response ends without a marker', () => {
+    const r = run([frame('Just '), frame('an answer.', { done: true })]);
+    expect(r).toMatchObject({ thinking: '', content: 'Just an answer.' });
+    expect(r.perFrame).toEqual(['', 'Just an answer.']);
+  });
+
+  it('releases a done frame without a message too', () => {
+    const split = createContentChannelSplitter();
+    split(frame('Held.'));
+    expect(split({ done: true } as never).message?.content).toBe('Held.');
+  });
+
+  it('passes content through once thinking arrived normally', () => {
+    const r = run([
+      frame('', { thinking: 'reasoning' }),
+      frame('Answer '),
+      frame('streams.', { done: true }),
+    ]);
+    expect(r.thinking).toBe('reasoning');
+    expect(r.perFrame).toEqual(['', 'Answer ', 'streams.']);
+  });
+
+  it('streams long answers after the buffer limit instead of holding them', () => {
+    const long = 'x'.repeat(LEAKED_THINKING_BUFFER_CHARS + 1);
+    const r = run([frame(long), frame(' more')]);
+    expect(r.perFrame).toEqual([long, ' more']);
+    expect(r.thinking).toBe('');
+  });
+
+  it('removes stray markers from content in every case', () => {
+    const r = run([
+      frame('', { thinking: 't' }),
+      frame('a<channel|>b', { done: true }),
+    ]);
+    expect(r.content).toBe('ab');
   });
 });

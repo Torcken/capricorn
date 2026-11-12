@@ -47,6 +47,7 @@ import { debugLogger } from '../../utils/debugLogger.js';
 import type { OllamaClient } from './client.js';
 import {
   createToolCallIdAllocator,
+  createContentChannelSplitter,
   createThinkingSanitizer,
   frameToResponse,
   normalizeContents,
@@ -135,8 +136,10 @@ export class OllamaContentGenerator implements ContentGenerator {
       this.client.chat(body, signal),
     );
     this.calibrate(estimate, frame.prompt_eval_count);
+    // Capricorn: recover thinking that arrived as content (see converter).
+    const whole = { ...frame, done: true };
     const response = frameToResponse(
-      { ...frame, done: true },
+      body.think === true ? createContentChannelSplitter()(whole) : whole,
       createToolCallIdAllocator(),
       new Set(),
       createThinkingSanitizer(),
@@ -176,13 +179,22 @@ export class OllamaContentGenerator implements ContentGenerator {
       const seen = new Set<string>();
       // Gemma 4 channel markers can leak into thinking deltas; see converter.
       const sanitizeThinking = createThinkingSanitizer();
+      // ...and whole thinking passages can arrive as content when Ollama
+      // misses the opening marker; only possible when thinking is on.
+      const splitChannels =
+        body.think === true ? createContentChannelSplitter() : undefined;
       let yielded = false;
       try {
         for await (const frame of this.client.chatStream(body, signal)) {
           if (frame.done) {
             this.calibrate(estimate, frame.prompt_eval_count);
           }
-          const chunk = frameToResponse(frame, ids, seen, sanitizeThinking);
+          const chunk = frameToResponse(
+            splitChannels ? splitChannels(frame) : frame,
+            ids,
+            seen,
+            sanitizeThinking,
+          );
           chunk.modelVersion = model;
           // Skip empty intermediate frames (keep-alives) so upstream does not
           // see zero-part chunks mid-stream; always emit the terminal frame,

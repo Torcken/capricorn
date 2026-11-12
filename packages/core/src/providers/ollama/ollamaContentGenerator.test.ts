@@ -325,6 +325,43 @@ describe('OllamaContentGenerator thinking', () => {
     // The SDK `.text` getter excludes thoughts, so reasoning never leaks as answer text.
     expect(chunks.map((c) => c.text ?? '').join('')).toBe('answer');
   });
+
+  // Capricorn: Ollama can miss Gemma 4's opening marker and stream the
+  // reasoning as content up to `<channel|>`.
+  const leaked = () =>
+    mock.enqueueChat({
+      frames: [
+        textFrame('There are 6. Wait, recount: 5.'),
+        textFrame('<channel|>5 matches.'),
+        doneFrame(),
+      ],
+    });
+  const stream = async (think: 'on' | 'off') =>
+    collect(
+      await generator({ think }).generateContentStream(
+        { model: 'auto', contents: 'x' },
+        'p',
+        LlmRole.MAIN,
+      ),
+    );
+
+  it('recovers reasoning that leaked into content when thinking is on', async () => {
+    leaked();
+    const chunks = await stream('on');
+    const parts = chunks.flatMap((c) => c.candidates?.[0].content?.parts ?? []);
+    expect(parts.filter((p) => p.thought).map((p) => p.text)).toEqual([
+      'There are 6. Wait, recount: 5.',
+    ]);
+    expect(chunks.map((c) => c.text ?? '').join('')).toBe('5 matches.');
+  });
+
+  it('leaves content untouched when thinking is off (nothing to recover)', async () => {
+    leaked();
+    const chunks = await stream('off');
+    expect(chunks.map((c) => c.text ?? '').join('')).toBe(
+      'There are 6. Wait, recount: 5.<channel|>5 matches.',
+    );
+  });
 });
 
 describe('OllamaContentGenerator non-streamed, tokens and embeddings', () => {

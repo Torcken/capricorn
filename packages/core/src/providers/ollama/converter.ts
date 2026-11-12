@@ -617,6 +617,94 @@ export function createThinkingSanitizer(): (delta: string) => string {
   };
 }
 
+/** Gemma 4's end-of-thinking marker. */
+const CHANNEL_CLOSE = '<channel|>';
+
+/**
+ * Content held back while waiting for a possible {@link CHANNEL_CLOSE} is
+ * released as ordinary content beyond this size, so a long answer given
+ * without any thinking still streams. Leaked thinking seen in evals was at
+ * most ~4.4K characters.
+ */
+export const LEAKED_THINKING_BUFFER_CHARS = 8000;
+
+/**
+ * Creates a stateful per-response filter that recovers Gemma 4 thinking which
+ * Ollama delivered as *content*.
+ *
+ * Why: with thinking enabled, Ollama (0.30.11) sometimes misses the opening
+ * `<|channel>thought` marker, so the model's reasoning streams in the
+ * `content` field until the closing `<channel|>`; the user saw raw reasoning
+ * ("There are 6 … wait, let me re-count … 5") in front of the answer, and
+ * checkers read the wrong number (11 of 431 eval runs, 8 of them failed).
+ *
+ * Rule: until the response has produced any `thinking`, content is held back.
+ * If `<channel|>` arrives, the held text is thinking and only what follows is
+ * content; if the response ends, or the held text exceeds
+ * {@link LEAKED_THINKING_BUFFER_CHARS}, it is released unchanged. Once
+ * thinking arrived normally, frames pass through without delay. Stray markers
+ * are removed from content in every case. Only use this when `think: true`
+ * was requested; otherwise there is no thinking to recover.
+ */
+export function createContentChannelSplitter(): (
+  frame: OllamaChatResponse,
+) => OllamaChatResponse {
+  let decided = false;
+  let held = '';
+  return (frame) => {
+    const msg = frame.message;
+    if (!msg) {
+      if (frame.done && held) {
+        const out = { ...frame, message: { role: 'assistant', content: held } };
+        held = '';
+        decided = true;
+        return out;
+      }
+      return frame;
+    }
+    let thinking = msg.thinking ?? '';
+    let content = msg.content ?? '';
+    if (!decided) {
+      if (thinking) {
+        // Normal case: Ollama separated the channels itself.
+        decided = true;
+        content = held + content;
+        held = '';
+      } else {
+        held += content;
+        content = '';
+        const close = held.indexOf(CHANNEL_CLOSE);
+        if (close !== -1) {
+          thinking = held
+            .slice(0, close)
+            .replace(/^\s*(<\|channel>\s*(thought\b)?)?\s*/, '');
+          content = held
+            .slice(close + CHANNEL_CLOSE.length)
+            .replace(/^\s+/, '');
+          held = '';
+          decided = true;
+        } else if (frame.done || held.length > LEAKED_THINKING_BUFFER_CHARS) {
+          content = held;
+          held = '';
+          decided = true;
+        }
+      }
+    }
+    content = content.split(CHANNEL_CLOSE).join('');
+    if (content === msg.content && thinking === (msg.thinking ?? '')) {
+      return frame;
+    }
+    return {
+      ...frame,
+      message: {
+        ...msg,
+        content,
+        ...(thinking ? { thinking } : { thinking: undefined }),
+      },
+    };
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
