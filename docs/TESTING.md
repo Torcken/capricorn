@@ -6,11 +6,11 @@
 npm ci                          # install (runs the bundle via `prepare`)
 npm run build                   # compile all workspaces
 
-# Unit tests (Vitest)
-npx vitest run --root packages/core
-npx vitest run --root packages/cli
-npx vitest run --root packages/core src/providers/ollama/client.test.ts   # one file
-npx vitest run --root packages/core -t "refuses a remote endpoint"         # one test
+# Unit tests (Vitest), exactly as CI runs them
+npm run test:ci -w @google/gemini-cli-core
+npm run test:ci -w @google/gemini-cli
+cd packages/core && npx vitest run src/providers/ollama/client.test.ts      # one file
+cd packages/core && npx vitest run -t "refuses a remote endpoint"          # one test
 
 # End-to-end: compiled CLI against the mock Ollama daemon (needs `npm run build`)
 npm run test:e2e:capricorn
@@ -98,14 +98,23 @@ filing a bug.
 
 ## Known test-suite caveats
 
-- **Pre-existing upstream failures.** At the fork base, 7 core and 5 CLI unit
-  tests already failed on the development machine (listed in
-  [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md#test-results)). They are
-  tracked separately from Capricorn changes.
+- **Run unit tests from the package directory, in an English locale.** A few
+  retained upstream tests resolve fixtures relative to `process.cwd()` (the
+  model-config golden files, topic policy), so
+  `npx vitest run --root packages/core` from the repository root fails them; and
+  snapshot tests format numbers with the system locale, so a French (or other)
+  locale fails 3 core and 4 CLI tests. With `npm run test:ci -w …` and
+  `LC_ALL=C.UTF-8 TZ=UTC`, both suites pass with no failures. (Earlier status
+  entries recorded these 11 as "pre-existing upstream failures"; they were
+  artefacts of how the suites were run.)
+- **Node 20.** CI runs the minimum supported Node (`.nvmrc`). Node 21+ features
+  break it silently on newer local Node versions; for example `node --test` only
+  expands glob patterns since Node 21 (the eval checkers list test files
+  explicitly for this reason).
 - **Home-directory writes.** Some retained upstream unit tests write to the real
   `~/.capricorn` (upstream wrote to `~/.gemini`). Run the suites with a
   disposable `HOME` if this matters to you, e.g.
-  `HOME=$(mktemp -d) npx vitest run --root packages/cli`.
+  `HOME=$(mktemp -d) npm run test:ci -w @google/gemini-cli`.
 - The upstream `integration-tests/`, `evals/`, `memory-tests/` and `perf-tests/`
   suites were written for hosted Gemini models and are not part of Capricorn's
   quality gate yet.

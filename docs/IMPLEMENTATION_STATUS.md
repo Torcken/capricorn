@@ -74,6 +74,22 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   refused by the bridge, only the project and session settings mounted. The same
   checks passed with rootful Docker 29. Gated sandbox e2e 1/1 with each of
   Podman and Docker.
+- **Correction (2026-11-12): the "7 core / 4 cli upstream failures" were local
+  artefacts.** Run as CI runs them (`npm run test:ci -w …` from the package
+  directory) with `LC_ALL=C.UTF-8 TZ=UTC`, core passes 8377/8434 (57 skipped)
+  and cli 7467/7471 (4 skipped) with 0 failures, on Node 22 and on Node 20. The
+  failures came from running Vitest from the repository root (cwd-relative
+  fixtures: model-config golden, topic policy) and from the development
+  machine's French locale (number formatting). The entries below that list those
+  failures describe that local setup.
+- **CI was red on every push (2026-11-12).** On Node 20 (`.nvmrc`),
+  `node --test 'test/**/*.test.js'` does not expand the glob, so 5 eval-suite
+  e2e tests failed (they passed locally on Node 22). The eval checkers now list
+  test files explicitly; on Node 20 in a fresh clone, every CI step of the Linux
+  jobs passes (`npm ci`, prettier, build, lint, typecheck, core and cli unit
+  tests, e2e 71 + 3 gated skips, package smoke). CI run #1 predates the eval
+  suite and failed for a reason not yet known (no access to the logs); macOS and
+  Windows not verified locally.
 - **After removing `packages/a2a-server` (2026-11-12):** core 7 failed / 8421
   and cli 4 failed / 7471 (the same upstream failures); typecheck, lint and
   prettier pass; build and bundle succeed; e2e and `verify:offline` 71 passed, 3

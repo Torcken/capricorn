@@ -10,7 +10,12 @@
  * measure collateral damage with `git diff`.
  */
 
-import { ESM_PACKAGE_JSON, Expect, defineTask } from '../types.js';
+import {
+  ESM_PACKAGE_JSON,
+  Expect,
+  defineTask,
+  runNodeTests,
+} from '../types.js';
 
 const AUTO_EDIT = ['--approval-mode', 'auto_edit'];
 
@@ -101,7 +106,7 @@ export const editTasks = [
         e.that(!/getUserName/.test(src), `${f} still mentions getUserName`);
         e.that(/getDisplayName/.test(src), `${f} does not use getDisplayName`);
       }
-      const t = ctx.node(['--test', 'test/**/*.test.js']);
+      const t = runNodeTests(ctx);
       e.that(t.code === 0, `tests fail after rename:\n${t.output.slice(-600)}`);
       return e.result();
     },

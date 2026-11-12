@@ -14,6 +14,9 @@
  * it did: small local models often report success they did not achieve.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
+
 /** Broad skill a task measures; used to aggregate pass rates. */
 export type EvalCategory =
   | 'explore' // read-only questions about a codebase
@@ -119,6 +122,37 @@ export class Expect {
   result(): CheckResult {
     return { pass: this.failures.length === 0, failures: [...this.failures] };
   }
+}
+
+/**
+ * Runs every `*.test.js` under `dir` (default `test/`) with `node --test`;
+ * never throws.
+ *
+ * Why the explicit file list: `node --test` only expands glob patterns since
+ * Node 21, and CI runs Node 20 (`.nvmrc`), where `'test/**\/*.test.js'` is
+ * taken as a literal file name and every run fails.
+ */
+export function runNodeTests(
+  ctx: CheckContext,
+  dir = 'test',
+): { code: number; output: string } {
+  let files: string[];
+  try {
+    files = fs
+      .readdirSync(path.join(ctx.dir, dir), {
+        recursive: true,
+        encoding: 'utf8',
+      })
+      .filter((f) => f.endsWith('.test.js'))
+      .map((f) => path.posix.join(dir, f.split(path.sep).join('/')))
+      .sort();
+  } catch (e) {
+    return { code: 1, output: `cannot list ${dir}/: ${String(e)}` };
+  }
+  if (files.length === 0) {
+    return { code: 1, output: `no *.test.js files under ${dir}/` };
+  }
+  return ctx.node(['--test', ...files]);
 }
 
 /** Defines a task (identity function, for type inference in task files). */

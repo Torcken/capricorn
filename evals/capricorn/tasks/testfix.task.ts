@@ -15,6 +15,7 @@ import {
   ESM_PACKAGE_JSON,
   Expect,
   defineTask,
+  runNodeTests,
   type CheckContext,
 } from '../types.js';
 
@@ -42,7 +43,7 @@ function verifyFix(
     e.that(!changed.includes(t), `${t} was modified (tests must not change)`);
     e.that(ctx.exists(t), `${t} was deleted`);
   }
-  const visible = ctx.node(['--test', 'test/**/*.test.js']);
+  const visible = runNodeTests(ctx);
   e.that(
     visible.code === 0,
     `provided tests still fail:\n${visible.output.slice(-600)}`,

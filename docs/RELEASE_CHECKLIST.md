@@ -20,8 +20,8 @@ link to the CI run) next to each box in the release PR.
 - [ ] `npm ci` on a clean clone succeeds.
 - [ ] `npm run build`, `npm run lint`, `npm run typecheck`,
       `npx prettier --check .` pass.
-- [ ] Unit tests: no failures beyond the documented pre-existing upstream ones
-      (IMPLEMENTATION_STATUS.md), or those are fixed.
+- [ ] Unit tests: `npm run test:ci -w` for core and cli pass with no failures
+      (CI, Node 20).
 - [ ] `npm run test:e2e:capricorn` passes on Linux, macOS and Windows (CI).
 - [ ] `npm run verify:offline` passes (Linux).
 - [ ] `node scripts/capricorn/pack-smoke.js` passes.

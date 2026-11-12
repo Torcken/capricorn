@@ -16,8 +16,12 @@ Ollama daemon**. The binding spec is
   → `bundle/capricorn.js`)
 - Lint / typecheck / format: `npm run lint`, `npm run typecheck`,
   `npx prettier --check .`
-- Unit tests: `npx vitest run --root packages/core [file]`,
-  `npx vitest run --root packages/cli [file]`; single test: add `-t "<name>"`
+- Unit tests (as CI runs them): `npm run test:ci -w @google/gemini-cli-core`,
+  `npm run test:ci -w @google/gemini-cli`; one file / test:
+  `cd packages/core && npx vitest run <file> [-t "<name>"]`. Run from the
+  package directory (a few tests resolve fixtures from `process.cwd()`) and with
+  `LC_ALL=C.UTF-8 TZ=UTC` on non-English machines (number formatting in
+  snapshots); then both suites have 0 failures.
 - CLI unit tests resolve `@google/gemini-cli-core` from `packages/core/dist`:
   rebuild core (`npm run build -w @google/gemini-cli-core`) after core changes.
 - E2E (compiled CLI vs mock Ollama; needs build): `npm run test:e2e:capricorn`
@@ -29,8 +33,8 @@ Ollama daemon**. The binding spec is
 
 Run one Vitest process per package at a time (shared coverage temp dir). Some
 retained upstream tests write to the real home dir; prefer `HOME=$(mktemp -d)`.
-Known pre-existing upstream failures: 7 core, 4 cli (listed in
-IMPLEMENTATION_STATUS.md).
+CI uses Node 20 (`.nvmrc`, the minimum in `engines`): avoid Node 21+ features
+(e.g. glob patterns in `node --test`, which Node 20 treats as file names).
 
 ## Architecture (big picture)
 
