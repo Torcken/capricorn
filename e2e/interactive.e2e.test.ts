@@ -11,6 +11,7 @@
  * render loop end to end.
  */
 
+import { spawnSync } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 // The prebuilt fork (as in upstream's test rig): plain `node-pty` is an
 // optional native build that is not installed on Windows runners.
@@ -103,7 +104,18 @@ function spawnTui() {
       await new Promise((r) => setTimeout(r, 100));
     }
   };
-  running = { kill: () => term.kill(), done: () => exitCode !== undefined };
+  running = {
+    kill: () => {
+      if (process.platform === 'win32') {
+        // node-pty's kill() left the CLI running on Windows CI (it kept the
+        // temp repo locked); end the whole tree instead.
+        spawnSync('taskkill', ['/pid', String(term.pid), '/T', '/F']);
+      } else {
+        term.kill();
+      }
+    },
+    done: () => exitCode !== undefined,
+  };
   return { term, waitFor, exited, screen: () => plain(screen) };
 }
 

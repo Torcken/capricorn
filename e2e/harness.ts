@@ -148,13 +148,19 @@ export async function createEnv(
     cleanup: async () => {
       await mock.close();
       // Retries: on Windows a just-killed child can hold its cwd briefly
-      // (EBUSY).
-      fs.rmSync(root, {
-        recursive: true,
-        force: true,
-        maxRetries: 10,
-        retryDelay: 500,
-      });
+      // (EBUSY). If it still cannot be removed there, leave it to the OS temp
+      // cleanup rather than fail the test on housekeeping.
+      try {
+        fs.rmSync(root, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 500,
+        });
+      } catch (e) {
+        if (process.platform !== 'win32') throw e;
+        process.stderr.write(`[e2e] could not remove ${root}: ${String(e)}\n`);
+      }
     },
   };
 }
