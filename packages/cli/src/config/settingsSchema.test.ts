@@ -494,9 +494,10 @@ describe('SettingsSchema', () => {
       expect(enabled.category).toBe('Experimental');
       expect(enabled.default).toBe(false);
       expect(enabled.requiresRestart).toBe(true);
-      expect(enabled.showInDialog).toBe(true);
+      // Capricorn: unsupported (non-Gemma-4 model outside Ollama), always off.
+      expect(enabled.showInDialog).toBe(false);
       expect(enabled.description).toBe(
-        'Enable the Gemma Model Router (experimental). Requires a local endpoint serving Gemma via the Gemini API using LiteRT-LM shim.',
+        'Unsupported in Capricorn (the LiteRT-LM router used a non-Gemma-4 model outside Ollama); always off.',
       );
 
       const autoStartServer = gemmaModelRouter.properties.autoStartServer;

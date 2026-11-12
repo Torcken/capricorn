@@ -4,13 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {
-  type CountTokensResponse,
-  type GenerateContentResponse,
-  type GenerateContentParameters,
-  type CountTokensParameters,
-  type EmbedContentResponse,
-  type EmbedContentParameters,
+// Capricorn: type-only, so the SDK is not bundled (see genaiRuntime.ts).
+import type {
+  CountTokensResponse,
+  GenerateContentResponse,
+  GenerateContentParameters,
+  CountTokensParameters,
+  EmbedContentResponse,
+  EmbedContentParameters,
 } from '@google/genai';
 import { type ContentGenerator } from './contentGenerator.js';
 import type { LlmRole } from '../telemetry/llmRole.js';

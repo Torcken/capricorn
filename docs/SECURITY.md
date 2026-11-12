@@ -133,12 +133,11 @@ isolation boundary.
   group/world-writable.
 - **Sandbox coverage varies by platform**; see above. No universal OS isolation
   is claimed.
-- **Bundled third-party Google client code.** Capricorn uses `@google/genai`'s
-  types and a few of its classes, so its bundled Gemini/Vertex client code and
-  `google-auth-library` (with their default Google endpoints) are still in the
-  package, unreachable from Capricorn; the egress guard would block them.
-  Capricorn's own Google sign-in, Code Assist and usage-statistics code has no
-  network code left; see docs/UPSTREAM.md.
+- **No Google client code ships.** Capricorn uses only `@google/genai`'s _types_
+  (erased at build time); the SDK's Gemini/Vertex clients and
+  `google-auth-library` are not in the package, which the package smoke test
+  checks. Capricorn's own Google sign-in, Code Assist and usage-statistics
+  stand-ins have no network code; see docs/UPSTREAM.md.
 
 ## Privacy
 

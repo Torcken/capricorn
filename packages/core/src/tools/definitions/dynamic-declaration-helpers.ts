@@ -9,7 +9,8 @@
  * (OS, platforms, or dynamic schema values like available skills).
  */
 
-import { type FunctionDeclaration } from '@google/genai';
+// Capricorn: type-only, so the SDK is not bundled (see genaiRuntime.ts).
+import type { FunctionDeclaration } from '@google/genai';
 import * as os from 'node:os';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';

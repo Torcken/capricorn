@@ -31,14 +31,15 @@
  *   Tool execution is never retried by this layer (it never executes tools).
  */
 
-import {
-  type CountTokensParameters,
-  type CountTokensResponse,
-  type EmbedContentParameters,
-  type EmbedContentResponse,
-  type GenerateContentParameters,
-  type GenerateContentResponse,
-  type Part,
+// Capricorn: type-only, so the SDK is not bundled (see genaiRuntime.ts).
+import type {
+  CountTokensParameters,
+  CountTokensResponse,
+  EmbedContentParameters,
+  EmbedContentResponse,
+  GenerateContentParameters,
+  GenerateContentResponse,
+  Part,
 } from '@google/genai';
 import type { ContentGenerator } from '../../core/contentGenerator.js';
 import type { LlmRole } from '../../telemetry/llmRole.js';

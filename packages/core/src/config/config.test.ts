@@ -2225,7 +2225,8 @@ describe('GemmaModelRouterSettings', () => {
     };
     const config = new Config(params);
     const settings = config.getGemmaModelRouterSettings();
-    expect(settings.enabled).toBe(true);
+    // Capricorn: the LiteRT-LM router is forced off; other fields still load.
+    expect(settings.enabled).toBe(false);
     expect(settings.autoStartServer).toBe(false);
     expect(settings.binaryPath).toBe('/custom/lit');
     expect(settings.classifier?.host).toBe('http://custom:1234');
@@ -2241,7 +2242,8 @@ describe('GemmaModelRouterSettings', () => {
     };
     const config = new Config(params);
     const settings = config.getGemmaModelRouterSettings();
-    expect(settings.enabled).toBe(true);
+    // Capricorn: the LiteRT-LM router is forced off; other fields still load.
+    expect(settings.enabled).toBe(false);
     expect(settings.autoStartServer).toBe(true);
     expect(settings.binaryPath).toBe('');
     expect(settings.classifier?.host).toBe('http://localhost:9379');

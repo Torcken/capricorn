@@ -25,7 +25,8 @@ import {
   type ToolInvocation,
   type ExecuteOptions,
 } from '../../tools/tools.js';
-import { Environment } from '@google/genai';
+// Capricorn: runtime values come from genaiRuntime, so the SDK is not bundled.
+import { Environment } from '../../core/genaiRuntime.js';
 import type { MessageBus } from '../../confirmation-bus/message-bus.js';
 import type { BrowserManager } from './browserManager.js';
 import type { Config } from '../../config/config.js';

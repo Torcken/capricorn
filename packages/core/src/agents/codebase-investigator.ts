@@ -19,7 +19,8 @@ import {
 } from '../config/models.js';
 import { z } from 'zod';
 import type { Config } from '../config/config.js';
-import { ThinkingLevel } from '@google/genai';
+// Capricorn: runtime values come from genaiRuntime, so the SDK is not bundled.
+import { ThinkingLevel } from '../core/genaiRuntime.js';
 
 // Define a type that matches the outputConfig schema for type safety.
 const CodebaseInvestigationReportSchema = z.object({

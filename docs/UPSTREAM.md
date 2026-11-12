@@ -86,7 +86,18 @@ The repository history starts with the unmodified upstream commit, so
   `"private": true` so they cannot be published under Google's scope.
 - **`@google/genai` types** as the internal message model. The agent loop,
   history, tools and UI are written against them; translation happens only at
-  the provider boundary (ADR 0001).
+  the provider boundary (ADR 0001). Only the _types_ are used: the few runtime
+  values (enums, `createUserContent`, `GenerateContentResponse`) come from
+  `core/src/core/genaiRuntime.ts`, checked against the SDK at compile time and
+  in tests, so no SDK code (hosted clients, `google-auth-library`) is bundled.
+  The SDK is a dev dependency. When merging upstream, imports from
+  `@google/genai` must be `import type { … }` (the inline `import { type X }`
+  form is kept as a side-effect import under `verbatimModuleSyntax`) and values
+  must come from `genaiRuntime`; `security/noGoogleServices.test.ts` fails
+  otherwise.
+- **LiteRT-LM client** (`core/localLiteRtLmClient.ts`) is an inert stand-in and
+  the experimental Gemma model router is forced off: it classified prompts with
+  a non-Gemma-4 model on a separate local server.
 - **Inert stand-ins for removed Google modules.** Google sign-in
   (`code_assist/oauth2.ts`), the Code Assist client (`code_assist/server.ts`),
   account onboarding (`code_assist/setup.ts`) and the Clearcut usage logger keep
@@ -98,8 +109,7 @@ The repository history starts with the unmodified upstream commit, so
   `packages/core`. `security/noGoogleServices.test.ts` keeps it that way.
 - **Still present, all unreachable:** upstream billing/quota helpers
   (`billing/`, `utils/googleQuotaErrors.ts`: string handling only, listed as
-  exceptions in the guard test); and `google-auth-library` as a transitive
-  dependency of `@google/genai`.
+  exceptions in the guard test).
 - **Environment variable names** used by the retained test harness
   (`GEMINI_CLI_HOME`, `GEMINI_CLI_TRUST_WORKSPACE`, …). Capricorn-prefixed
   equivalents exist where they are user-facing (`CAPRICORN_HOME`,

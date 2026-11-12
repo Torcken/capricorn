@@ -30,6 +30,13 @@ All notable changes to Capricorn are documented here. The format follows
   answering; check the project setup before creating files.
 - `grep_search` adds 2 lines of context around each match for 4–20 matches
   (upstream: only for 1–3), so the enclosing function is usually visible.
+- The bundle no longer contains the `@google/genai` SDK (hosted Gemini/Vertex
+  clients, `google-auth-library`): only its types are used, and its few runtime
+  values are implemented locally (`core/genaiRuntime.ts`). The bundle is 1.3 MB
+  smaller; the package smoke test checks that no SDK code ships.
+- The experimental Gemma model router (`experimental.gemmaModelRouter`) is
+  always off: it sent prompts to a separate LiteRT-LM server running a
+  non-Gemma-4 model.
 
 ### Fixed
 

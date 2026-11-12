@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { type Part, type PartListUnion } from '@google/genai';
+// Capricorn: type-only, so the SDK is not bundled (see genaiRuntime.ts).
+import type { Part, PartListUnion } from '@google/genai';
 import { type ConversationRecord } from '../services/chatRecordingService.js';
 export { partListUnionToString } from '../core/geminiRequest.js';
 import { partListUnionToString } from '../core/geminiRequest.js';

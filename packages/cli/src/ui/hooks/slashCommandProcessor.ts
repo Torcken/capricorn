@@ -11,7 +11,8 @@ import {
   useState,
   createElement,
 } from 'react';
-import { type PartListUnion } from '@google/genai';
+// Capricorn: type-only, so the SDK is not bundled (see genaiRuntime.ts).
+import type { PartListUnion } from '@google/genai';
 import process from 'node:process';
 import type { UseHistoryManagerReturn } from './useHistoryManager.js';
 import type {

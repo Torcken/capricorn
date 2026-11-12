@@ -7,18 +7,18 @@
 // DISCLAIMER: This is a copied version of https://github.com/googleapis/js-genai/blob/main/src/chats.ts with the intention of working around a key bug
 // where function responses are not treated as "valid" responses: https://b.corp.google.com/issues/420354090
 
-import {
-  createUserContent,
-  FinishReason,
-  type GenerateContentResponse,
-  type Content,
-  type Part,
-  type Tool,
-  type PartListUnion,
-  type GenerateContentConfig,
-  type GenerateContentParameters,
-  type FunctionCall,
+import type {
+  GenerateContentResponse,
+  Content,
+  Part,
+  Tool,
+  PartListUnion,
+  GenerateContentConfig,
+  GenerateContentParameters,
+  FunctionCall,
 } from '@google/genai';
+// Capricorn: runtime values come from genaiRuntime, so the SDK is not bundled.
+import { createUserContent, FinishReason } from './genaiRuntime.js';
 export { AgentChatHistory, type HistoryTurn } from './agentChatHistory.js';
 import { AgentChatHistory, type HistoryTurn } from './agentChatHistory.js';
 

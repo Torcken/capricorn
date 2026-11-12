@@ -12,8 +12,9 @@ import {
   toContents,
   type CaGenerateContentResponse,
 } from './converter.js';
+// Capricorn: the converter builds the local runtime class, not the SDK's.
+import { GenerateContentResponse } from '../core/genaiRuntime.js';
 import {
-  GenerateContentResponse,
   FinishReason,
   BlockedReason,
   type ContentListUnion,

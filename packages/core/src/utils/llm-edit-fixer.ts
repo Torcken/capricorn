@@ -5,7 +5,9 @@
  */
 
 import { createHash } from 'node:crypto';
-import { type Content, Type } from '@google/genai';
+import type { Content } from '@google/genai';
+// Capricorn: runtime values come from genaiRuntime, so the SDK is not bundled.
+import { Type } from '../core/genaiRuntime.js';
 import { type BaseLlmClient } from '../core/baseLlmClient.js';
 import { LRUCache } from 'mnemonist';
 import { getPromptIdWithFallback } from './promptIdContext.js';

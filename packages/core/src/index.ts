@@ -305,6 +305,19 @@ export * from './voice/responseFormatter.js';
 
 // Export types from @google/genai
 export type { Content, Part, FunctionCall } from '@google/genai';
+// Capricorn: runtime values of the @google/genai data model, implemented
+// locally so the SDK (hosted clients, google-auth-library) is not bundled.
+// (`ApiError` is not re-exported: utils/quotaErrorDetection exports that name.)
+export {
+  Type,
+  FinishReason,
+  ThinkingLevel,
+  Environment,
+  FunctionCallingConfigMode,
+  createUserContent,
+  GenerateContentResponse,
+  EmbedContentResponse,
+} from './core/genaiRuntime.js';
 
 // Export context types and profiles
 export * from './context/types.js';

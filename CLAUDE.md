@@ -47,7 +47,10 @@ IMPLEMENTATION_STATUS.md).
   verified Gemma tag.
 - Internal data model stays `@google/genai` types; internal package names stay
   `@google/gemini-cli-*` (private, bundled) to keep upstream merges feasible —
-  don't rename.
+  don't rename. Import the SDK only with `import type { … }`; runtime values
+  (enums, `createUserContent`, `GenerateContentResponse`) come from
+  `core/src/core/genaiRuntime.ts` (core re-exports them for the CLI), so no SDK
+  code is bundled.
 - Security: process-wide egress guard (`core/src/security/egressGuard.ts`,
   installed in `cli/src/gemini.tsx` via `cli/src/capricorn/networkPolicy.ts`);
   malformed tool args rejected in `scheduler.ts` (`MALFORMED_ARGS_MARKER`);

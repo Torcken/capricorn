@@ -10,8 +10,9 @@
  * `capricorn` binary — exactly what a user gets from npm, minus publishing.
  *
  * Checks: package contents (no source maps of secrets, required legal files
- * present), `capricorn --version`, and `capricorn doctor --json` against the
- * mock Ollama daemon. Never publishes anything.
+ * present), no Google SDK code in the installed bundle, `capricorn --version`,
+ * and `capricorn doctor --json` against the mock Ollama daemon. Never
+ * publishes anything.
  *
  * Usage: node scripts/capricorn/pack-smoke.js   (after `npm run build`)
  */
@@ -109,6 +110,34 @@ try {
       },
     ),
   );
+
+  step('no Google SDK code in the installed package', () => {
+    // The internal data model uses only @google/genai *types*; its runtime
+    // (hosted Gemini/Vertex clients, google-auth-library) must not ship.
+    // These markers only occur in that SDK code (checked when introduced).
+    const pkgDir = [
+      path.join(prefix, 'lib', 'node_modules', 'capricorn-cli'),
+      path.join(prefix, 'node_modules', 'capricorn-cli'),
+    ].find((d) => fs.existsSync(d));
+    if (!pkgDir) fail('installed package directory not found');
+    for (const dep of ['@google/genai', 'google-auth-library']) {
+      if (fs.existsSync(path.join(pkgDir, 'node_modules', dep))) {
+        fail(`installed package depends on ${dep}`);
+      }
+    }
+    const markers = [
+      'generativelanguage.googleapis.com',
+      'aiplatform.googleapis.com',
+      'google-auth-library',
+    ];
+    const bundleDir = path.join(pkgDir, 'bundle');
+    for (const name of fs.readdirSync(bundleDir)) {
+      if (!name.endsWith('.js')) continue;
+      const text = fs.readFileSync(path.join(bundleDir, name), 'utf8');
+      const hit = markers.find((m) => text.includes(m));
+      if (hit) fail(`bundle/${name} contains "${hit}" (Google SDK code)`);
+    }
+  });
 
   const bin =
     process.platform === 'win32'

@@ -11,14 +11,15 @@
  * @see https://github.com/open-telemetry/semantic-conventions/blob/8b4f210f43136e57c1f6f47292eb6d38e3bf30bb/docs/gen-ai/gen-ai-events.md
  */
 
-import {
-  FinishReason,
-  type Candidate,
-  type Content,
-  type ContentUnion,
-  type Part,
-  type PartUnion,
+import type {
+  Candidate,
+  Content,
+  ContentUnion,
+  Part,
+  PartUnion,
 } from '@google/genai';
+// Capricorn: runtime values come from genaiRuntime, so the SDK is not bundled.
+import { FinishReason } from '../core/genaiRuntime.js';
 import { truncateString } from '../utils/textUtils.js';
 
 // 160KB limit for the total size of string content in a log entry.

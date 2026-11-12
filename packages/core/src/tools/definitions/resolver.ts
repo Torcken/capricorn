@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { type FunctionDeclaration } from '@google/genai';
+// Capricorn: type-only, so the SDK is not bundled (see genaiRuntime.ts).
+import type { FunctionDeclaration } from '@google/genai';
 import type { ToolDefinition } from './types.js';
 
 /**

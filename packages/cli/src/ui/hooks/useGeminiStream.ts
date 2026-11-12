@@ -51,6 +51,8 @@ import {
   RECITATION_BLOCKED_MESSAGE,
   OTHER_BLOCKED_MESSAGE,
   TRUE_EMPTY_RESPONSE_MESSAGE,
+  // Capricorn: from core's genaiRuntime, so the SDK is not bundled.
+  FinishReason,
 } from '@google/gemini-cli-core';
 import type {
   CompletedToolCall,
@@ -68,7 +70,7 @@ import type {
   GeminiErrorEventValue,
   RetryAttemptPayload,
 } from '@google/gemini-cli-core';
-import { type Part, type PartListUnion, FinishReason } from '@google/genai';
+import type { Part, PartListUnion } from '@google/genai';
 import type {
   HistoryItem,
   HistoryItemThinking,

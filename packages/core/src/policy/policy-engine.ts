@@ -5,7 +5,8 @@
  */
 
 import path from 'node:path';
-import { type FunctionCall } from '@google/genai';
+// Capricorn: type-only, so the SDK is not bundled (see genaiRuntime.ts).
+import type { FunctionCall } from '@google/genai';
 import {
   SHELL_TOOL_NAMES,
   REDIRECTION_NAMES,

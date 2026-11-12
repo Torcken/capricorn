@@ -2490,9 +2490,10 @@ const SETTINGS_SCHEMA = {
             category: 'Experimental',
             requiresRestart: true,
             default: false,
+            // Capricorn: forced off in core Config (non-Ollama, non-Gemma-4).
             description:
-              'Enable the Gemma Model Router (experimental). Requires a local endpoint serving Gemma via the Gemini API using LiteRT-LM shim.',
-            showInDialog: true,
+              'Unsupported in Capricorn (the LiteRT-LM router used a non-Gemma-4 model outside Ollama); always off.',
+            showInDialog: false,
           },
           autoStartServer: {
             type: 'boolean',

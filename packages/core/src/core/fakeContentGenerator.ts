@@ -4,14 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type {
+  CountTokensResponse,
+  GenerateContentParameters,
+  CountTokensParameters,
+  EmbedContentParameters,
+} from '@google/genai';
+// Capricorn: runtime values come from genaiRuntime, so the SDK is not bundled.
 import {
   GenerateContentResponse,
-  type CountTokensResponse,
-  type GenerateContentParameters,
-  type CountTokensParameters,
   EmbedContentResponse,
-  type EmbedContentParameters,
-} from '@google/genai';
+} from './genaiRuntime.js';
 import { promises } from 'node:fs';
 import type { ContentGenerator } from './contentGenerator.js';
 import type { UserTierId, GeminiUserTier } from '../code_assist/types.js';

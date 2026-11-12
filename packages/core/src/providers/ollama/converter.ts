@@ -39,20 +39,23 @@
  * permission decision happen later in the scheduler and policy engine.
  */
 
+import type {
+  Candidate,
+  Content,
+  ContentListUnion,
+  ContentUnion,
+  FunctionCall,
+  FunctionDeclaration,
+  GenerateContentConfig,
+  Part,
+  PartUnion,
+  ToolListUnion,
+} from '@google/genai';
+// Capricorn: runtime values come from genaiRuntime, so the SDK is not bundled.
 import {
   FinishReason,
   GenerateContentResponse,
-  type Candidate,
-  type Content,
-  type ContentListUnion,
-  type ContentUnion,
-  type FunctionCall,
-  type FunctionDeclaration,
-  type GenerateContentConfig,
-  type Part,
-  type PartUnion,
-  type ToolListUnion,
-} from '@google/genai';
+} from '../../core/genaiRuntime.js';
 import type {
   OllamaChatMessage,
   OllamaChatOptions,

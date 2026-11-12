@@ -3018,7 +3018,8 @@ describe('loadCliConfig gemmaModelRouter', () => {
       },
     });
     const config = await loadCliConfig(settings, 'test-session', argv);
-    expect(config.getGemmaModelRouterEnabled()).toBe(true);
+    // Capricorn: the Gemma (LiteRT-LM) router is forced off; other fields load.
+    expect(config.getGemmaModelRouterEnabled()).toBe(false);
     const gemmaSettings = config.getGemmaModelRouterSettings();
     expect(gemmaSettings.autoStartServer).toBe(false);
     expect(gemmaSettings.binaryPath).toBe('/custom/lit');
@@ -3049,7 +3050,8 @@ describe('loadCliConfig gemmaModelRouter', () => {
       },
     });
     const config = await loadCliConfig(settings, 'test-session', argv);
-    expect(config.getGemmaModelRouterEnabled()).toBe(true);
+    // Capricorn: the Gemma (LiteRT-LM) router is forced off; other fields load.
+    expect(config.getGemmaModelRouterEnabled()).toBe(false);
     const gemmaSettings = config.getGemmaModelRouterSettings();
     expect(gemmaSettings.autoStartServer).toBe(false);
     expect(gemmaSettings.binaryPath).toBe('');

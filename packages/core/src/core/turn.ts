@@ -4,16 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {
-  createUserContent,
-  type Content,
-  type PartListUnion,
-  type GenerateContentResponse,
-  type FunctionCall,
-  type FunctionDeclaration,
-  type FinishReason,
-  type GenerateContentResponseUsageMetadata,
+import type {
+  Content,
+  PartListUnion,
+  GenerateContentResponse,
+  FunctionCall,
+  FunctionDeclaration,
+  FinishReason,
+  GenerateContentResponseUsageMetadata,
 } from '@google/genai';
+// Capricorn: runtime values come from genaiRuntime, so the SDK is not bundled.
+import { createUserContent } from './genaiRuntime.js';
 import type {
   ToolCallConfirmationDetails,
   ToolResult,

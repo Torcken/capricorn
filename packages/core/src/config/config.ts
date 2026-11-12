@@ -1394,7 +1394,10 @@ export class Config implements McpContext, AgentLoopContext {
       format: params.output?.format ?? OutputFormat.TEXT,
     };
     this.gemmaModelRouter = {
-      enabled: params.gemmaModelRouter?.enabled ?? false,
+      // Capricorn: always off. The router classified prompts with a separate
+      // LiteRT-LM server running a non-Gemma-4 model (gemma3-1b), which breaks
+      // the "only verified Gemma 4 through Ollama" rule; its client is inert.
+      enabled: false,
       autoStartServer: params.gemmaModelRouter?.autoStartServer ?? true,
       binaryPath: params.gemmaModelRouter?.binaryPath ?? '',
       classifier: {

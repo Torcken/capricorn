@@ -9,11 +9,12 @@ import { reportError } from '../utils/errorReporting.js';
 import { randomUUID } from 'node:crypto';
 import { ApprovalMode } from '../policy/types.js';
 import { GeminiChat, StreamEventType } from '../core/geminiChat.js';
-import {
-  type Content,
-  type Part,
-  type FunctionCall,
-  type FunctionDeclaration,
+// Capricorn: type-only, so the SDK is not bundled (see genaiRuntime.ts).
+import type {
+  Content,
+  Part,
+  FunctionCall,
+  FunctionDeclaration,
 } from '@google/genai';
 import { ToolRegistry } from '../tools/tool-registry.js';
 import { PromptRegistry } from '../prompts/prompt-registry.js';

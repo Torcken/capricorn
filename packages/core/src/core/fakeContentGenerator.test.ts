@@ -10,8 +10,9 @@ import {
   type FakeResponse,
 } from './fakeContentGenerator.js';
 import { promises } from 'node:fs';
+// Capricorn: the generator builds the local runtime class, not the SDK's.
+import { GenerateContentResponse } from './genaiRuntime.js';
 import {
-  GenerateContentResponse,
   type CountTokensResponse,
   type EmbedContentResponse,
   type GenerateContentParameters,

@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { FunctionCallingConfigMode } from '@google/genai';
+// Capricorn: runtime values come from genaiRuntime, so the SDK is not bundled.
+import { FunctionCallingConfigMode } from '../core/genaiRuntime.js';
 import {
   DefaultHookOutput,
   BeforeToolHookOutput,

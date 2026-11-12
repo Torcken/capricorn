@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ThinkingLevel } from '@google/genai';
+// Capricorn: runtime values come from genaiRuntime, so the SDK is not bundled.
+import { ThinkingLevel } from '../core/genaiRuntime.js';
 import type { ModelConfigServiceConfig } from '../services/modelConfigService.js';
 import {
   DEFAULT_THINKING_MODE,

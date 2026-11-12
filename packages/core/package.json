@@ -25,7 +25,6 @@
   "dependencies": {
     "@a2a-js/sdk": "0.3.11",
     "@bufbuild/protobuf": "2.11.0",
-    "@google/genai": "1.30.0",
     "@grpc/grpc-js": "1.14.3",
     "@iarna/toml": "2.2.5",
     "@modelcontextprotocol/sdk": "1.23.0",
@@ -101,6 +100,7 @@
   },
   "devDependencies": {
     "@google/gemini-cli-test-utils": "file:../test-utils",
+    "@google/genai": "1.30.0",
     "@types/fast-levenshtein": "0.0.4",
     "@types/js-yaml": "4.0.9",
     "@types/json-stable-stringify": "1.1.0",

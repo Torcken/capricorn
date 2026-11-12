@@ -13,7 +13,9 @@ import type {
   RoutingStrategy,
 } from '../routingStrategy.js';
 import { resolveClassifierModel } from '../../config/models.js';
-import { createUserContent, type Content, type Part } from '@google/genai';
+import type { Content, Part } from '@google/genai';
+// Capricorn: runtime values come from genaiRuntime, so the SDK is not bundled.
+import { createUserContent } from '../../core/genaiRuntime.js';
 import type { Config } from '../../config/config.js';
 import {
   isFunctionCall,

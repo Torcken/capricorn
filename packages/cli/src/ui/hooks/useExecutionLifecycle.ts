@@ -22,7 +22,8 @@ import {
   CoreToolCallStatus,
   escapeShellArg,
 } from '@google/gemini-cli-core';
-import { type PartListUnion } from '@google/genai';
+// Capricorn: type-only, so the SDK is not bundled (see genaiRuntime.ts).
+import type { PartListUnion } from '@google/genai';
 import type { UseHistoryManagerReturn } from './useHistoryManager.js';
 import { SHELL_COMMAND_NAME } from '../constants.js';
 import { formatBytes } from '../utils/formatters.js';

@@ -17,9 +17,9 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
   results in `evals/capricorn/RESULTS.md`.
 - **Finish removing Google code:** the OAuth/Code Assist/Clearcut network code
   and Google auth/Cloud dependencies are gone (inert stand-ins remain, see
-  docs/UPSTREAM.md), as is the upstream A2A server package; still to do:
-  upstream billing/quota helpers, and replacing runtime use of `@google/genai`
-  classes so its bundled client code (and `google-auth-library`) can be dropped.
+  docs/UPSTREAM.md), as are the upstream A2A server package and all bundled
+  `@google/genai` SDK code (only its types remain); still to do: the unreachable
+  upstream billing/quota helpers.
 - **Platform coverage:** CI runs on macOS and Windows exist; manual real-model
   validation on each still needed. Windows sandbox story.
 - **Context management:** calibrated budgets per model, smarter selection of
