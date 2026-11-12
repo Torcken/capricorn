@@ -13,6 +13,9 @@ on:
     branches: ['main']
   pull_request:
   workflow_dispatch:
+  # Weekly full run, so the macOS job (skipped on pushes) still runs on main.
+  schedule:
+    - cron: '0 4 * * 1'
 
 permissions:
   contents: 'read'
@@ -101,6 +104,9 @@ jobs:
 
   platforms:
     name: 'Smoke (${{ matrix.os }})'
+    # macOS minutes are billed at 10x on a private repo: run on pull
+    # requests, manual runs and the weekly schedule, not on every push.
+    if: "github.event_name != 'push'"
     strategy:
       fail-fast: false
       matrix:
