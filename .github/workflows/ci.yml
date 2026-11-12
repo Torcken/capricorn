@@ -51,8 +51,29 @@ jobs:
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - name: 'Unit tests (core)'
         run: 'npm run test:ci -w @google/gemini-cli-core'
+
+  cli-tests:
+    # The CLI suite (~460 files) takes ~110 min on a 4-CPU hosted runner;
+    # upstream runs it on 16-core runners. Split it across parallel jobs.
+    name: 'Unit tests (cli ${{ matrix.shard }}/4)'
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: 'actions/checkout@v4'
+      - uses: 'actions/setup-node@v4'
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: 'npm ci'
+      # CLI tests resolve @google/gemini-cli-core from packages/core/dist.
+      - run: 'npm run build'
       - name: 'Unit tests (cli)'
-        run: 'npm run test:ci -w @google/gemini-cli'
+        # Coverage off: nothing consumes it here and it slows the run.
+        run: 'npm run test:ci -w @google/gemini-cli -- --shard=${{ matrix.shard }}/4 --coverage.enabled=false'
 
   e2e:
     name: 'End-to-end (Linux, offline)'
