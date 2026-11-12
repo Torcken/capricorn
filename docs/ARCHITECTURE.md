@@ -19,7 +19,7 @@ esbuild bundle, `bundle/capricorn.js`.
 | CLI / TUI               | `cli/src/gemini.tsx`, `cli/src/ui/`, `cli/src/commands/capricorn.ts`                                                                          |
 | Startup preflight       | `cli/src/capricorn/preflight.ts`                                                                                                              |
 | Diagnostics (`doctor`)  | `cli/src/capricorn/diagnostics.ts`                                                                                                            |
-| Agent orchestrator      | `core/src/core/client.ts` (`GeminiClient`), `geminiChat.ts`, `turn.ts`                                                                        |
+| Agent orchestrator      | `core/src/core/client.ts` (`GeminiClient`), `geminiChat.ts`, `turn.ts`; cited-files follow-up `citedFiles.ts`                                 |
 | Provider contract       | `core/src/core/contentGenerator.ts` (`ContentGenerator`)                                                                                      |
 | Ollama transport        | `core/src/providers/ollama/client.ts`, `ndjson.ts`, `endpoint.ts`, `errors.ts`                                                                |
 | Gemma 4 adaptation      | `providers/ollama/modelPolicy.ts`, `converter.ts`, `ollamaContentGenerator.ts`, `prompts/capricornSnippets.ts`                                |

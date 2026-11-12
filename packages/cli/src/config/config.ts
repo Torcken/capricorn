@@ -1151,6 +1151,9 @@ export async function loadCliConfig(
     // conflict with ACP's explicit turn management via session/prompt,
     // causing infinite agent_thought_chunk loops.
     skipNextSpeakerCheck: isAcpMode || settings.model?.skipNextSpeakerCheck,
+    // Capricorn: the cited-files follow-up is also a continuation turn, so
+    // it is off under ACP for the same reason.
+    checkCitedFiles: !isAcpMode && settings.model?.checkCitedFiles !== false,
     truncateToolOutputThreshold: settings.tools?.truncateToolOutputThreshold,
     eventEmitter: coreEvents,
     useWriteTodos: argv.useWriteTodos ?? settings.useWriteTodos,

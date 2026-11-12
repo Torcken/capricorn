@@ -8,16 +8,24 @@ All runs: Linux x64, 24 CPUs, 94 GiB RAM, Ollama 0.30.11, 3 runs per task.
 
 ## 2026-11-11 — prompt and tool iterations (`gemma4:12b`, 11.9B Q4_K_M)
 
-| Version                 | Commit       | Overall         | explore        | edit       | test-fix       | tool-use       | safety     | Tool errors | Wall time |
-| ----------------------- | ------------ | --------------- | -------------- | ---------- | -------------- | -------------- | ---------- | ----------- | --------- |
-| Baseline (prompt v1)    | `c0605435c`¹ | 74% (31/42)     | 33% (3/9)      | 100% (9/9) | 67% (6/9)      | 67% (4/6)      | 100% (9/9) | 18          | ~48 min   |
-| Prompt v2 + agent fixes | `c1f1fe18b`  | **83% (35/42)** | 44% (4/9)      | 100% (9/9) | **100% (9/9)** | 67% (4/6)      | 100% (9/9) | **0**       | ~15 min   |
-| Prompt v3               | `6692c4840`  | **88% (37/42)** | 44% (4/9)      | 100% (9/9) | 100% (9/9)     | **100% (6/6)** | 100% (9/9) | 4           | ~15 min   |
-| + grep auto-context     | `21166d420`² | **95% (40/42)** | **100% (9/9)** | 100% (9/9) | 100% (9/9)     | 67% (4/6)      | 100% (9/9) | 2           | ~16 min   |
-| + `write_file` guard    | this commit³ | 95% (40/42)     | 78% (7/9)      | 100% (9/9) | 100% (9/9)     | **100% (6/6)** | 100% (9/9) | 0           | ~14 min   |
+| Version                 | Commit       | Overall          | explore        | edit       | test-fix       | tool-use       | safety     | Tool errors | Wall time |
+| ----------------------- | ------------ | ---------------- | -------------- | ---------- | -------------- | -------------- | ---------- | ----------- | --------- |
+| Baseline (prompt v1)    | `c0605435c`¹ | 74% (31/42)      | 33% (3/9)      | 100% (9/9) | 67% (6/9)      | 67% (4/6)      | 100% (9/9) | 18          | ~48 min   |
+| Prompt v2 + agent fixes | `c1f1fe18b`  | **83% (35/42)**  | 44% (4/9)      | 100% (9/9) | **100% (9/9)** | 67% (4/6)      | 100% (9/9) | **0**       | ~15 min   |
+| Prompt v3               | `6692c4840`  | **88% (37/42)**  | 44% (4/9)      | 100% (9/9) | 100% (9/9)     | **100% (6/6)** | 100% (9/9) | 4           | ~15 min   |
+| + grep auto-context     | `21166d420`² | **95% (40/42)**  | **100% (9/9)** | 100% (9/9) | 100% (9/9)     | 67% (4/6)      | 100% (9/9) | 2           | ~16 min   |
+| + `write_file` guard    | `031f2da3f`³ | 95% (40/42)      | 78% (7/9)      | 100% (9/9) | 100% (9/9)     | **100% (6/6)** | 100% (9/9) | 0           | ~14 min   |
+| + cited-files check     | this commit⁴ | **100% (42/42)** | 100% (9/9)     | 100% (9/9) | 100% (9/9)     | 100% (6/6)     | 100% (9/9) | 0           | ~14 min   |
+| + leaked-thinking fix   | this commit⁴ | 95% (40/42)      | 100% (9/9)     | 89% (8/9)  | 100% (9/9)     | 83% (5/6)      | 100% (9/9) | 0           | ~17 min   |
 
 ² Build of `21166d420`; the report header says `414e212cc+dirty` because later,
 unbuilt commits landed during the run.
+
+⁴ Both rows run on the uncommitted change (header `d6767b22c+dirty`); see below
+for the targeted 10-run batches, which say more than these 3-run rows. The 100%
+→ 95% step between them is run-to-run noise: the two failures were a rename that
+left a test broken and a self-written test that failed, with no follow-up
+involved. The "cited-files check" row already counts grep results as seen.
 
 ³ Run on the uncommitted change (header: `c48a9717c+dirty`), with one extra
 sentence in the `write_file` description that was later removed (see below).
@@ -84,6 +92,39 @@ the value instead of opening it in roughly half of all runs. The extra
 description sentence was removed anyway (the refusal message carries the same
 information when it matters) so the description stays identical to upstream.
 Making the model open the file it cites is the open exploration problem.
+
+**Cited-files check** (`model.checkCitedFiles`, on by default): when a final
+answer cites 1–3 existing workspace files that were not opened during the
+request (read, written, edited, or shown with matching lines by `grep_search`),
+the agent sends the model one follow-up asking it to open them and correct the
+answer. A hint in `read_file` results listing referenced files was tried first
+and did nothing (4/10), so it was dropped.
+
+| Variant (10 runs each)                                       | `explore-config-port` | `tooluse-count-todos` |
+| ------------------------------------------------------------ | --------------------- | --------------------- |
+| before (three batches)                                       | 3/10, 6/10, 4/10      | —                     |
+| `read_file` hint (dropped)                                   | 4/10                  | —                     |
+| follow-up                                                    | **10/10**, 10/10      | 5/10                  |
+| follow-up, check disabled for this task                      | —                     | 9/10                  |
+| follow-up + grep results count as seen + leaked-thinking fix | —                     | **9/10**              |
+
+The `count-todos` dip was investigated rather than averaged away: its failing
+answers began "There are 6 … Wait, let me re-examine … 5" followed by a raw
+`<channel|>` marker and then the correct "5". That is Gemma 4's **reasoning
+leaking into the answer**: Ollama 0.30.11 sometimes misses the opening
+`<|channel>thought` marker and streams the reasoning as content up to the
+closing marker. Across all 431 saved runs this happened 11 times, and 8 of those
+runs failed (also in `testfix-two-modules`, `testfix-missing-await`,
+`tooluse-create-module`), so it was a cross-cutting bug, not a task quirk. The
+Ollama provider now holds back content while thinking is on and none has arrived
+yet; if `<channel|>` follows, the held text becomes thinking. No marker leaked
+in the 52 runs after the fix. The one remaining `count-todos` failure wrote the
+same kind of reasoning into the answer without any marker, which cannot be told
+apart from an answer.
+
+Eval checkers that judge a claim now read `finalAnswer` (the text after the last
+tool call), so a corrected answer counts as corrected; leak checks still read
+the whole output.
 
 Remaining failures after v2 (for reference), all genuine model behaviour:
 

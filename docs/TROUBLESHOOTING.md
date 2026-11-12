@@ -58,6 +58,13 @@ times out, raise `ollama.requestTimeoutMs`.
 The per-prompt budget (`model.maxRunMinutes`, default 30) was reached. Split the
 task, use a faster model, or raise the limit.
 
+## The answer is followed by a second, corrected answer
+
+When an answer cites files the model never opened, Capricorn asks it once to
+open them and check (`model.checkCitedFiles`, on by default). If the guess was
+wrong, the corrected answer follows the first one; trust the last one. Set
+`model.checkCitedFiles` to `false` to turn this off.
+
 ## Headless run says a tool was "not found"
 
 Headless runs cannot ask for approval, so tools that need it (edits, shell) are

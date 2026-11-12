@@ -695,6 +695,11 @@ export interface ConfigParameters {
   enableInteractiveShell?: boolean;
   shellBackgroundCompletionBehavior?: string;
   skipNextSpeakerCheck?: boolean;
+  /**
+   * Capricorn: ask the model once per prompt to open files its final answer
+   * cites but never opened (see core/citedFiles.ts). Defaults to true.
+   */
+  checkCitedFiles?: boolean;
   shellExecutionConfig?: ShellExecutionConfig;
   extensionManagement?: boolean;
   extensionRegistryURI?: string;
@@ -919,6 +924,7 @@ export class Config implements McpContext, AgentLoopContext {
     | 'notify'
     | 'silent';
   private readonly skipNextSpeakerCheck: boolean;
+  private readonly checkCitedFiles: boolean;
   private readonly useBackgroundColor: boolean;
   private readonly useAlternateBuffer: boolean;
   private readonly useTerminalBuffer: boolean;
@@ -1306,6 +1312,7 @@ export class Config implements McpContext, AgentLoopContext {
     }
 
     this.skipNextSpeakerCheck = params.skipNextSpeakerCheck ?? true;
+    this.checkCitedFiles = params.checkCitedFiles ?? true;
     this.shellExecutionConfig = {
       terminalWidth: params.shellExecutionConfig?.terminalWidth ?? 80,
       terminalHeight: params.shellExecutionConfig?.terminalHeight ?? 24,
@@ -3832,6 +3839,11 @@ export class Config implements McpContext, AgentLoopContext {
 
   getSkipNextSpeakerCheck(): boolean {
     return this.skipNextSpeakerCheck;
+  }
+
+  /** Capricorn: whether the cited-but-unopened files check is enabled. */
+  getCheckCitedFiles(): boolean {
+    return this.checkCitedFiles;
   }
 
   getRetryFetchErrors(): boolean {

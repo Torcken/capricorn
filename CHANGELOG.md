@@ -11,6 +11,11 @@ All notable changes to Capricorn are documented here. The format follows
 - Behavioural eval suite for local Gemma 4 models (`npm run eval:capricorn`,
   `evals/capricorn/`): 14 tasks with deterministic, outcome-based checkers; the
   suite itself is validated in the e2e tests.
+- Cited-files check (`model.checkCitedFiles`, default on): when a final answer
+  cites 1–3 workspace files that were never opened during the request, the model
+  is asked once to open them and correct the answer. In evals this took
+  `explore-config-port` (answer guessed without opening the config file) from
+  3–6/10 to 10/10.
 - `capricorn doctor --load` loads the selected model once with the configured
   `num_ctx` (check `models.load`), catching models that verify as Gemma 4 but
   that this Ollama build cannot run, or that do not fit in memory.
@@ -33,6 +38,12 @@ All notable changes to Capricorn are documented here. The format follows
   in interactive sessions.
 - API request events were labelled with the Gemini API host even though requests
   go to Ollama; they now carry the Ollama endpoint.
+- Gemma 4 reasoning could appear in the answer: Ollama sometimes misses the
+  opening thinking marker and streams the reasoning as normal text up to
+  `<channel|>` (11 of 431 eval runs, 8 of which then failed). With thinking on,
+  such text is now held back and turned into thinking when the marker arrives;
+  answers without it are released unchanged (streaming starts at once when
+  thinking arrives normally, or after 8,000 characters at most).
 - `write_file` no longer lets the model "create a directory" by writing an empty
   extensionless file (which then blocked every write into that directory): such
   writes are refused with an explanation that parent directories are created

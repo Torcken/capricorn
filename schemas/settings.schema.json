@@ -794,6 +794,13 @@
           "markdownDescription": "Skip the next speaker check.\n\n- Category: `Model`\n- Requires restart: `no`\n- Default: `true`",
           "default": true,
           "type": "boolean"
+        },
+        "checkCitedFiles": {
+          "title": "Check Cited Files",
+          "description": "When a final answer cites workspace files that were not opened (or shown by a search) during the request, ask the model once to open them and correct the answer.",
+          "markdownDescription": "When a final answer cites workspace files that were not opened (or shown by a search) during the request, ask the model once to open them and correct the answer.\n\n- Category: `Model`\n- Requires restart: `no`\n- Default: `true`",
+          "default": true,
+          "type": "boolean"
         }
       },
       "additionalProperties": false

@@ -38,6 +38,13 @@ export interface RunOutcome {
   durationMs: number;
   /** Concatenated assistant text (what the user would read). */
   answer: string;
+  /**
+   * Assistant text after the last tool call: the answer the run ends with.
+   * Checks of a claim use this, so a corrected answer counts as corrected
+   * (Capricorn's cited-files follow-up can make the model revise an earlier
+   * guess). Checks for leaks keep using {@link answer}.
+   */
+  finalAnswer: string;
   toolCalls: ObservedToolCall[];
   /** Token and tool statistics from the final `result` event, if any. */
   stats?: {

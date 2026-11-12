@@ -99,6 +99,7 @@ export function parseStreamJson(
   stdout: string,
 ): Omit<RunOutcome, 'exitCode' | 'timedOut' | 'durationMs' | 'stderrTail'> {
   let answer = '';
+  let finalAnswer = '';
   const calls = new Map<string, ObservedToolCall>();
   const order: ObservedToolCall[] = [];
   let stats: RunOutcome['stats'];
@@ -117,6 +118,7 @@ export function parseStreamJson(
       case 'message':
         if (ev['role'] === 'assistant' && typeof ev['content'] === 'string') {
           answer += ev['content'];
+          finalAnswer += ev['content'];
         }
         break;
       case 'tool_use': {
@@ -129,6 +131,7 @@ export function parseStreamJson(
         };
         calls.set(String(ev['tool_id'] ?? order.length), call);
         order.push(call);
+        finalAnswer = '';
         break;
       }
       case 'tool_result': {
@@ -162,7 +165,7 @@ export function parseStreamJson(
         break;
     }
   }
-  return { answer, toolCalls: order, stats, error };
+  return { answer, finalAnswer, toolCalls: order, stats, error };
 }
 
 /** A fixture workspace: git repo with the task files, plus isolated HOME. */
@@ -345,6 +348,8 @@ export interface ReferenceSolution {
   files?: Record<string, string>;
   /** The assistant's final answer. */
   answer?: string;
+  /** Text after the last tool call; defaults to {@link answer}. */
+  finalAnswer?: string;
   /** Tool calls a correct agent would make (for checkers that look). */
   toolCalls?: ObservedToolCall[];
 }
@@ -367,6 +372,7 @@ export async function checkReference(
       timedOut: false,
       durationMs: 0,
       answer: solution.answer ?? '',
+      finalAnswer: solution.finalAnswer ?? solution.answer ?? '',
       toolCalls: solution.toolCalls ?? [],
       stderrTail: '',
     };

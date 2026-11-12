@@ -95,7 +95,7 @@ TODO: this one is in docs, outside src.
     prompt:
       'How many `TODO:` comments (with the colon) are there in files under the src directory, including subdirectories? Start your answer with the number.',
     check: (ctx) => {
-      const first = ctx.outcome.answer.match(/\d+/)?.[0];
+      const first = ctx.outcome.finalAnswer.match(/\d+/)?.[0];
       return new Expect()
         .that(
           first === '5',

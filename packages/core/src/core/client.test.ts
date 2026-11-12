@@ -257,6 +257,9 @@ describe('Gemini Client (client.ts)', () => {
       getChatCompression: vi.fn().mockReturnValue(undefined),
       getCompressionThreshold: vi.fn().mockReturnValue(undefined),
       getSkipNextSpeakerCheck: vi.fn().mockReturnValue(false),
+      // Capricorn: cited-files check (off here; covered by its own tests).
+      getCheckCitedFiles: vi.fn().mockReturnValue(false),
+      getTargetDir: vi.fn().mockReturnValue('/test/project/root'),
       getShowModelInfoInChat: vi.fn().mockReturnValue(false),
       getProjectRoot: vi.fn().mockReturnValue('/test/project/root'),
       getIncludeDirectoryTree: vi.fn().mockReturnValue(true),

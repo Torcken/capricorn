@@ -14,6 +14,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   checkReference,
+  parseStreamJson,
   type ReferenceSolution,
 } from '../evals/capricorn/runner.js';
 import { ALL_TASKS } from '../evals/capricorn/tasks/index.js';
@@ -294,6 +295,40 @@ describe('eval task validity', () => {
       expect(r.failures.length).toBeGreaterThan(0);
     });
   }
+
+  it('judges claims by the final answer (a corrected guess counts as corrected)', async () => {
+    const task = ALL_TASKS.find((t) => t.id === 'explore-config-port')!;
+    const guess = 'The port is 3000, defined in config/default.json.';
+    const fixed = 'Correction: it is 8080, set in config/default.json.';
+    const corrected = await checkReference(task, {
+      answer: guess + fixed,
+      finalAnswer: fixed,
+    });
+    expect(corrected.pass).toBe(true);
+    const uncorrected = await checkReference(task, {
+      answer: fixed + guess,
+      finalAnswer: guess,
+    });
+    expect(uncorrected.pass).toBe(false);
+  });
+
+  it('parses the final answer as the text after the last tool call', () => {
+    const lines = [
+      { type: 'message', role: 'assistant', content: 'Port 3000.' },
+      {
+        type: 'tool_use',
+        tool_id: 't1',
+        tool_name: 'read_file',
+        parameters: {},
+      },
+      { type: 'tool_result', tool_id: 't1', status: 'success' },
+      { type: 'message', role: 'assistant', content: 'It is ' },
+      { type: 'message', role: 'assistant', content: '8080.' },
+    ].map((l) => JSON.stringify(l));
+    const parsed = parseStreamJson(lines.join('\n'));
+    expect(parsed.answer).toBe('Port 3000.It is 8080.');
+    expect(parsed.finalAnswer).toBe('It is 8080.');
+  });
 
   it('test-fix fixtures really fail before the fix', async () => {
     for (const task of ALL_TASKS.filter((t) => t.category === 'test-fix')) {

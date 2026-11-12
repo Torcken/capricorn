@@ -1231,6 +1231,16 @@ const SETTINGS_SCHEMA = {
         description: 'Skip the next speaker check.',
         showInDialog: true,
       },
+      checkCitedFiles: {
+        type: 'boolean',
+        label: 'Check Cited Files',
+        category: 'Model',
+        requiresRestart: false,
+        default: true,
+        description:
+          'When a final answer cites workspace files that were not opened (or shown by a search) during the request, ask the model once to open them and correct the answer.',
+        showInDialog: true,
+      },
     },
   },
 

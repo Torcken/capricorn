@@ -14,6 +14,8 @@
  * operations had *no side effect*, not merely that an error was printed.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   doneFrame,
@@ -476,5 +478,119 @@ describe('sessions', () => {
     // The resumed request must carry the earlier conversation.
     const last = chatMessages(env.mock, env.mock.chatRequests().length - 1);
     expect(JSON.stringify(last)).toContain('PINEAPPLE');
+  });
+});
+
+describe('cited-but-unopened files check', () => {
+  /** Requests whose newest user message is the cited-files follow-up. */
+  const followUps = () =>
+    env.mock.chatRequests().filter((r) => {
+      const msgs =
+        (r.body as { messages?: Array<{ role: string; content?: string }> })
+          .messages ?? [];
+      const last = msgs[msgs.length - 1];
+      return (
+        last?.role === 'user' &&
+        String(last.content ?? '').includes('Check before finishing')
+      );
+    });
+
+  it('asks once to open a cited file, and the corrected answer follows', async () => {
+    env.write('config/default.json', '{"server":{"port":8080}}\n');
+    env.mock.enqueueChat(
+      // A guessed answer citing a file that was never opened.
+      {
+        frames: [
+          textFrame('The port is 3000, defined in `config/default.json`.'),
+          doneFrame(),
+        ],
+      },
+      // After the follow-up: open the file, then answer.
+      {
+        frames: [
+          toolCallFrame({
+            id: 'r1',
+            name: 'read_file',
+            args: { file_path: 'config/default.json' },
+          }),
+          doneFrame(),
+        ],
+      },
+      {
+        frames: [
+          textFrame('Correction: the port is 8080 (`config/default.json`).'),
+          doneFrame(),
+        ],
+      },
+    );
+    const r = await headless('What port does the server use by default?');
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain('8080');
+    const sent = followUps();
+    expect(sent).toHaveLength(1);
+    expect(JSON.stringify(sent[0].body)).toContain('`config/default.json`');
+    expect(String(toolResults(env.mock)[0]['content'])).toContain('8080');
+  });
+
+  it('sends the follow-up at most once per prompt', async () => {
+    env.write('config/default.json', '{}\n');
+    env.mock.enqueueChat(
+      { frames: [textFrame('See config/default.json.'), doneFrame()] },
+      { frames: [textFrame('Still: see config/default.json.'), doneFrame()] },
+    );
+    const r = await headless('Where is the config?');
+    expect(r.code).toBe(0);
+    expect(followUps()).toHaveLength(1);
+  });
+
+  it('does not fire for files whose lines a search result showed', async () => {
+    env.mock.enqueueChat(
+      {
+        frames: [
+          toolCallFrame({
+            id: 'g1',
+            name: 'grep_search',
+            args: { pattern: 'return a - b' },
+          }),
+          doneFrame(),
+        ],
+      },
+      { frames: [textFrame('The bug is in `math.js`.'), doneFrame()] },
+    );
+    const r = await headless('Find the subtraction bug.');
+    expect(r.code).toBe(0);
+    expect(String(toolResults(env.mock)[0]['content'])).toContain(
+      'File: math.js',
+    );
+    expect(followUps()).toHaveLength(0);
+  });
+
+  it('does not fire when the cited file was opened, or when disabled', async () => {
+    env.mock.enqueueChat(
+      {
+        frames: [
+          toolCallFrame({
+            id: 'r1',
+            name: 'read_file',
+            args: { file_path: 'math.js' },
+          }),
+          doneFrame(),
+        ],
+      },
+      { frames: [textFrame('`math.js` subtracts.'), doneFrame()] },
+    );
+    expect((await headless('What does add do?')).code).toBe(0);
+    expect(followUps(), 'fired although math.js was opened').toHaveLength(0);
+
+    fs.mkdirSync(path.join(env.home, '.capricorn'), { recursive: true });
+    fs.writeFileSync(
+      path.join(env.home, '.capricorn', 'settings.json'),
+      JSON.stringify({ model: { checkCitedFiles: false } }),
+    );
+    env.mock.enqueueChat({
+      frames: [textFrame('It is in math.js.'), doneFrame()],
+    });
+    expect((await headless('Where is add?')).code).toBe(0);
+    expect(followUps(), 'fired although disabled').toHaveLength(0);
   });
 });

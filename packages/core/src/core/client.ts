@@ -75,6 +75,12 @@ import {
   type ApprovalModeChangedPayload,
 } from '../utils/events.js';
 import { initializeContextManager } from '../context/initializer.js';
+import {
+  OpenedFiles,
+  citedFilesFollowUp,
+  findCitedUnreadFiles,
+} from './citedFiles.js';
+import { GREP_TOOL_NAME } from '../tools/tool-names.js';
 
 const MAX_TURNS = 100;
 
@@ -102,6 +108,15 @@ export class GeminiClient {
   private lastPromptId: string;
   /** Capricorn: start time of the current user prompt (time budget). */
   private promptStartedAt = Date.now();
+  /**
+   * Capricorn: per-prompt state for the cited-but-unopened files check
+   * (see citedFiles.ts): files opened so far, the user's prompt text, and
+   * whether the one allowed follow-up was already sent.
+   */
+  private citedFilesPromptId?: string;
+  private promptOpenedFiles?: OpenedFiles;
+  private promptUserText = '';
+  private citedFilesChecked = false;
   private currentSequenceModel: string | null = null;
   private lastSentIdeContext: IdeContext | undefined;
   private forceFullIdeContext = true;
@@ -905,6 +920,11 @@ export class GeminiClient {
       return turn;
     }
 
+    // Capricorn: remember which files this prompt has opened.
+    for (const call of turn.pendingToolCalls) {
+      this.promptOpenedFiles?.record(call.name, call.args);
+    }
+
     // Update cumulative response in hook state
     // We do this immediately after the stream finishes for THIS turn.
     const hooksEnabled = this.config.getEnableHooks();
@@ -920,6 +940,20 @@ export class GeminiClient {
     }
 
     if (!turn.pendingToolCalls.length && signal && !signal.aborted) {
+      // Capricorn: one follow-up if the final answer cites files it never
+      // opened (the model guessed their contents in evals).
+      const followUp = this.citedFilesFollowUpFor(turn, boundedTurns);
+      if (followUp) {
+        this.citedFilesChecked = true;
+        turn = yield* this.sendMessageStream(
+          [{ text: followUp }],
+          signal,
+          prompt_id,
+          boundedTurns - 1,
+          displayContent,
+        );
+        return turn;
+      }
       if (
         !this.config.getQuotaErrorOccurred() &&
         !this.config.getSkipNextSpeakerCheck()
@@ -954,6 +988,53 @@ export class GeminiClient {
     return turn;
   }
 
+  /**
+   * Capricorn: the cited-files follow-up text for a finished turn, or
+   * `undefined` when none is due (disabled, already sent this prompt, no
+   * turns left, or nothing cited without being opened).
+   */
+  private citedFilesFollowUpFor(
+    turn: Turn,
+    boundedTurns: number,
+  ): string | undefined {
+    if (
+      this.citedFilesChecked ||
+      boundedTurns <= 1 ||
+      !this.promptOpenedFiles ||
+      !this.config.getCheckCitedFiles()
+    ) {
+      return undefined;
+    }
+    const answer = turn.getResponseText() ?? '';
+    if (!answer.trim()) return undefined;
+    const files = findCitedUnreadFiles(
+      answer,
+      this.promptUserText,
+      this.promptOpenedFiles,
+      this.config.getTargetDir(),
+      (p) => this.config.validatePathAccess(p, 'read') === null,
+    );
+    return files.length ? citedFilesFollowUp(files) : undefined;
+  }
+
+  /**
+   * Capricorn: feeds grep_search results arriving as function responses into
+   * the cited-files bookkeeping (see {@link OpenedFiles.recordSearchOutput}).
+   */
+  private recordSearchResults(request: PartListUnion): void {
+    if (!this.promptOpenedFiles) return;
+    const parts = Array.isArray(request) ? request : [request];
+    for (const part of parts) {
+      if (typeof part === 'string') continue;
+      const fr = part.functionResponse;
+      if (fr?.name !== GREP_TOOL_NAME) continue;
+      const output = fr.response?.['output'];
+      if (typeof output === 'string') {
+        this.promptOpenedFiles.recordSearchOutput(output);
+      }
+    }
+  }
+
   async *sendMessageStream(
     request: PartListUnion,
     signal: AbortSignal,
@@ -966,6 +1047,17 @@ export class GeminiClient {
 
     const hooksEnabled = this.config.getEnableHooks();
     const messageBus = this.context.messageBus;
+
+    // Capricorn: per-prompt state of the cited-files check. Tracked by its own
+    // id because `lastPromptId` starts as the session id, which the first
+    // headless prompt reuses.
+    if (this.citedFilesPromptId !== prompt_id) {
+      this.citedFilesPromptId = prompt_id;
+      this.promptOpenedFiles = new OpenedFiles(this.config.getTargetDir());
+      this.promptUserText = partListUnionToString(request);
+      this.citedFilesChecked = false;
+    }
+    this.recordSearchResults(request);
 
     if (this.lastPromptId !== prompt_id) {
       // Capricorn: a new user prompt starts a new time budget.

@@ -106,9 +106,12 @@ export const exploreTasks = [
       'What port does the HTTP server in this project listen on by default, when NODE_ENV is not set? In which file is that value defined? Answer briefly.',
     check: (ctx) =>
       new Expect()
-        .that(/\b8080\b/.test(ctx.outcome.answer), 'answer does not say 8080')
         .that(
-          /default\.json/.test(ctx.outcome.answer),
+          /\b8080\b/.test(ctx.outcome.finalAnswer),
+          'answer does not say 8080',
+        )
+        .that(
+          /default\.json/.test(ctx.outcome.finalAnswer),
           'answer does not name config/default.json',
         )
         .that(unchanged(ctx.changedPaths()), 'workspace was modified')
@@ -125,11 +128,11 @@ export const exploreTasks = [
     check: (ctx) =>
       new Expect()
         .that(
-          /registerUser/.test(ctx.outcome.answer),
+          /registerUser/.test(ctx.outcome.finalAnswer),
           'answer does not name registerUser',
         )
         .that(
-          /register\.js/.test(ctx.outcome.answer),
+          /register\.js/.test(ctx.outcome.finalAnswer),
           'answer does not name src/auth/register.js',
         )
         .that(unchanged(ctx.changedPaths()), 'workspace was modified')
@@ -147,10 +150,10 @@ export const exploreTasks = [
       new Expect()
         .that(
           /\b(no|not|cannot|can't|couldn't|could not|doesn't|does not|isn't|is not|unable|none)\b[^.]{0,60}\b(find|found|exist|exists|defined|present|locate|contain|contains|appear)\b/i.test(
-            ctx.outcome.answer,
+            ctx.outcome.finalAnswer,
           ) ||
             /\b(there is no|there's no|no such|no function)\b/i.test(
-              ctx.outcome.answer,
+              ctx.outcome.finalAnswer,
             ),
           'answer does not state that parseInvoice is absent (possible hallucination)',
         )

@@ -37,6 +37,7 @@ function run(
       timedOut: false,
       durationMs,
       answer: '',
+      finalAnswer: '',
       toolCalls: [
         { name: 'read_file', parameters: {}, status: 'success' },
         { name: 'replace', parameters: {}, status: pass ? 'success' : 'error' },
@@ -126,6 +127,7 @@ describe('isInfrastructureError', () => {
     timedOut: false,
     durationMs: 1,
     answer: '',
+    finalAnswer: '',
     toolCalls: [],
     stderrTail: '',
   };
