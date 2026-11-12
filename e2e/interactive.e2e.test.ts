@@ -12,7 +12,9 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import * as pty from 'node-pty';
+// The prebuilt fork (as in upstream's test rig): plain `node-pty` is an
+// optional native build that is not installed on Windows runners.
+import * as pty from '@lydell/node-pty';
 import {
   doneFrame,
   textFrame,

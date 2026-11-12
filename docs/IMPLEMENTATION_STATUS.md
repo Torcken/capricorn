@@ -90,6 +90,15 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   tests, e2e 71 + 3 gated skips, package smoke). CI run #1 predates the eval
   suite and failed for a reason not yet known (no access to the logs); macOS and
   Windows not verified locally.
+- **CI logs read (2026-11-12, after the fix above).** macOS and the Linux e2e
+  job passed; two causes remained, present since run #1: (1) the retained
+  SandboxManager integration tests (19) need `bwrap`, which the runner lacks and
+  Ubuntu 24.04's AppArmor blocks — CI now installs bubblewrap and lifts the
+  restriction, as upstream's CI does; (2) on Windows `node-pty` (an optional
+  native build) is not installed, so the interactive e2e test now uses the
+  prebuilt `@lydell/node-pty`. Also found: the e2e job's offline verification
+  had never actually run in CI (skipped with a warning for the same AppArmor
+  reason); it now lifts the restriction and fails instead of skipping.
 - **After removing `packages/a2a-server` (2026-11-12):** core 7 failed / 8421
   and cli 4 failed / 7471 (the same upstream failures); typecheck, lint and
   prettier pass; build and bundle succeed; e2e and `verify:offline` 71 passed, 3

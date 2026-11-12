@@ -42,6 +42,13 @@ jobs:
         run: 'npm run lint'
       - name: 'Typecheck'
         run: 'npm run typecheck'
+      - name: 'Install bubblewrap (sandbox integration tests)'
+        # Same as upstream CI: the retained SandboxManager tests run real
+        # bwrap, which the runner image lacks, and Ubuntu 24.04's AppArmor
+        # policy blocks the unprivileged user namespaces it needs.
+        run: |
+          sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq bubblewrap
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - name: 'Unit tests (core)'
         run: 'npm run test:ci -w @google/gemini-cli-core'
       - name: 'Unit tests (cli)'
@@ -63,12 +70,11 @@ jobs:
         run: 'npm run test:e2e:capricorn'
       - name: 'Offline verification (loopback-only network namespace)'
         run: |
-          # GitHub-hosted runners may restrict unprivileged user namespaces.
-          if unshare -rn true 2>/dev/null; then
-            npm run verify:offline
-          else
-            echo "::warning::unprivileged user namespaces unavailable; offline verification skipped"
-          fi
+          # Ubuntu 24.04 runners block unprivileged user namespaces through
+          # AppArmor by default; lift that so the check really runs. It must
+          # not be skipped silently: it is the CI proof of no network egress.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          npm run verify:offline
       - name: 'Package smoke test (npm pack + launch)'
         run: 'node scripts/capricorn/pack-smoke.js'
 
