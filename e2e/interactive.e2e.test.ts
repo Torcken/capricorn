@@ -22,11 +22,17 @@ import {
 import { CLI_ENTRY, createEnv, type E2EEnv } from './harness.js';
 
 let env: E2EEnv;
+/** The running TUI, killed after each test so cleanup can remove its cwd. */
+let running: { kill: () => void; done: () => boolean } | undefined;
 
 beforeEach(async () => {
   env = await createEnv();
 });
 afterEach(async () => {
+  // A TUI that failed to exit still holds the temp repo open, which makes
+  // the directory removal fail on Windows (EBUSY).
+  if (running && !running.done()) running.kill();
+  running = undefined;
   await env.cleanup();
 });
 
@@ -97,6 +103,7 @@ function spawnTui() {
       await new Promise((r) => setTimeout(r, 100));
     }
   };
+  running = { kill: () => term.kill(), done: () => exitCode !== undefined };
   return { term, waitFor, exited, screen: () => plain(screen) };
 }
 
@@ -125,10 +132,20 @@ describe('interactive UI', () => {
       .find((r) => JSON.stringify(r.body).includes('hello there'));
     expect(chat).toBeDefined();
 
-    // Ctrl+C twice is the documented exit gesture.
-    tui.term.write('\x03');
-    await new Promise((r) => setTimeout(r, 300));
-    tui.term.write('\x03');
+    if (process.platform === 'win32') {
+      // On Windows CI the TUI did not exit on a written Ctrl+C (most likely
+      // the pseudo-console turns it into a console control event rather than
+      // input). Exit through the slash command there; Ctrl+C on Windows is
+      // not covered by this test.
+      tui.term.write('/quit');
+      await new Promise((r) => setTimeout(r, 300));
+      tui.term.write('\r');
+    } else {
+      // Ctrl+C twice is the documented exit gesture.
+      tui.term.write('\x03');
+      await new Promise((r) => setTimeout(r, 300));
+      tui.term.write('\x03');
+    }
     const code = await Promise.race([
       tui.exited,
       new Promise<number>((r) => setTimeout(() => r(-1), 15_000)),

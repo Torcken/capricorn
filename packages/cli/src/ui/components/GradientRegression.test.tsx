@@ -35,6 +35,14 @@ vi.mock('../semantic-colors.js', async (importOriginal) => {
   };
 });
 
+// Capricorn: CapricornModelDialog queries the Ollama daemon on mount. Keep
+// discovery pending so the test makes no network call and no state update
+// lands after the assertions (an act() warning when no daemon is running).
+vi.mock('@google/gemini-cli-core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@google/gemini-cli-core')>()),
+  discoverModels: () => new Promise(() => {}),
+}));
+
 // Mock the context to provide controlled data for testing
 vi.mock('../contexts/SessionContext.js', async (importOriginal) => {
   const actual = await importOriginal<typeof SessionContext>();
