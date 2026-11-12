@@ -69,6 +69,12 @@ The repository history starts with the unmodified upstream commit, so
 - Removed: upstream documentation site sources, `GEMINI.md`, `.gemini/`,
   `.gcp/`, `.allstar/`, upstream `ROADMAP.md`, Google-specific GitHub workflows,
   actions and bots.
+- Removed `packages/a2a-server` (the upstream Agent-to-Agent HTTP server). It
+  only supported Google back-ends (API key, Cloud ADC, Google sign-in) and Cloud
+  Storage persistence, so it could not start in Capricorn, and porting it would
+  have meant a second, separately secured entry point. The core's A2A _client_
+  for remote agents (`core/src/agents/`) is unaffected. When merging upstream,
+  drop changes to that package.
 - Added: Capricorn docs, `e2e/` suite, offline verification, package smoke test,
   CI workflow without secrets.
 
@@ -92,11 +98,8 @@ The repository history starts with the unmodified upstream commit, so
   `packages/core`. `security/noGoogleServices.test.ts` keeps it that way.
 - **Still present, all unreachable:** upstream billing/quota helpers
   (`billing/`, `utils/googleQuotaErrors.ts`: string handling only, listed as
-  exceptions in the guard test); the A2A server's Google auth selection
-  (`packages/a2a-server`, not part of the `capricorn` package; it fails at
-  startup because only the Ollama back-end exists, so the server does not run);
-  and `google-auth-library` as a transitive dependency of `@google/genai`. The
-  A2A server's Google Cloud Storage persistence was removed.
+  exceptions in the guard test); and `google-auth-library` as a transitive
+  dependency of `@google/genai`.
 - **Environment variable names** used by the retained test harness
   (`GEMINI_CLI_HOME`, `GEMINI_CLI_TRUST_WORKSPACE`, …). Capricorn-prefixed
   equivalents exist where they are user-facing (`CAPRICORN_HOME`,

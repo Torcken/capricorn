@@ -74,6 +74,11 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   refused by the bridge, only the project and session settings mounted. The same
   checks passed with rootful Docker 29. Gated sandbox e2e 1/1 with each of
   Podman and Docker.
+- **After removing `packages/a2a-server` (2026-11-12):** core 7 failed / 8421
+  and cli 4 failed / 7471 (the same upstream failures); typecheck, lint and
+  prettier pass; build and bundle succeed; e2e and `verify:offline` 71 passed, 3
+  gated skips; package smoke test passes. The 3 A2A server test failures noted
+  above went with the package.
 
 ## Known limitations
 

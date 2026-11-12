@@ -17,7 +17,6 @@ COPY packages/vscode-ide-companion/scripts/ ./packages/vscode-ide-companion/scri
 COPY packages/devtools/package*.json ./packages/devtools/
 COPY packages/sdk/package*.json ./packages/sdk/
 COPY packages/test-utils/package*.json ./packages/test-utils/
-COPY packages/a2a-server/package*.json ./packages/a2a-server/
 
 # Use npm ci for consistent, reliable builds (respects package-lock.json)
 RUN HUSKY=0 npm ci --ignore-scripts

@@ -80,12 +80,11 @@ All notable changes to Capricorn are documented here. The format follows
 
 - The container sandbox no longer mounts `~/.config/gcloud` or the
   `GOOGLE_APPLICATION_CREDENTIALS` file.
-- The A2A server's Google Cloud Storage task persistence and its
-  `@google-cloud/storage` dependency: tasks are kept in memory, and a set
-  `GCS_BUCKET_NAME` stops the server at startup instead of being ignored. The
-  server no longer copies `GOOGLE_APPLICATION_CREDENTIALS`,
-  `GOOGLE_CLOUD_PROJECT` or `GEMINI_CLI_USE_COMPUTE_ADC` from a workspace `.env`
-  into its environment.
+- The upstream A2A server (`packages/a2a-server`, never part of the `capricorn`
+  package). It supported only Google back-ends and Google Cloud Storage
+  persistence and could not start in Capricorn. Its dependencies
+  (`@google-cloud/storage`, Express and others, 45 packages) went with it. The
+  A2A client for remote agents is unchanged.
 
 ## [0.1.0-alpha.0] - 2026-11-10 (not published)
 
