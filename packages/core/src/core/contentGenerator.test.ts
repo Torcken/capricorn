@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Capricorn modification (2026, Capricorn Contributors): the upstream suite
-// tested Google GenAI / Vertex / Code Assist construction, which Capricorn
-// removed. These tests pin the replacement contract: only the local Ollama
-// back-end can be constructed, and Google credentials never change that.
+// Capricorn modification (2026, Guillaume S. Condamine & all awesome
+// contributors): the upstream suite tested Google GenAI / Vertex / Code Assist
+// construction, which Capricorn removed. These tests pin the replacement
+// contract: only the local Ollama back-end can be constructed, and Google
+// credentials never change that.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {

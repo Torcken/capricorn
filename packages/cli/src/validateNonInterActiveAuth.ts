@@ -4,9 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Capricorn modification (2026, Capricorn Contributors): headless runs no
-// longer look for Google credentials. The back-end is always the local Ollama
-// provider; any other configured type is a configuration error.
+// Capricorn modification (2026, Guillaume S. Condamine & all awesome
+// contributors): headless runs no longer look for Google credentials. The
+// back-end is always the local Ollama provider; any other configured type is a
+// configuration error.
 
 import {
   AuthType,

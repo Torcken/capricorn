@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Capricorn modification (2026, Capricorn Contributors): upstream validated
-// Google login, Gemini API key and Vertex AI credentials here. Capricorn has
-// no hosted back-end, so the only valid method is the local Ollama provider
-// and no credential is ever read from the environment or keychain.
+// Capricorn modification (2026, Guillaume S. Condamine & all awesome
+// contributors): upstream validated Google login, Gemini API key and Vertex AI
+// credentials here. Capricorn has no hosted back-end, so the only valid method
+// is the local Ollama provider and no credential is ever read from the
+// environment or keychain.
 
 import { AuthType } from '@google/gemini-cli-core';
 

@@ -4,8 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Capricorn modification (2026, Capricorn Contributors): the header shows
-// inference location and approval mode instead of a Google account.
+// Capricorn modification (2026, Guillaume S. Condamine & all awesome
+// contributors): the header shows inference location and approval mode instead
+// of a Google account.
 
 import { renderWithProviders } from '../../test-utils/render.js';
 import { UserIdentity } from './UserIdentity.js';

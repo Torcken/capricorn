@@ -4,12 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Capricorn modification (2026, Capricorn Contributors): the upstream factory
-// constructed Google GenAI / Vertex AI / Code Assist generators. Capricorn
-// performs inference exclusively through a local Ollama daemon, so every
-// hosted branch has been removed and `createContentGenerator` now builds only
-// the Ollama generator (plus the upstream fake/recording generators used by
-// tests). See docs/adr/0001-foundation.md.
+// Capricorn modification (2026, Guillaume S. Condamine & all awesome
+// contributors): the upstream factory constructed Google GenAI / Vertex AI /
+// Code Assist generators. Capricorn performs inference exclusively through a
+// local Ollama daemon, so every hosted branch has been removed and
+// `createContentGenerator` now builds only the Ollama generator (plus the
+// upstream fake/recording generators used by tests). See
+// docs/adr/0001-foundation.md.
 
 import type {
   CountTokensResponse,

@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Capricorn modification (2026, Capricorn Contributors): validateAuthMethod
-// only accepts the local Ollama back-end; the upstream Google credential
-// cases were replaced by these tests.
+// Capricorn modification (2026, Guillaume S. Condamine & all awesome
+// contributors): validateAuthMethod only accepts the local Ollama back-end; the
+// upstream Google credential cases were replaced by these tests.
 
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { AuthType } from '@google/gemini-cli-core';

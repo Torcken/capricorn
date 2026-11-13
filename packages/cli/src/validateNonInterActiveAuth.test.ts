@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Capricorn modification (2026, Capricorn Contributors): tests for the
-// Ollama-only headless back-end resolution (upstream Google-credential cases
-// removed together with that functionality).
+// Capricorn modification (2026, Guillaume S. Condamine & all awesome
+// contributors): tests for the Ollama-only headless back-end resolution
+// (upstream Google-credential cases removed together with that functionality).
 
 import {
   afterEach,

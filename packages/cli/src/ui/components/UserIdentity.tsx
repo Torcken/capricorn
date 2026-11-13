@@ -4,11 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Capricorn modification (2026, Capricorn Contributors): upstream showed the
-// signed-in Google account and subscription tier here. Capricorn has no
-// account; the header instead states where inference runs (local Ollama, or a
-// clearly flagged remote host the user opted into) and the approval mode, so
-// the safety-relevant runtime facts are visible at startup (spec §5.1).
+// Capricorn modification (2026, Guillaume S. Condamine & all awesome
+// contributors): upstream showed the signed-in Google account and subscription
+// tier here. Capricorn has no account; the header instead states where
+// inference runs (local Ollama, or a clearly flagged remote host the user opted
+// into) and the approval mode, so the safety-relevant runtime facts are visible
+// at startup (spec §5.1).
 
 import type React from 'react';
 import { Box, Text } from 'ink';
