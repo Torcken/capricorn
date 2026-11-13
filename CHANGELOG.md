@@ -8,6 +8,9 @@ All notable changes to Capricorn are documented here. The format follows
 
 ### Added
 
+- `start.sh`: runs Capricorn from a source checkout after checking Node.js,
+  dependencies and the local Ollama daemon, rebuilding the bundle when sources
+  changed. Installs and downloads nothing.
 - Hardware-aware onboarding: when no verified Gemma 4 model is installed,
   startup detects RAM and GPU (NVIDIA via `nvidia-smi`, AMD via sysfs, Apple
   Silicon unified memory), recommends a preset that fits (12B, else E4B, else
