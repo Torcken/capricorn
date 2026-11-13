@@ -63,7 +63,7 @@ function pick(names: string[]): Record<string, string> {
   return out;
 }
 
-function spawnTui(args: string[] = []) {
+function spawnTui(args: string[] = [], extraEnv: Record<string, string> = {}) {
   const term = pty.spawn(
     process.execPath,
     ['--no-deprecation', CLI_ENTRY, ...args],
@@ -84,6 +84,7 @@ function spawnTui(args: string[] = []) {
         GEMINI_CLI_NO_RELAUNCH: 'true',
         GEMINI_CLI_TRUST_WORKSPACE: 'true',
         TERM: 'xterm-256color',
+        ...extraEnv,
       },
     },
   );
@@ -183,13 +184,24 @@ describe('startup model prompts', () => {
 });
 
 describe('first-run download offer', () => {
-  // Every preset the recommendation can pick, whatever this machine's
-  // hardware (detection is real here): pulling one installs it in the mock.
-  const gemma = DEFAULT_MOCK_MODELS.filter((m) => m.family === 'gemma4');
-  const pullable: MockModel[] = [
-    ...gemma,
-    { ...gemma[gemma.length - 1], name: 'gemma4:e2b' },
-  ];
+  // A fixed machine (16 GiB GPU), so the result does not depend on the CI
+  // runner's hardware: the recommendation is the default gemma4:12b.
+  const hardware = {
+    CAPRICORN_HARDWARE_PROFILE: JSON.stringify({
+      totalMemoryBytes: 32 * 1024 ** 3,
+      gpus: [
+        {
+          vendor: 'nvidia',
+          name: 'Test GPU',
+          memoryBytes: 16 * 1024 ** 3,
+          unified: false,
+        },
+      ],
+    }),
+  };
+  const pullable: MockModel[] = DEFAULT_MOCK_MODELS.filter(
+    (m) => m.name === 'gemma4:12b',
+  );
   const pulls = () => env.mock.requests.filter((q) => q.path === '/api/pull');
 
   beforeEach(async () => {
@@ -198,7 +210,7 @@ describe('first-run download offer', () => {
   });
 
   it('downloads nothing when the user just presses Enter (default: no)', async () => {
-    const tui = spawnTui();
+    const tui = spawnTui([], hardware);
     await tui.waitFor(/Download gemma4:\S+ now\?.*\[y\/N\]/s);
     tui.term.write('\r');
     expect(await tui.exited).toBe(1);
@@ -207,13 +219,13 @@ describe('first-run download offer', () => {
   });
 
   it('pulls the recommended model after "y" and starts the session', async () => {
-    const tui = spawnTui();
-    await tui.waitFor(/Download (gemma4:\S+) now\?/);
-    const tag = /Download (gemma4:\S+) now\?/.exec(tui.screen())![1];
+    const tui = spawnTui([], hardware);
+    await tui.waitFor(/This machine: 32 GiB RAM, Test GPU \(16 GiB\)/);
+    await tui.waitFor(/Download gemma4:12b now\?/);
     tui.term.write('y\r');
     await tui.waitFor(/Type your message/i, 60_000);
     expect(pulls().map((q) => (q.body as { model: string }).model)).toEqual([
-      tag,
+      'gemma4:12b',
     ]);
   }, 90_000);
 });

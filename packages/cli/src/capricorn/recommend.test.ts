@@ -62,7 +62,7 @@ describe('recommendModel', () => {
   it('counts only part of unified memory on Apple Silicon', () => {
     // 16 GiB Mac: 12 GiB usable by the GPU, enough for 12B (≈11 GiB).
     expect(recommendModel(machine(16, [apple(16)])).tag).toBe('gemma4:12b');
-    // 8 GiB Mac: 4 GiB after the reserve, so only E2B fits on the GPU.
+    // 8 GiB Mac: 6 GiB usable by the GPU, so only E2B (≈4 GiB) fits.
     const small = recommendModel(machine(8, [apple(8)]));
     expect(small).toMatchObject({ tag: 'gemma4:e2b', placement: 'gpu' });
     expect(small.reason).toContain('experimental');
@@ -76,12 +76,12 @@ describe('recommendModel', () => {
     expect(r.hardware).toBe('32 GiB RAM, no supported GPU found');
   });
 
-  it('falls back to E2B on a small CPU-only machine', () => {
-    expect(recommendModel(machine(10)).tag).toBe('gemma4:e2b');
+  it('falls back to E2B on a common 8 GB CPU-only laptop', () => {
+    expect(recommendModel(machine(8)).tag).toBe('gemma4:e2b');
   });
 
   it('recommends nothing when even E2B does not fit', () => {
-    const r = recommendModel(machine(6));
+    const r = recommendModel(machine(5));
     expect(r.tag).toBeUndefined();
     expect(r.placement).toBe('none');
     expect(r.reason).toContain('gemma4:e2b');

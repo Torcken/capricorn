@@ -34,8 +34,13 @@ import type { HardwareProfile } from './hardware.js';
 
 const GIB = 1024 ** 3;
 
-/** RAM kept free for the OS, Ollama itself and Capricorn. */
-export const RAM_RESERVE_GIB = 4;
+/**
+ * RAM kept free for the OS, Ollama itself and Capricorn. Small on purpose:
+ * the preset sizes are already generous (12B measured ≈9.2 GiB at 32K on
+ * CUDA vs. its 11 GiB estimate), and a larger reserve left common 8 GB
+ * laptops with no recommendation at all.
+ */
+export const RAM_RESERVE_GIB = 2;
 
 /**
  * Share of unified memory a model may use on Apple Silicon (Metal's working

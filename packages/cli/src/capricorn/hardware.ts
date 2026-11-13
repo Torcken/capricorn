@@ -132,13 +132,61 @@ function amdGpus(probes: HardwareProbes): GpuInfo[] {
 }
 
 /**
+ * Environment variable holding a JSON {@link HardwareProfile} that replaces
+ * detection. For tests of the compiled CLI (whose output must not depend on
+ * the CI runner's hardware) and for seeing what another machine would be
+ * recommended. It only changes advice, never which model runs.
+ */
+export const HARDWARE_PROFILE_ENV = 'CAPRICORN_HARDWARE_PROFILE';
+
+/** Parses {@link HARDWARE_PROFILE_ENV}; undefined if unset or invalid. */
+export function profileFromEnv(
+  value: string | undefined,
+): HardwareProfile | undefined {
+  if (!value) return undefined;
+  try {
+    const p: unknown = JSON.parse(value);
+    if (
+      typeof p === 'object' &&
+      p !== null &&
+      'totalMemoryBytes' in p &&
+      typeof p.totalMemoryBytes === 'number' &&
+      'gpus' in p &&
+      Array.isArray(p.gpus)
+    ) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+      const partial = p as Partial<HardwareProfile> &
+        Pick<HardwareProfile, 'totalMemoryBytes' | 'gpus'>;
+      return {
+        platform: os.platform(),
+        arch: os.arch(),
+        cpus: os.cpus().length,
+        ...partial,
+      };
+    }
+  } catch {
+    // Invalid JSON: fall back to real detection.
+  }
+  return undefined;
+}
+
+/**
  * Detects RAM and GPUs. Never throws.
  *
- * @param probes Injectable probes (tests); defaults to the real system.
+ * @param probes Injectable probes (tests); defaults to the real system, or
+ *   to {@link HARDWARE_PROFILE_ENV} when that is set.
  */
 export async function detectHardware(
-  probes: HardwareProbes = systemProbes,
+  probes?: HardwareProbes,
 ): Promise<HardwareProfile> {
+  if (!probes) {
+    const fromEnv = profileFromEnv(process.env[HARDWARE_PROFILE_ENV]);
+    if (fromEnv) return fromEnv;
+  }
+  return probeHardware(probes ?? systemProbes);
+}
+
+async function probeHardware(probes: HardwareProbes): Promise<HardwareProfile> {
   const platform = probes.platform();
   const arch = probes.arch();
   const totalMemoryBytes = probes.totalmem();

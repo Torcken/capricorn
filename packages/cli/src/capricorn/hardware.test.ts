@@ -5,7 +5,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { detectHardware, type HardwareProbes } from './hardware.js';
+import {
+  detectHardware,
+  profileFromEnv,
+  type HardwareProbes,
+} from './hardware.js';
 
 const GIB = 1024 ** 3;
 
@@ -119,5 +123,24 @@ describe('detectHardware', () => {
       probes({ platform: () => 'darwin', arch: () => 'x64' }),
     );
     expect(hw.gpus).toEqual([]);
+  });
+});
+
+describe('profileFromEnv (CAPRICORN_HARDWARE_PROFILE)', () => {
+  it('accepts a profile with memory and GPUs, filling in the rest', () => {
+    const p = profileFromEnv(
+      JSON.stringify({ totalMemoryBytes: 8 * GIB, gpus: [] }),
+    );
+    expect(p).toMatchObject({ totalMemoryBytes: 8 * GIB, gpus: [] });
+    expect(typeof p?.platform).toBe('string');
+  });
+
+  it('ignores unset, malformed or incomplete values', () => {
+    expect(profileFromEnv(undefined)).toBeUndefined();
+    expect(profileFromEnv('not json')).toBeUndefined();
+    expect(profileFromEnv('{"gpus": []}')).toBeUndefined();
+    expect(
+      profileFromEnv('{"totalMemoryBytes": "8", "gpus": []}'),
+    ).toBeUndefined();
   });
 });
