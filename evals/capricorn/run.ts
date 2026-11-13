@@ -11,6 +11,7 @@
  *   npm run eval:capricorn -- --model gemma4:12b --repeat 3
  *   npm run eval:capricorn -- --model gemma4:12b,gemma4:e4b --category test-fix
  *   npm run eval:capricorn -- --task testfix-off-by-one --keep
+ *   npm run eval:capricorn -- --num-ctx 8192   (context pressure: forces compression)
  *
  * Writes `evals/capricorn/results/<timestamp>.{json,md}` and prints the
  * Markdown summary. Exit codes: 0 = suite ran (whatever the pass rate),
@@ -43,6 +44,7 @@ const { values } = parseArgs({
     },
     out: { type: 'string', default: path.join(here, 'results') },
     keep: { type: 'boolean', default: false },
+    'num-ctx': { type: 'string' },
     list: { type: 'boolean', default: false },
   },
 });
@@ -78,6 +80,10 @@ if (values.list) {
 }
 
 const repeat = Number(values.repeat);
+const numCtx =
+  values['num-ctx'] === undefined ? undefined : Number(values['num-ctx']);
+if (numCtx !== undefined && (!Number.isInteger(numCtx) || numCtx < 8192))
+  fail('--num-ctx must be an integer >= 8192 (Capricorn minimum)');
 if (!Number.isInteger(repeat) || repeat < 1) fail('--repeat must be >= 1');
 if (tasks.length === 0) fail('no tasks match the filters (try --list)');
 if (!fs.existsSync(values.cli)) {
@@ -189,6 +195,7 @@ for (const model of models) {
           model,
           ollamaHost: ollamaBase,
           keepWorkspaces: values.keep,
+          numCtx,
         },
         attempt,
       );
@@ -211,6 +218,7 @@ const meta: ReportMeta = {
   capricornVersion: pkg.version,
   gitCommit: gitCommit(),
   repeat,
+  numCtx,
   host: {
     platform: os.platform(),
     arch: os.arch(),

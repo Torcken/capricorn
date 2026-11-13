@@ -11,6 +11,10 @@ import {
   modelStringToModelConfigAlias,
   collapseOlderFunctionResponses,
   RECENT_TURNS_PROTECTED,
+  LOCAL_SUMMARY_PREAMBLE,
+  compressionTriggerTokens,
+  extractStateSnapshot,
+  fitToTokenBudget,
 } from './chatCompressionService.js';
 import type { Content, GenerateContentResponse, Part } from '@google/genai';
 import { CompressionStatus } from '../core/turn.js';
@@ -22,14 +26,19 @@ import { getInitialChatHistory } from '../utils/environmentContext.js';
 
 const { TOOL_OUTPUTS_DIR } = fileUtils;
 import * as tokenCalculation from '../utils/tokenCalculation.js';
-import { tokenLimit } from '../core/tokenLimits.js';
+import { setActiveContextWindow, tokenLimit } from '../core/tokenLimits.js';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 
 vi.mock('../telemetry/loggers.js');
 vi.mock('../utils/environmentContext.js');
-vi.mock('../core/tokenLimits.js');
+// Capricorn: keep the real window helpers (no local window is active here,
+// so they return upstream's values); only tokenLimit is mocked.
+vi.mock('../core/tokenLimits.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../core/tokenLimits.js')>()),
+  tokenLimit: vi.fn(),
+}));
 
 describe('findCompressSplitPoint', () => {
   it('should throw an error for non-positive numbers', () => {
@@ -279,6 +288,179 @@ describe('ChatCompressionService', () => {
     );
     expect(result.info.compressionStatus).toBe(CompressionStatus.NOOP);
     expect(result.newHistory).toBeNull();
+  });
+
+  // Capricorn: behaviour against a local Ollama window.
+  describe('with a local context window', () => {
+    afterEach(() => setActiveContextWindow(undefined));
+
+    it('makes one summarizer call (no probe) and keeps only the snapshot', async () => {
+      setActiveContextWindow(32_768);
+      vi.mocked(tokenLimit).mockReturnValue(32_768);
+      // ~20K tokens of history plus a ~3K fixed prompt part.
+      const text = 'w'.repeat(20_000);
+      vi.mocked(mockChat.getHistory).mockReturnValue([
+        { role: 'user', parts: [{ text }] },
+        { role: 'model', parts: [{ text }] },
+        { role: 'user', parts: [{ text }] },
+        { role: 'model', parts: [{ text }] },
+      ]);
+      vi.mocked(mockChat.getLastPromptTokenCount).mockReturnValue(23_000);
+      const generateContent = vi.fn().mockResolvedValue({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: 'Scratchpad: let me think...\n<state_snapshot>\n<goal>fix add</goal>\n</state_snapshot>',
+                },
+              ],
+            },
+          },
+        ],
+      } as unknown as GenerateContentResponse);
+      vi.mocked(mockConfig.getBaseLlmClient).mockReturnValue({
+        generateContent,
+      } as unknown as BaseLlmClient);
+
+      const result = await service.compress(
+        mockChat,
+        mockPromptId,
+        false,
+        mockModel,
+        mockConfig,
+        false,
+      );
+
+      expect(result.info.compressionStatus).toBe(CompressionStatus.COMPRESSED);
+      expect(generateContent).toHaveBeenCalledTimes(1);
+      const stored = result.newHistory![0].parts![0].text!;
+      expect(stored.startsWith(LOCAL_SUMMARY_PREAMBLE)).toBe(true);
+      expect(
+        stored.endsWith(
+          '<state_snapshot>\n<goal>fix add</goal>\n</state_snapshot>',
+        ),
+      ).toBe(true);
+      expect(stored).not.toContain('Scratchpad');
+    });
+
+    it('compresses within one long task, splitting between tool exchanges', async () => {
+      setActiveContextWindow(8192);
+      vi.mocked(tokenLimit).mockReturnValue(8192);
+      const out = 'z'.repeat(4000); // ~1000 tokens per tool result
+      const history: Content[] = [
+        { role: 'user', parts: [{ text: 'Fix the failing tests.' }] },
+      ];
+      for (let k = 0; k < 4; k++) {
+        history.push(
+          {
+            role: 'model',
+            parts: [{ functionCall: { name: 'read_file', args: { k } } }],
+          },
+          {
+            role: 'user',
+            parts: [
+              {
+                functionResponse: {
+                  name: 'read_file',
+                  response: { output: out },
+                },
+              },
+            ],
+          },
+        );
+      }
+      vi.mocked(mockChat.getHistory).mockReturnValue(history);
+      // ~4K tokens of history plus a ~3K fixed prompt part.
+      vi.mocked(mockChat.getLastPromptTokenCount).mockReturnValue(7000);
+      vi.mocked(mockConfig.getBaseLlmClient).mockReturnValue({
+        generateContent: vi.fn().mockResolvedValue({
+          candidates: [
+            {
+              content: {
+                parts: [{ text: '<state_snapshot>s</state_snapshot>' }],
+              },
+            },
+          ],
+        }),
+      } as unknown as BaseLlmClient);
+
+      const result = await service.compress(
+        mockChat,
+        mockPromptId,
+        false,
+        mockModel,
+        mockConfig,
+        false,
+      );
+
+      expect(result.info.compressionStatus).toBe(CompressionStatus.COMPRESSED);
+      const h = result.newHistory!;
+      expect(h[0].parts![0].text).toBe(
+        `${LOCAL_SUMMARY_PREAMBLE}\n\n<state_snapshot>s</state_snapshot>`,
+      );
+      // No acknowledgement: the kept part starts with the next tool call.
+      expect(h[1].role).toBe('model');
+      expect(h[1].parts![0].functionCall).toBeDefined();
+      // Every kept call still has its response.
+      const calls = h.filter((c) =>
+        c.parts?.some((p) => p.functionCall),
+      ).length;
+      const responses = h.filter((c) =>
+        c.parts?.some((p) => p.functionResponse),
+      ).length;
+      expect(calls).toBe(responses);
+      expect(h.length).toBeLessThan(history.length);
+    });
+
+    it('fits the summarizer input to the window minus prompt and summary room', async () => {
+      setActiveContextWindow(8192);
+      vi.mocked(tokenLimit).mockReturnValue(8192);
+      // ~40 messages of ~1000 tokens each: far more than an 8K window.
+      const big = 'x'.repeat(4000);
+      const history: Content[] = [];
+      for (let k = 0; k < 40; k++) {
+        history.push({
+          role: k % 2 ? 'model' : 'user',
+          parts: [{ text: big }],
+        });
+      }
+      vi.mocked(mockChat.getHistory).mockReturnValue(history);
+      vi.mocked(mockChat.getLastPromptTokenCount).mockReturnValue(8000);
+      const generateContent = vi.fn().mockResolvedValue({
+        candidates: [
+          {
+            content: {
+              parts: [{ text: '<state_snapshot>s</state_snapshot>' }],
+            },
+          },
+        ],
+      } as unknown as GenerateContentResponse);
+      vi.mocked(mockConfig.getBaseLlmClient).mockReturnValue({
+        generateContent,
+      } as unknown as BaseLlmClient);
+
+      await service.compress(
+        mockChat,
+        mockPromptId,
+        false,
+        mockModel,
+        mockConfig,
+        false,
+      );
+
+      const sent = generateContent.mock.calls[0][0] as {
+        contents: Content[];
+        systemInstruction: { text: string };
+      };
+      const tokens = tokenCalculation.estimateTokenCountSync([
+        ...sent.contents.flatMap((c) => c.parts ?? []),
+        { text: sent.systemInstruction.text },
+      ]);
+      // Room is left for the summary (20% of the window here).
+      expect(tokens).toBeLessThanOrEqual(8192 - Math.floor(8192 * 0.2));
+      expect(sent.contents.length).toBeGreaterThan(1);
+    });
   });
 
   it('should compress if over token threshold with verification turn', async () => {
@@ -1357,5 +1539,134 @@ describe('ChatCompressionService', () => {
       expect(turn1Content).not.toContain('[Tool output collapsed');
       expect(turn2Content).not.toContain('[Tool output collapsed');
     });
+  });
+});
+
+// Capricorn: helpers for compressing against a local window.
+describe('fitToTokenBudget', () => {
+  const msg = (role: 'user' | 'model', text: string): Content => ({
+    role,
+    parts: [{ text }],
+  });
+  const big = 'y'.repeat(4000); // ~1000 tokens
+
+  it('returns the history unchanged when it fits', () => {
+    const h = [msg('user', 'a'), msg('model', 'b')];
+    expect(fitToTokenBudget(h, 1000)).toBe(h);
+  });
+
+  it('drops the oldest messages but keeps a previous snapshot and the newest', () => {
+    const snapshot = msg('user', '<state_snapshot>old</state_snapshot>');
+    const h = [
+      snapshot,
+      msg('model', big),
+      msg('user', big),
+      msg('model', big),
+      msg('user', 'latest'),
+    ];
+    const out = fitToTokenBudget(h, 1200);
+    expect(out[0]).toBe(snapshot);
+    expect(out[out.length - 1].parts![0].text).toBe('latest');
+    expect(out.length).toBeLessThan(h.length);
+  });
+
+  it('never leaves a tool result without its call', () => {
+    const call: Content = {
+      role: 'model',
+      parts: [{ functionCall: { name: 'read_file', args: {} } }, { text: big }],
+    };
+    const result: Content = {
+      role: 'user',
+      parts: [
+        { functionResponse: { name: 'read_file', response: { output: 'ok' } } },
+      ],
+    };
+    const out = fitToTokenBudget(
+      [msg('user', big), call, result, msg('model', 'end')],
+      300,
+    );
+    expect(out.some((c) => c.parts?.some((p) => p.functionResponse))).toBe(
+      false,
+    );
+    expect(out[out.length - 1].parts![0].text).toBe('end');
+  });
+});
+
+describe('extractStateSnapshot', () => {
+  it('keeps only the last snapshot block', () => {
+    expect(
+      extractStateSnapshot(
+        'thinking\n<state_snapshot>a</state_snapshot> more <state_snapshot>b</state_snapshot> tail',
+      ),
+    ).toBe('<state_snapshot>b</state_snapshot>');
+  });
+  it('returns replies without tags unchanged', () => {
+    expect(extractStateSnapshot('plain summary')).toBe('plain summary');
+  });
+});
+
+// Capricorn: mid-task split points for local windows.
+describe('findCompressSplitPoint with tool exchange boundaries', () => {
+  const task: Content[] = [
+    { role: 'user', parts: [{ text: 'task' }] },
+    { role: 'model', parts: [{ functionCall: { name: 'f', args: {} } }] },
+    {
+      role: 'user',
+      parts: [{ functionResponse: { name: 'f', response: {} } }],
+    },
+    { role: 'model', parts: [{ functionCall: { name: 'g', args: {} } }] },
+    {
+      role: 'user',
+      parts: [{ functionResponse: { name: 'g', response: {} } }],
+    },
+    { role: 'model', parts: [{ functionCall: { name: 'h', args: {} } }] },
+    {
+      role: 'user',
+      parts: [{ functionResponse: { name: 'h', response: {} } }],
+    },
+  ];
+  it('finds no split point inside one task by default (upstream)', () => {
+    expect(findCompressSplitPoint(task, 0.7)).toBe(0);
+  });
+  it('splits before a model turn that follows tool results when allowed', () => {
+    const i = findCompressSplitPoint(task, 0.7, {
+      allowToolExchangeBoundary: true,
+    });
+    expect(i).toBeGreaterThan(0);
+    expect(task[i].role).toBe('model');
+    expect(task[i - 1].parts![0].functionResponse).toBeDefined();
+  });
+});
+
+describe('compressionTriggerTokens', () => {
+  const history: Content[] = [
+    { role: 'user', parts: [{ text: 'a'.repeat(8000) }] }, // ~2000 tokens
+  ];
+  it('is threshold x window outside a local session (upstream)', () => {
+    expect(compressionTriggerTokens(0.5, 1_000_000, 5000, history)).toBe(
+      500_000,
+    );
+  });
+  it('applies the threshold to the room left after the fixed prompt part', () => {
+    setActiveContextWindow(8192);
+    try {
+      // 5000 prompt tokens, ~2000 of them history: ~3000 fixed.
+      const t = compressionTriggerTokens(0.5, 8192, 5000, history);
+      expect(t).toBeGreaterThan(5000);
+      expect(t).toBeLessThan(6000);
+    } finally {
+      setActiveContextWindow(undefined);
+    }
+  });
+  it('never waits past 70% of the window, even if the estimate is off', () => {
+    setActiveContextWindow(8192);
+    try {
+      // Tiny history estimate: the whole prompt looks "fixed".
+      expect(compressionTriggerTokens(0.5, 8192, 7000, [])).toBeCloseTo(
+        0.7 * 8192,
+      );
+    } finally {
+      setActiveContextWindow(undefined);
+    }
   });
 });

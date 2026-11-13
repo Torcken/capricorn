@@ -40,6 +40,30 @@ export function setActiveContextWindow(tokens: TokenCount | undefined): void {
     tokens !== undefined && tokens > 0 ? Math.floor(tokens) : undefined;
 }
 
+/** Capricorn: the allocated local window, or undefined outside a session. */
+export function getActiveContextWindow(): TokenCount | undefined {
+  return activeContextWindow;
+}
+
+/**
+ * Capricorn: scales a budget that upstream sized for Gemini's ~1M-token
+ * window to the local one. Several upstream limits are absolute token
+ * counts (e.g. 50K of protected tool output) larger than a whole 32K local
+ * window, so they never triggered. With a local window active the result
+ * is `min(upstreamTokens, fraction × window)`; otherwise `upstreamTokens`
+ * unchanged, so upstream behaviour and tests are unaffected.
+ *
+ * @param upstreamTokens The upstream budget, in tokens.
+ * @param fraction Share of the local window the budget may use (0–1].
+ */
+export function windowBudget(
+  upstreamTokens: TokenCount,
+  fraction: number,
+): TokenCount {
+  if (activeContextWindow === undefined) return upstreamTokens;
+  return Math.min(upstreamTokens, Math.floor(activeContextWindow * fraction));
+}
+
 export function tokenLimit(model: Model): TokenCount {
   // Capricorn: the real allocated window always wins over the theoretical
   // model maximum — compressing late against a 1M budget would overflow a

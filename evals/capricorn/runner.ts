@@ -35,6 +35,12 @@ export interface RunnerOptions {
   keepWorkspaces?: boolean;
   /** Extra environment for the CLI (tests inject a mock daemon here). */
   extraEnv?: Record<string, string>;
+  /**
+   * Context window (`ollama.numCtx`) for the run, written to the throwaway
+   * home's user settings. A small window forces history compression and
+   * tool-output truncation, which is how context management is evaluated.
+   */
+  numCtx?: number;
 }
 
 /** Result of one task run. */
@@ -177,7 +183,7 @@ interface Workspace {
 }
 
 /** Creates the fixture repo (one commit) and the isolated HOME. */
-function createWorkspace(task: EvalTask): Workspace {
+function createWorkspace(task: EvalTask, numCtx?: number): Workspace {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), `capricorn-eval-`));
   const dir = path.join(root, 'repo');
   const home = path.join(root, 'home');
@@ -185,6 +191,11 @@ function createWorkspace(task: EvalTask): Workspace {
   fs.mkdirSync(home, { recursive: true });
   writeTree(dir, task.files);
   writeTree(home, task.homeFiles ?? {});
+  if (numCtx !== undefined) {
+    writeTree(home, {
+      '.capricorn/settings.json': JSON.stringify({ ollama: { numCtx } }),
+    });
+  }
   const git = (args: string[]) =>
     execFileSync('git', [...GIT_IDENTITY, ...args], {
       cwd: dir,
@@ -249,7 +260,7 @@ export async function runTaskOnce(
   options: RunnerOptions,
   attempt = 1,
 ): Promise<TaskRunResult> {
-  const ws = createWorkspace(task);
+  const ws = createWorkspace(task, options.numCtx);
   const { root, dir, home } = ws;
   const started = Date.now();
   const timeoutMs = task.timeoutMs ?? 300_000;

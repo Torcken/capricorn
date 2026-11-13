@@ -45,6 +45,7 @@ import type { ContentGenerator } from '../../core/contentGenerator.js';
 import type { LlmRole } from '../../telemetry/llmRole.js';
 import { estimateTokenCountSync } from '../../utils/tokenCalculation.js';
 import { debugLogger } from '../../utils/debugLogger.js';
+import { coreEvents } from '../../utils/events.js';
 import type { OllamaClient } from './client.js';
 import {
   createToolCallIdAllocator,
@@ -114,6 +115,8 @@ export class OllamaContentGenerator implements ContentGenerator {
   private readonly verdicts = new Map<string, Promise<ModelVerdict>>();
   /** Ratio actual/estimated prompt tokens, learned from real usage. */
   private calibration = 1;
+  /** Whether the context-overflow warning was already shown this session. */
+  private overflowWarned = false;
 
   constructor(
     private readonly client: OllamaClient,
@@ -300,7 +303,25 @@ export class OllamaContentGenerator implements ContentGenerator {
       { text: JSON.stringify(tools) },
       ...contents.flatMap((c) => c.parts ?? []),
     ]);
+    this.warnIfOverflowing(estimate, this.effectiveNumCtx(verdict));
     return { body, verdict, estimate };
+  }
+
+  /**
+   * Warns (once per session) when a request will not fit the allocated
+   * window. Ollama does not fail such a request: it silently drops the
+   * oldest part of the prompt, so the model loses instructions or earlier
+   * work without anyone noticing. The upstream agent loop already compresses
+   * and checks before main turns; this catches whatever still gets through.
+   */
+  private warnIfOverflowing(estimate: number, numCtx: number): void {
+    const projected = Math.ceil(estimate * this.calibration);
+    if (projected <= numCtx || this.overflowWarned) return;
+    this.overflowWarned = true;
+    coreEvents.emitFeedback(
+      'warning',
+      `A request of about ${projected.toLocaleString('en-US')} tokens (estimated) exceeds the ${numCtx.toLocaleString('en-US')}-token context window; Ollama drops the oldest part of such prompts. Raise \`ollama.numCtx\` if memory allows, or start a fresh session with /clear.`,
+    );
   }
 
   /**

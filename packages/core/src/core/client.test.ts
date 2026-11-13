@@ -482,7 +482,9 @@ describe('Gemini Client (client.ts)', () => {
     const mockGetHistory = vi.fn();
 
     beforeEach(() => {
-      vi.mock('./tokenLimits', () => ({
+      // Capricorn: keep the real window helpers (no local window is active).
+      vi.mock('./tokenLimits', async (importOriginal) => ({
+        ...(await importOriginal<typeof import('./tokenLimits.js')>()),
         tokenLimit: vi.fn(),
       }));
 

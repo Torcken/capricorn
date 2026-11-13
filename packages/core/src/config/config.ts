@@ -82,7 +82,11 @@ import {
   type TelemetryTarget,
 } from '../telemetry/index.js';
 import { coreEvents, CoreEvent } from '../utils/events.js';
-import { tokenLimit } from '../core/tokenLimits.js';
+import {
+  getActiveContextWindow,
+  tokenLimit,
+  windowBudget,
+} from '../core/tokenLimits.js';
 import {
   DEFAULT_GEMINI_EMBEDDING_MODEL,
   DEFAULT_GEMINI_FLASH_MODEL,
@@ -2753,17 +2757,24 @@ export class Config implements McpContext, AgentLoopContext {
       ? parseInt(remotePrunable, 10)
       : undefined;
 
+    // Capricorn: scaled to the local window. Upstream's defaults (protect the
+    // newest 50K tool tokens, mask only once 30K more are prunable) exceed a
+    // whole 32K window, so masking never ran locally.
     return {
-      protectionThresholdTokens:
+      protectionThresholdTokens: windowBudget(
         parsedProtection !== undefined && !isNaN(parsedProtection)
           ? parsedProtection
           : this.contextManagement.tools.outputMasking
               .protectionThresholdTokens,
-      minPrunableThresholdTokens:
+        0.25,
+      ),
+      minPrunableThresholdTokens: windowBudget(
         parsedPrunable !== undefined && !isNaN(parsedPrunable)
           ? parsedPrunable
           : this.contextManagement.tools.outputMasking
               .minPrunableThresholdTokens,
+        0.1,
+      ),
       protectLatestTurn:
         remoteProtectLatest ??
         this.contextManagement.tools.outputMasking.protectLatestTurn,
@@ -3893,10 +3904,21 @@ export class Config implements McpContext, AgentLoopContext {
   }
 
   getTruncateToolOutputThreshold(): number {
+    const limit = tokenLimit(this.model);
+    const remaining = limit - uiTelemetryService.getLastPromptTokenCount();
+    // Capricorn: on a local window one tool output may use at most a quarter
+    // of the window and half of what remains, leaving room for the model's
+    // answer. Upstream allowed all of the remaining window (fine at 1M
+    // tokens; a single file read could fill a 32K window). Outside a local
+    // session windowBudget returns its input, i.e. upstream's formula.
+    const remainingForOutput =
+      getActiveContextWindow() === undefined
+        ? remaining
+        : Math.floor(remaining / 2);
     return Math.min(
       // Estimate remaining context window in characters (1 token ~= 4 chars).
-      4 *
-        (tokenLimit(this.model) - uiTelemetryService.getLastPromptTokenCount()),
+      4 * remainingForOutput,
+      4 * windowBudget(limit, 0.25),
       this.truncateToolOutputThreshold,
     );
   }

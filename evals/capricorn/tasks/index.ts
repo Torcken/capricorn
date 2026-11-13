@@ -7,6 +7,7 @@
 /** @fileoverview Registry of all Capricorn eval tasks, in report order. */
 
 import type { EvalTask } from '../types.js';
+import { contextTasks } from './context.task.js';
 import { editTasks } from './edit.task.js';
 import { exploreTasks } from './explore.task.js';
 import { safetyTasks } from './safety.task.js';
@@ -19,6 +20,7 @@ export const ALL_TASKS: readonly EvalTask[] = [
   ...testFixTasks,
   ...toolUseTasks,
   ...safetyTasks,
+  ...contextTasks,
 ];
 
 // Duplicate ids would silently merge rows in the report.

@@ -416,6 +416,16 @@ export async function runNonInteractive(
             warnings.push(message);
           } else if (event.type === GeminiEventType.Error) {
             throw event.value.error;
+          } else if (event.type === GeminiEventType.ContextWindowWillOverflow) {
+            // Capricorn: upstream ignored this event in headless runs, which
+            // then ended with an empty answer and exit code 0. With a small
+            // local window it is a real outcome; report it as an error.
+            const { estimatedRequestTokenCount, remainingTokenCount } =
+              event.value;
+            throw new Error(
+              `The next request (about ${estimatedRequestTokenCount} tokens) does not fit the ${remainingTokenCount} tokens left in the context window. ` +
+                'Raise `ollama.numCtx` if memory allows, or split the task into smaller prompts.',
+            );
           } else if (event.type === GeminiEventType.AgentExecutionStopped) {
             const stopMessage = `Agent execution stopped: ${event.value.systemMessage?.trim() || event.value.reason}`;
             if (config.getOutputFormat() === OutputFormat.TEXT) {

@@ -2351,6 +2351,29 @@ describe('runNonInteractive', () => {
   });
 
   describe('Agent Execution Events', () => {
+    // Capricorn: a request that does not fit the local window must not end
+    // the run with an empty answer and exit code 0.
+    it('fails with a clear error when the context window would overflow', async () => {
+      const events: ServerGeminiStreamEvent[] = [
+        {
+          type: GeminiEventType.ContextWindowWillOverflow,
+          value: { estimatedRequestTokenCount: 1006, remainingTokenCount: 640 },
+        },
+      ];
+      mockGeminiClient.sendMessageStream.mockReturnValue(
+        createStreamFromEvents(events),
+      );
+
+      await expect(
+        runNonInteractive({
+          config: mockConfig,
+          settings: mockSettings,
+          input: 'long task',
+          prompt_id: 'prompt-id-overflow',
+        }),
+      ).rejects.toThrow(/about 1006 tokens\) does not fit the 640 tokens left/);
+    });
+
     it('should handle AgentExecutionStopped event', async () => {
       const events: ServerGeminiStreamEvent[] = [
         {

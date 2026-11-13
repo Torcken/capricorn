@@ -4,7 +4,54 @@ Curated results of `npm run eval:capricorn`. Raw per-run data (every tool call,
 answer and failure detail) stays in the git-ignored `results/` directory of the
 machine that ran it.
 
-All runs: Linux x64, 24 CPUs, 94 GiB RAM, Ollama 0.30.11, 3 runs per task.
+All runs: Linux x64, 24 CPUs, 94 GiB RAM, Ollama 0.30.11; 3 runs per task unless
+noted.
+
+## 2026-11-13 — context management under pressure (`gemma4:12b`)
+
+`--num-ctx 8192` forces history compression: the fixed part of every request
+(system prompt and tool declarations) is ≈3K tokens, and several tasks grow past
+6K. `context-long-read` (new) needs ≈9–10K: it states a requirement, makes the
+model read six catalog files, one of which mentions the tax-exempt categories,
+and then checks the function it writes. 2 runs per task unless noted; Capricorn
+`7754b80ec` (baseline) and the uncommitted change (header `7c32c14c4+dirty`).
+
+| Run                | Window | 14 original tasks | `context-long-read` | Notes                                           |
+| ------------------ | ------ | ----------------- | ------------------- | ----------------------------------------------- |
+| Baseline           | 8K     | 100% (28/28)      | 0/3                 | compression never ran (see below)               |
+| Context management | 8K     | 96% (27/28)       | 3/6 (4 + 2 runs)    | 3 long-read runs hit the 8-minute task limit    |
+| Context management | 32K    | 100% (14/14)      | 1/1                 | default window; times in line with earlier runs |
+
+What the baseline numbers hid: **compression never ran inside a task.** Upstream
+splits history for summarizing only before a plain user message, and in one
+agentic task every later user message is a tool result. The baseline passed the
+14 tasks only because none outgrew 8K; `context-long-read` ended after two files
+with an empty answer and exit code 0 (the overflow guard stopped the run, and
+headless mode did not report it).
+
+With the change (`core/src/context/chatCompressionService.ts` and others):
+
+- History can also be split between tool exchanges (local windows only).
+- Upstream limits sized for a 1M-token window are scaled to the local one: old
+  tool output truncated beyond 30% of the window, masking protects the newest
+  25%, one tool output may use at most 25% of the window and half of what
+  remains.
+- Compression starts when history fills half of the room left after the fixed
+  prompt part, and never later than at 70% of the window (a 4-chars-per-token
+  estimate undercounts numeric code; without the cap one run waited until 80%).
+- The summarizer's input is fitted to the window (room for the prompt and the
+  summary), only the `<state_snapshot>` block is kept, and the second
+  "verification" pass is skipped for local models. The summary is introduced as
+  background: without that, one run returned the bare snapshot as its answer.
+- A request that still does not fit warns once (interactive) or fails with a
+  clear error (headless) instead of an empty answer.
+
+Cost: at 8K the model summarizes often, and each summary is a model call. Median
+times rose, e.g. `edit-rename-symbol` 36 → 74 s, `testfix-two-modules` 52 → 111
+s; `context-long-read` took 5–8 minutes. At 32K the same tasks ran in their
+usual times (`testfix-two-modules` 54 s). The failure among the 14 tasks at 8K
+was a model-written test that failed (2 tool calls, no compression involved).
+Making compression cheaper in tight windows is the next step.
 
 ## 2026-11-11 — prompt and tool iterations (`gemma4:12b`, 11.9B Q4_K_M)
 

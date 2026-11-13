@@ -24,8 +24,11 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
   upstream billing/quota helpers.
 - **Platform coverage:** Linux and macOS are supported (CI on both); manual
   real-model validation on macOS still needed. Windows is not supported.
-- **Context management:** calibrated budgets per model, smarter selection of
-  repository context, compaction quality checks.
+- **Context management:** compression inside long tasks, window-scaled limits
+  and an 8K-window eval are done (2026-11-13, `evals/capricorn/RESULTS.md`).
+  Still to do: cheaper compression in tight windows (at 8K the model summarizes
+  almost every turn, roughly doubling task time), and smarter selection of
+  repository context.
 - **Startup time:** profile and trim inherited initialization.
 - **npm publication** once the package name and repository are confirmed.
 

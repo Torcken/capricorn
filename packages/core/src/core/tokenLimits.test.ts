@@ -5,7 +5,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { tokenLimit, DEFAULT_TOKEN_LIMIT } from './tokenLimits.js';
+import {
+  tokenLimit,
+  DEFAULT_TOKEN_LIMIT,
+  setActiveContextWindow,
+  windowBudget,
+} from './tokenLimits.js';
 import {
   DEFAULT_GEMINI_FLASH_LITE_MODEL,
   DEFAULT_GEMINI_FLASH_MODEL,
@@ -37,5 +42,23 @@ describe('tokenLimit', () => {
 
   it('should have the correct default token limit value', () => {
     expect(DEFAULT_TOKEN_LIMIT).toBe(1_048_576);
+  });
+});
+
+// Capricorn: upstream budgets scaled to the local window.
+describe('windowBudget', () => {
+  it('returns the upstream budget when no local window is active', () => {
+    setActiveContextWindow(undefined);
+    expect(windowBudget(50_000, 0.25)).toBe(50_000);
+  });
+  it('caps the budget at a share of the local window', () => {
+    setActiveContextWindow(32_768);
+    try {
+      expect(windowBudget(50_000, 0.25)).toBe(8192);
+      // A budget already below the share is kept.
+      expect(windowBudget(1000, 0.25)).toBe(1000);
+    } finally {
+      setActiveContextWindow(undefined);
+    }
   });
 });

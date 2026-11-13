@@ -22,7 +22,9 @@ import { CompressionStatus } from '../core/turn.js';
 import { makeFakeConfig } from '../test-utils/config.js';
 import { tokenLimit } from '../core/tokenLimits.js';
 
-vi.mock('../core/tokenLimits.js', () => ({
+// Capricorn: keep the real window helpers (no local window is active here).
+vi.mock('../core/tokenLimits.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../core/tokenLimits.js')>()),
   tokenLimit: vi.fn().mockReturnValue(1_000_000),
 }));
 

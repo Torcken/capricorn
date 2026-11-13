@@ -265,7 +265,7 @@ vi.mock('../context/memoryContextManager.js', () => ({
 }));
 
 import { BaseLlmClient } from '../core/baseLlmClient.js';
-import { tokenLimit } from '../core/tokenLimits.js';
+import { setActiveContextWindow, tokenLimit } from '../core/tokenLimits.js';
 import { getCodeAssistServer } from '../code_assist/codeAssist.js';
 import { getExperiments } from '../code_assist/experiments/experiments.js';
 import type { CodeAssistServer } from '../code_assist/server.js';
@@ -279,7 +279,10 @@ import { LocalLiteRtLmClient } from '../core/localLiteRtLmClient.js';
 
 vi.mock('../core/baseLlmClient.js');
 vi.mock('../core/localLiteRtLmClient.js');
-vi.mock('../core/tokenLimits.js', () => ({
+// Capricorn: keep the real window helpers (no local window is active here,
+// so they return upstream's values); only tokenLimit is controlled.
+vi.mock('../core/tokenLimits.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../core/tokenLimits.js')>()),
   tokenLimit: vi.fn(),
 }));
 vi.mock('../code_assist/codeAssist.js');
@@ -1747,6 +1750,42 @@ describe('Server Config (config.ts)', () => {
       // 4 * (32000 - 1000) = 124000
       // custom threshold is 50000
       expect(config.getTruncateToolOutputThreshold()).toBe(50000);
+    });
+
+    // Capricorn: with a local window, one output may use at most a quarter
+    // of the window and half of what remains.
+    describe('with a local context window', () => {
+      afterEach(() => setActiveContextWindow(undefined));
+
+      it('caps one output at a quarter of the window', () => {
+        const config = new Config(baseParams);
+        setActiveContextWindow(32_768);
+        vi.mocked(tokenLimit).mockReturnValue(32_768);
+        vi.mocked(uiTelemetryService.getLastPromptTokenCount).mockReturnValue(
+          4000,
+        );
+        // min(4 * 28768/2, 4 * 8192, 40000) = 32768 chars
+        expect(config.getTruncateToolOutputThreshold()).toBe(32_768);
+      });
+
+      it('leaves half of the remaining window for the answer', () => {
+        const config = new Config(baseParams);
+        setActiveContextWindow(32_768);
+        vi.mocked(tokenLimit).mockReturnValue(32_768);
+        vi.mocked(uiTelemetryService.getLastPromptTokenCount).mockReturnValue(
+          30_768,
+        );
+        // 2000 tokens remain: an output may use 1000 of them (4000 chars).
+        expect(config.getTruncateToolOutputThreshold()).toBe(4000);
+      });
+
+      it('scales the tool output masking thresholds', async () => {
+        const config = new Config(baseParams);
+        setActiveContextWindow(32_768);
+        const masking = await config.getToolOutputMaskingConfig();
+        expect(masking.protectionThresholdTokens).toBe(8192);
+        expect(masking.minPrunableThresholdTokens).toBe(3276);
+      });
     });
   });
 

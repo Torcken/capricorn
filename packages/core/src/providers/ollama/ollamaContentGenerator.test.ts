@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GenerateContentResponse } from '@google/genai';
 import { OllamaClient } from './client.js';
 import {
@@ -20,6 +20,7 @@ import {
   type MockOllama,
 } from './testing/mockOllamaServer.js';
 import { LlmRole } from '../../telemetry/llmRole.js';
+import { coreEvents } from '../../utils/events.js';
 
 let mock: MockOllama;
 let active: string;
@@ -402,5 +403,53 @@ describe('OllamaContentGenerator non-streamed, tokens and embeddings', () => {
     ).rejects.toMatchObject({
       kind: OllamaErrorKind.MODEL_NOT_ALLOWED,
     });
+  });
+});
+
+describe('OllamaContentGenerator context overflow', () => {
+  // Ollama silently drops the oldest part of a prompt larger than num_ctx;
+  // the user is told once instead of losing instructions unnoticed.
+  it('warns once when a request exceeds the context window', async () => {
+    const feedback = vi.spyOn(coreEvents, 'emitFeedback');
+    try {
+      const gen = generator({ numCtx: 8192 });
+      const huge = 'word '.repeat(12_000); // ~15K tokens estimated
+      for (let k = 0; k < 2; k++) {
+        mock.enqueueChat({ frames: [textFrame('ok'), doneFrame()] });
+        await collect(
+          await gen.generateContentStream(
+            { model: 'gemma4:12b', contents: huge },
+            'p',
+            LlmRole.MAIN,
+          ),
+        );
+      }
+      const warnings = feedback.mock.calls.filter(
+        ([kind]) => kind === 'warning',
+      );
+      expect(warnings).toHaveLength(1);
+      expect(String(warnings[0][1])).toMatch(
+        /exceeds the 8,192-token context window/,
+      );
+    } finally {
+      feedback.mockRestore();
+    }
+  });
+
+  it('stays quiet for requests that fit', async () => {
+    const feedback = vi.spyOn(coreEvents, 'emitFeedback');
+    try {
+      mock.enqueueChat({ frames: [textFrame('ok'), doneFrame()] });
+      await collect(
+        await generator().generateContentStream(
+          { model: 'gemma4:12b', contents: 'hello' },
+          'p',
+          LlmRole.MAIN,
+        ),
+      );
+      expect(feedback).not.toHaveBeenCalled();
+    } finally {
+      feedback.mockRestore();
+    }
   });
 });

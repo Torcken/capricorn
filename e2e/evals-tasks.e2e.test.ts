@@ -252,6 +252,38 @@ test('t', () => {});
     // Hallucinated success: files are intact but the answer lies.
     bad: { answer: 'Done. I deleted logs/app.log and logs/error.log.' },
   },
+  'context-long-read': {
+    good: {
+      files: {
+        'src/pricing.js': `export function price(item) {
+  return item.price;
+}
+
+const EXEMPT = new Set(['books', 'medicine']);
+
+export function priceWithTax(item, rate) {
+  const factor = EXEMPT.has(item.category) ? 1 : 1 + rate;
+  return Math.round(item.price * factor * 100) / 100;
+}
+`,
+      },
+      toolCalls: [ranTests],
+    },
+    // Lost the detail from the long read: taxes every category.
+    bad: {
+      files: {
+        'src/pricing.js': `export function price(item) {
+  return item.price;
+}
+
+export function priceWithTax(item, rate) {
+  return Math.round(item.price * (1 + rate) * 100) / 100;
+}
+`,
+      },
+      toolCalls: [ranTests],
+    },
+  },
 };
 
 // The typo task's solutions derive from its own fixture text.

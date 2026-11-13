@@ -8,7 +8,11 @@ import type { Content } from '@google/genai';
 import type { Config } from '../config/config.js';
 import type { GeminiChat } from '../core/geminiChat.js';
 import { type ChatCompressionInfo, CompressionStatus } from '../core/turn.js';
-import { tokenLimit } from '../core/tokenLimits.js';
+import {
+  getActiveContextWindow,
+  tokenLimit,
+  windowBudget,
+} from '../core/tokenLimits.js';
 import { getCompressionPrompt } from '../core/prompts.js';
 import { getResponseText } from '../utils/partUtils.js';
 import { logChatCompression } from '../telemetry/loggers.js';
@@ -274,6 +278,20 @@ const COMPRESSION_PRESERVE_THRESHOLD = 0.3;
 const COMPRESSION_FUNCTION_RESPONSE_TOKEN_BUDGET = 50_000;
 
 /**
+ * Capricorn: share of a local window that preserved tool output may use
+ * before older large outputs are truncated (upstream's 50K exceeds a whole
+ * 32K window, so truncation never happened locally).
+ */
+const LOCAL_FUNCTION_RESPONSE_SHARE = 0.3;
+
+/**
+ * Capricorn: tokens kept free for the summary itself when sizing the
+ * summarizer's input against a local window, capped at this share of it.
+ */
+const SUMMARY_OUTPUT_RESERVE_TOKENS = 4096;
+const SUMMARY_OUTPUT_RESERVE_SHARE = 0.2;
+
+/**
  * Returns the index of the oldest item to keep when compressing. May return
  * contents.length which indicates that everything should be compressed.
  *
@@ -282,6 +300,7 @@ const COMPRESSION_FUNCTION_RESPONSE_TOKEN_BUDGET = 50_000;
 export function findCompressSplitPoint(
   contents: Content[],
   fraction: number,
+  options: { allowToolExchangeBoundary?: boolean } = {},
 ): number {
   if (fraction <= 0 || fraction >= 1) {
     throw new Error('Fraction must be between 0 and 1');
@@ -296,8 +315,9 @@ export function findCompressSplitPoint(
   for (let i = 0; i < contents.length; i++) {
     const content = contents[i];
     if (
-      content.role === 'user' &&
-      !content.parts?.some((part) => !!part.functionResponse)
+      (content.role === 'user' &&
+        !content.parts?.some((part) => !!part.functionResponse)) ||
+      (options.allowToolExchangeBoundary && isToolExchangeBoundary(contents, i))
     ) {
       if (cumulativeCharCount >= targetCharCount) {
         return i;
@@ -319,6 +339,26 @@ export function findCompressSplitPoint(
 
   // Can't compress everything so just compress at last splitpoint.
   return lastSplitPoint;
+}
+
+/**
+ * Capricorn: whether `contents[i]` starts a new tool exchange, i.e. a model
+ * turn right after the tool results of the previous one. Splitting there
+ * keeps every function call together with its response.
+ *
+ * Why: upstream splits only before a plain user message. In one long agentic
+ * task every later user message is a tool result, so the only split point is
+ * the start and nothing can be compressed; at Gemini's 1M tokens a single
+ * task never fills the window, but a 32K local window fills mid-task.
+ */
+function isToolExchangeBoundary(contents: Content[], i: number): boolean {
+  const prev = contents[i - 1];
+  return (
+    i > 0 &&
+    contents[i].role === 'model' &&
+    prev?.role === 'user' &&
+    (prev.parts?.some((part) => !!part.functionResponse) ?? false)
+  );
 }
 
 export function modelStringToModelConfigAlias(model: string): string {
@@ -409,7 +449,10 @@ async function truncateHistoryToBudget(
 
           if (
             functionResponseTokenCounter + tokens >
-            COMPRESSION_FUNCTION_RESPONSE_TOKEN_BUDGET
+            windowBudget(
+              COMPRESSION_FUNCTION_RESPONSE_TOKEN_BUDGET,
+              LOCAL_FUNCTION_RESPONSE_SHARE,
+            )
           ) {
             try {
               // Budget exceeded: Truncate this response.
@@ -504,7 +547,13 @@ export class ChatCompressionService {
         (await config.getCompressionThreshold()) ??
         DEFAULT_COMPRESSION_TOKEN_THRESHOLD;
       const isOverModelThreshold =
-        originalTokenCount >= threshold * tokenLimit(model);
+        originalTokenCount >=
+        compressionTriggerTokens(
+          threshold,
+          tokenLimit(model),
+          originalTokenCount,
+          curatedHistory,
+        );
 
       if (!isOverModelThreshold) {
         return {
@@ -557,6 +606,9 @@ export class ChatCompressionService {
     const splitPoint = findCompressSplitPoint(
       truncatedHistory,
       1 - COMPRESSION_PRESERVE_THRESHOLD,
+      // Capricorn: a local window can fill within one task (see
+      // isToolExchangeBoundary).
+      { allowToolExchangeBoundary: getActiveContextWindow() !== undefined },
     );
 
     const historyToCompressTruncated = truncatedHistory.slice(0, splitPoint);
@@ -579,10 +631,21 @@ export class ChatCompressionService {
       originalHistoryToCompress.flatMap((c) => c.parts || []),
     );
 
-    const historyForSummarizer =
-      originalToCompressTokenCount < tokenLimit(model)
+    // Capricorn: against a local window the summarizer's input must leave
+    // room for the compression prompt and the summary itself; otherwise
+    // Ollama silently drops the oldest tokens of the request. Upstream
+    // compared against the whole window, which on 1M tokens never mattered.
+    const summarizerBudget = summarizerInputBudget(config, model);
+    let historyForSummarizer =
+      originalToCompressTokenCount < summarizerBudget
         ? originalHistoryToCompress
         : historyToCompressTruncated;
+    if (getActiveContextWindow() !== undefined) {
+      historyForSummarizer = fitToTokenBudget(
+        historyForSummarizer,
+        summarizerBudget,
+      );
+    }
 
     const hasPreviousSnapshot = historyForSummarizer.some((c) =>
       c.parts?.some((p) => p.text?.includes('<state_snapshot>')),
@@ -611,7 +674,26 @@ export class ChatCompressionService {
       abortSignal: abortSignal ?? new AbortController().signal,
       role: LlmRole.UTILITY_COMPRESSOR,
     });
-    const summary = getResponseText(summaryResponse) ?? '';
+    // Capricorn: keep only the snapshot. The prompt asks the model to reason
+    // in a scratchpad first; storing that reasoning in history wastes the
+    // very window compression is meant to free.
+    const summary = extractStateSnapshot(
+      getResponseText(summaryResponse) ?? '',
+    );
+
+    // Capricorn: skip the probe on a local model. It re-reads the whole
+    // history to the model a second time, doubling the cost of compression
+    // (minutes on a CPU). Evaluated with the eval suite under context
+    // pressure (`--num-ctx 8192`, evals/capricorn/RESULTS.md).
+    if (getActiveContextWindow() !== undefined) {
+      return this.finishCompression(
+        config,
+        model,
+        summary.trim(),
+        historyToKeepTruncated,
+        originalTokenCount,
+      );
+    }
 
     // Phase 3: The "Probe" Verification (Self-Correction)
     // We perform a second lightweight turn to ensure no critical information was lost.
@@ -640,10 +722,31 @@ export class ChatCompressionService {
         abortSignal: abortSignal ?? new AbortController().signal,
       });
 
-    const finalSummary = (
-      getResponseText(verificationResponse)?.trim() || summary
+    const finalSummary = extractStateSnapshot(
+      getResponseText(verificationResponse)?.trim() || summary,
     ).trim();
 
+    return this.finishCompression(
+      config,
+      model,
+      finalSummary,
+      historyToKeepTruncated,
+      originalTokenCount,
+    );
+  }
+
+  /**
+   * Builds the compressed history from a summary, or reports why it could
+   * not be used. Capricorn: extracted from `compress` (unchanged logic) so the
+   * local path, which skips the verification probe, shares it.
+   */
+  private async finishCompression(
+    config: Config,
+    model: string,
+    finalSummary: string,
+    historyToKeepTruncated: Content[],
+    originalTokenCount: number,
+  ): Promise<{ newHistory: Content[] | null; info: ChatCompressionInfo }> {
     if (!finalSummary) {
       logChatCompression(
         config,
@@ -665,12 +768,30 @@ export class ChatCompressionService {
     const extraHistory: Content[] = [
       {
         role: 'user',
-        parts: [{ text: finalSummary }],
+        // Capricorn: framed for local models. Without the framing, Gemma
+        // took a bare snapshot (especially mid-task, where no model reply
+        // follows it) for the message to answer and returned it as its
+        // final answer (seen in the eval at 8K).
+        parts: [
+          {
+            text:
+              getActiveContextWindow() === undefined
+                ? finalSummary
+                : `${LOCAL_SUMMARY_PREAMBLE}\n\n${finalSummary}`,
+          },
+        ],
       },
-      {
-        role: 'model',
-        parts: [{ text: 'Got it. Thanks for the additional context!' }],
-      },
+      // Capricorn: after a mid-task split the kept history starts with a
+      // model turn; an acknowledgement before it would put two model turns
+      // in a row.
+      ...(historyToKeepTruncated[0]?.role === 'model'
+        ? []
+        : [
+            {
+              role: 'model',
+              parts: [{ text: 'Got it. Thanks for the additional context!' }],
+            },
+          ]),
       ...historyToKeepTruncated,
     ];
 
@@ -704,10 +825,6 @@ export class ChatCompressionService {
         },
       };
     } else {
-      // Explicitly dereference old history slices so V8 GC can immediately reclaim memory
-      historyToCompressTruncated.length = 0;
-      originalHistoryToCompress.length = 0;
-
       return {
         newHistory: extraHistory,
         info: {
@@ -719,3 +836,114 @@ export class ChatCompressionService {
     }
   }
 }
+
+/**
+ * Capricorn: tokens the summarizer's history may use: the window minus the
+ * compression prompt and room for the summary. Outside a local session this
+ * is the full token limit, as upstream compared against.
+ */
+function summarizerInputBudget(config: Config, model: string): number {
+  const window = getActiveContextWindow();
+  if (window === undefined) return tokenLimit(model);
+  const promptTokens = estimateTokenCountSync([
+    { text: getCompressionPrompt(config) },
+  ]);
+  const reserve = Math.min(
+    SUMMARY_OUTPUT_RESERVE_TOKENS,
+    Math.floor(window * SUMMARY_OUTPUT_RESERVE_SHARE),
+  );
+  return Math.max(0, window - promptTokens - reserve);
+}
+
+/**
+ * Capricorn: drops the oldest messages until `contents` fits `budget`
+ * tokens, so the summarizer request is never silently cut by Ollama.
+ * Messages holding a previous `<state_snapshot>` are always kept (they carry
+ * everything summarized before), the newest message is always kept, and a
+ * tool result is never left without its call.
+ *
+ * Exported for testing purposes.
+ */
+export function fitToTokenBudget(
+  contents: Content[],
+  budget: number,
+): Content[] {
+  const sizes = contents.map((c) => estimateTokenCountSync(c.parts ?? []));
+  let total = sizes.reduce((a, b) => a + b, 0);
+  if (total <= budget) return contents;
+  const isSnapshot = (c: Content) =>
+    c.parts?.some((p) => p.text?.includes('<state_snapshot>')) ?? false;
+  const isToolResult = (c: Content) =>
+    c.parts?.some((p) => p.functionResponse) ?? false;
+  const dropped = new Set<number>();
+  let i = 0;
+  for (; i < contents.length - 1 && total > budget; i++) {
+    if (isSnapshot(contents[i])) continue;
+    dropped.add(i);
+    total -= sizes[i];
+  }
+  // A tool result whose call was dropped would be an orphan: drop it too.
+  for (; i < contents.length - 1 && isToolResult(contents[i]); i++) {
+    if (!dropped.has(i)) {
+      dropped.add(i);
+      total -= sizes[i];
+    }
+  }
+  return contents.filter((_, k) => !dropped.has(k));
+}
+
+/**
+ * Capricorn: the last `<state_snapshot>…</state_snapshot>` block of a
+ * summarizer reply, without the scratchpad reasoning the prompt asks for
+ * first. Replies without the tags are returned unchanged.
+ *
+ * Exported for testing purposes.
+ */
+export function extractStateSnapshot(text: string): string {
+  const blocks = text.match(/<state_snapshot>[\s\S]*?<\/state_snapshot>/g);
+  return blocks ? blocks[blocks.length - 1] : text;
+}
+
+/**
+ * Capricorn: prompt size at which compression starts.
+ *
+ * Upstream: `threshold × window`. On a local window that ignores the fixed
+ * part of every request (system prompt and tool declarations, ≈3K tokens),
+ * which compression cannot shrink: at 8K the 50% trigger sits barely above
+ * that fixed part, so a freshly compressed history was over it again and
+ * every turn paid for another summarizer call. Locally the threshold applies
+ * to the room history actually has: fixed part + threshold × (window −
+ * fixed part). Outside a local session the upstream rule is unchanged.
+ *
+ * Exported for testing purposes.
+ */
+export function compressionTriggerTokens(
+  threshold: number,
+  limit: number,
+  promptTokens: number,
+  history: Content[],
+): number {
+  if (getActiveContextWindow() === undefined) return threshold * limit;
+  const historyTokens = estimateTokenCountSync(
+    history.flatMap((c) => c.parts ?? []),
+  );
+  const fixed = Math.min(limit, Math.max(0, promptTokens - historyTokens));
+  // The history estimate (≈4 characters per token) undercounts code full of
+  // numbers, which overstates the fixed part and pushed the trigger to the
+  // brink of overflow (seen in the eval at 8K: no compression at 80% full).
+  // Never wait past MAX_LOCAL_TRIGGER_SHARE of the window.
+  return Math.min(
+    fixed + threshold * (limit - fixed),
+    MAX_LOCAL_TRIGGER_SHARE * limit,
+  );
+}
+
+/**
+ * Capricorn: introduces the summary that replaces compressed turns, so a
+ * local model treats it as background instead of a message to answer.
+ */
+export const LOCAL_SUMMARY_PREAMBLE =
+  '[Earlier turns of this conversation were compressed into the summary below to fit the context window. It is background, not a request: continue the current task from where it stopped, and do not repeat or reformat this summary.]';
+
+/** Capricorn: latest point (share of the window) to start compressing. */
+const MAX_LOCAL_TRIGGER_SHARE = 0.7;

@@ -8,6 +8,14 @@ All notable changes to Capricorn are documented here. The format follows
 
 ### Added
 
+- Context management for small local windows: history compression now also works
+  inside one long task (it could only split before a user message, so it never
+  ran mid-task), upstream limits sized for 1M tokens are scaled to the local
+  window (tool-output truncation and masking, per-output size), the summarizer's
+  input is fitted to the window, only the summary block is kept, and the second
+  verification pass is skipped locally. A request that still overflows warns
+  once, or fails with a clear error in headless mode. Eval: `--num-ctx` option
+  and a `context-long-read` task; results in `evals/capricorn/RESULTS.md`.
 - `start.sh`: runs Capricorn from a source checkout after checking Node.js,
   dependencies and the local Ollama daemon, rebuilding the bundle when sources
   changed. Installs and downloads nothing.
@@ -50,6 +58,9 @@ All notable changes to Capricorn are documented here. The format follows
   non-Gemma-4 model.
 
 ### Fixed
+
+- Headless runs that hit the context window limit ended with an empty answer and
+  exit code 0; they now fail with an explanation.
 
 - Startup questions (e.g. "Use the installed model … instead? [Y/n]") were
   invisible: they were written to the already-redirected stderr, leaving a blank

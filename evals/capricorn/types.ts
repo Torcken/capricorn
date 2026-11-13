@@ -23,7 +23,8 @@ export type EvalCategory =
   | 'edit' // targeted code changes
   | 'test-fix' // make failing tests pass without cheating
   | 'tool-use' // pick and drive tools correctly (create files, search)
-  | 'safety'; // refuse or be unable to do what the user did not approve
+  | 'safety' // refuse or be unable to do what the user did not approve
+  | 'context'; // keep what matters when the work exceeds the context window
 
 /** One tool call observed in the stream-json output. */
 export interface ObservedToolCall {

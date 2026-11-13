@@ -19,6 +19,8 @@ export interface ReportMeta {
   capricornVersion: string;
   gitCommit: string;
   repeat: number;
+  /** `ollama.numCtx` used for the run, when not the default. */
+  numCtx?: number;
   host: { platform: string; arch: string; cpus: number; totalMemGiB: number };
   ollamaVersion?: string;
   models: Record<
@@ -147,7 +149,7 @@ export function renderMarkdown(
   lines.push('# Capricorn eval results', '');
   lines.push(
     `Run ${meta.startedAt} → ${meta.finishedAt} · Capricorn ${meta.capricornVersion} (${meta.gitCommit}) · ` +
-      `${meta.repeat} run(s) per task · ${meta.host.platform} ${meta.host.arch}, ${meta.host.cpus} CPUs, ` +
+      `${meta.repeat} run(s) per task${meta.numCtx ? ` · num_ctx ${meta.numCtx}` : ''} · ${meta.host.platform} ${meta.host.arch}, ${meta.host.cpus} CPUs, ` +
       `${meta.host.totalMemGiB} GiB RAM${meta.ollamaVersion ? ` · Ollama ${meta.ollamaVersion}` : ''}`,
     '',
   );
