@@ -286,12 +286,13 @@ async function resolveFilePaths(
       const reason =
         gitIgnored && geminiIgnored ? 'both' : gitIgnored ? 'git' : 'gemini';
       ignoredFiles.push({ path: pathName, reason });
+      // Capricorn: name the real ignore file (upstream: "gemini").
       const reasonText =
         reason === 'both'
-          ? 'ignored by both git and gemini'
+          ? 'ignored by both git and .capricornignore'
           : reason === 'git'
             ? 'git-ignored'
-            : 'gemini-ignored';
+            : 'ignored by .capricornignore';
       onDebugMessage(`Path ${pathName} is ${reasonText} and will be skipped.`);
       continue;
     }

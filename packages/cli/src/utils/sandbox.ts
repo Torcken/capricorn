@@ -477,7 +477,8 @@ export async function start_sandbox(
     if (process.env['BUILD_SANDBOX']) {
       if (!gcPath.includes('gemini-cli/packages/')) {
         throw new FatalSandboxError(
-          'Cannot build sandbox using installed gemini binary; ' +
+          // Capricorn: the binary is `capricorn` (upstream: gemini).
+          'Cannot build sandbox using installed capricorn binary; ' +
             'run `npm link ./packages/cli` under gemini-cli repo to switch to linked binary.',
         );
       } else {

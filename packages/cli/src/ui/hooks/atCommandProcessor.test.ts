@@ -838,7 +838,7 @@ describe('handleAtCommand', () => {
         processedQuery: [{ text: query }],
       });
       expect(mockOnDebugMessage).toHaveBeenCalledWith(
-        `Path ${geminiIgnoredFile} is gemini-ignored and will be skipped.`,
+        `Path ${geminiIgnoredFile} is ignored by .capricornignore and will be skipped.`,
       );
       expect(mockOnDebugMessage).toHaveBeenCalledWith(
         `Ignored 1 files:\nGemini-ignored: ${geminiIgnoredFile}`,
@@ -910,7 +910,7 @@ describe('handleAtCommand', () => {
       ],
     });
     expect(mockOnDebugMessage).toHaveBeenCalledWith(
-      `Path ${geminiIgnoredFile} is gemini-ignored and will be skipped.`,
+      `Path ${geminiIgnoredFile} is ignored by .capricornignore and will be skipped.`,
     );
     expect(mockOnDebugMessage).toHaveBeenCalledWith(
       `Ignored 1 files:\nGemini-ignored: ${geminiIgnoredFile}`,

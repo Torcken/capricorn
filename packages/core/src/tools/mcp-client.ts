@@ -2382,8 +2382,10 @@ export async function createTransport(
 
   if (mcpServerConfig.command) {
     if (!cliConfig.isTrustedFolder()) {
+      // Capricorn: there is no `trust` command; folders are trusted with the
+      // /permissions trust slash command.
       throw new Error(
-        `MCP server '${mcpServerName}' uses stdio transport but current folder is not trusted. Use 'gemini trust' to enable it.`,
+        `MCP server '${mcpServerName}' uses stdio transport but current folder is not trusted. Use '/permissions trust' in an interactive session to enable it.`,
       );
     }
     const extensionEnv = getExtensionEnvironment(mcpServerConfig.extension);

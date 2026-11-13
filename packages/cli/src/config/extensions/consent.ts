@@ -309,7 +309,8 @@ async function extensionConsentString(
   }
   if (sanitizedConfig.contextFileName) {
     output.push(
-      `This extension will append info to your gemini.md context using ${sanitizedConfig.contextFileName}`,
+      // Capricorn: the project context file is CAPRICORN.md (upstream: gemini.md).
+      `This extension will append info to your CAPRICORN.md context using ${sanitizedConfig.contextFileName}`,
     );
   }
   if (sanitizedConfig.excludeTools) {

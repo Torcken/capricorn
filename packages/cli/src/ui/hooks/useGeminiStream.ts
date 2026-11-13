@@ -1204,7 +1204,8 @@ export const useGeminiStream = (
 
       if (localQueryToSendToGemini === null) {
         onDebugMessage(
-          'Query processing resulted in null, not sending to Gemini.',
+          // Capricorn: the model is local Gemma 4 (upstream: Gemini).
+          'Query processing resulted in null, not sending to the model.',
         );
         return { queryToSend: null, shouldProceed: false };
       }

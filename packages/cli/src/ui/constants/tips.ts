@@ -27,7 +27,8 @@ export const INFORMATIVE_TIPS = [
   'Customize loading phrases: tips, witty, all, or off (/settings)…',
   'Add custom witty phrases to the loading screen (settings.json)…',
   'Use alternate screen buffer to preserve shell history (/settings)…',
-  'Choose a specific Gemini model for conversations (/settings)…',
+  // Capricorn: models are local Gemma 4 models (upstream: Gemini).
+  'Choose a specific Gemma 4 model for conversations (/settings)…',
   'Limit the number of turns in your session history (/settings)…',
   'Automatically summarize large tool outputs to save tokens (settings.json)…',
   'Control when chat history gets compressed based on context compression threshold (settings.json)…',
@@ -146,7 +147,7 @@ export const INFORMATIVE_TIPS = [
   'See the current instructional context with /memory show',
   'Reload instructional context from CAPRICORN.md files with /memory reload',
   'List the paths of the CAPRICORN.md files in use with /memory list',
-  'Choose your Gemini model with /model',
+  'Choose your Gemma 4 model with /model',
   'Display the privacy notice with /privacy',
   'Restore project files to a previous state with /restore',
   'Exit the CLI with /quit or /exit',

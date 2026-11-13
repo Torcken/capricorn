@@ -173,7 +173,8 @@ const MatchSnippetDisplay = ({
   }
 
   const firstMatch = session.matchSnippets[0];
-  const rolePrefix = firstMatch.role === 'user' ? 'You:   ' : 'Gemini:';
+  // Capricorn: the model is not Gemini; same width as upstream's label.
+  const rolePrefix = firstMatch.role === 'user' ? 'You:   ' : 'Model: ';
   const roleColor = textColor(
     firstMatch.role === 'user' ? Colors.AccentGreen : Colors.AccentBlue,
   );
