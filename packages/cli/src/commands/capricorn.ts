@@ -53,6 +53,9 @@ import {
   type CapricornRuntime,
 } from '../capricorn/runtime.js';
 import { renderReport, runDiagnostics } from '../capricorn/diagnostics.js';
+import { isPullableTag, pullAndVerify } from '../capricorn/modelPull.js';
+import { detectHardware } from '../capricorn/hardware.js';
+import { recommendModel } from '../capricorn/recommend.js';
 
 /** Exit codes used by Capricorn subcommands. */
 export const CapricornExit = { OK: 0, FAILED: 1, USAGE: 2 } as const;
@@ -280,7 +283,13 @@ const modelsListCommand: CommandModule<
     }
     if (allowed.length === 0) {
       out('No verified Gemma 4 models are installed.');
-      out(`Pull one with: capricorn models pull ${GEMMA4_PRESETS[1].tag}`);
+      const rec = recommendModel(await detectHardware());
+      out(`This machine: ${rec.hardware}.`);
+      out(
+        rec.tag
+          ? `Recommended: ${rec.tag}. ${rec.reason}\nPull it with: capricorn models pull ${rec.tag}`
+          : rec.reason,
+      );
     } else {
       out('Installed Gemma 4 models (* = selected):');
       for (const m of allowed) out(renderModelRow(m, runtime.settings.model));
@@ -362,8 +371,7 @@ const modelsPullCommand: CommandModule<object, { model: string }> = {
     const tag = argv.model;
     // Refuse obviously disallowed tags before triggering a multi-GB download.
     // Final verification still happens after the pull, from real metadata.
-    const pre = prefilterTagModel({ name: tag });
-    if (pre || !/^gemma4[:/]?/i.test(tag.split('/').pop() ?? '')) {
+    if (!isPullableTag(tag)) {
       err(
         `Refusing to pull "${tag}": Capricorn only runs local Gemma 4 models (e.g. ${GEMMA4_PRESETS.map((p) => p.tag).join(', ')}).`,
       );
@@ -374,24 +382,8 @@ const modelsPullCommand: CommandModule<object, { model: string }> = {
       err(describeError(clientError));
       return exitCli(CapricornExit.USAGE);
     }
-    const ac = new AbortController();
-    const onSigint = () => ac.abort();
-    process.once('SIGINT', onSigint);
-    err(`Pulling ${tag} via Ollama at ${client.baseUrl} (Ctrl+C to cancel)...`);
-    let lastLine = '';
     try {
-      for await (const p of client.pullModel(tag, ac.signal)) {
-        const pct =
-          p.total && p.completed !== undefined
-            ? ` ${Math.floor((p.completed / p.total) * 100)}%`
-            : '';
-        const line = `${p.status ?? ''}${pct}`;
-        if (line !== lastLine) {
-          err(`  ${line}`);
-          lastLine = line;
-        }
-      }
-      const verdict = verifyGemma4Model(tag, await client.showModel(tag));
+      const verdict = await pullAndVerify(client, tag, err);
       out(
         verdict.allowed
           ? `Pulled ${tag}: ${verdict.detail}`
@@ -402,9 +394,7 @@ const modelsPullCommand: CommandModule<object, { model: string }> = {
       );
     } catch (e) {
       err(describeError(e));
-      return await exitCli(CapricornExit.FAILED);
-    } finally {
-      process.off('SIGINT', onSigint);
+      return exitCli(CapricornExit.FAILED);
     }
   },
 };

@@ -15,8 +15,8 @@
  * when the user needs it.
  *
  * Privacy: diagnostics only contact the configured Ollama endpoint (loopback
- * by default). Nothing is uploaded; output never includes prompt or file
- * contents.
+ * by default) and read local hardware facts (RAM, `nvidia-smi`, sysfs).
+ * Nothing is uploaded; output never includes prompt or file contents.
  */
 
 import os from 'node:os';
@@ -35,6 +35,8 @@ import {
   type OllamaClient,
 } from '@google/gemini-cli-core';
 import type { CapricornRuntime } from './runtime.js';
+import { detectHardware, type HardwareProfile } from './hardware.js';
+import { placementFor, recommendModel } from './recommend.js';
 import { formatGiB } from './runtime.js';
 
 /** Outcome severity. `fail` makes `doctor` exit non-zero. */
@@ -84,6 +86,8 @@ export interface DiagnosticsInput {
    */
   loadModel?: boolean;
   signal?: AbortSignal;
+  /** Hardware profile; detected from the system when omitted. */
+  hardware?: HardwareProfile;
 }
 
 /**
@@ -98,6 +102,11 @@ export async function runDiagnostics(
 
   checks.push(checkNode());
   checks.push(checkSystemMemory());
+  checks.push(
+    await safe('runtime.hardware', 'Hardware & model fit', async () =>
+      checkHardware(input.hardware ?? (await detectHardware()), input.runtime),
+    ),
+  );
   checks.push(checkEndpointPolicy(input));
 
   let daemonOk = false;
@@ -210,6 +219,57 @@ function checkSystemMemory(): DiagnosticCheck {
       platform: os.platform(),
       arch: os.arch(),
     },
+  };
+}
+
+/**
+ * Recommends a model for this machine and warns when the selected preset
+ * will not fit in GPU memory. Never fails: sizes are approximate, and a
+ * model that does not fit still runs, only more slowly.
+ */
+function checkHardware(
+  hw: HardwareProfile,
+  runtime: CapricornRuntime,
+): DiagnosticCheck {
+  const rec = recommendModel(hw);
+  const selected = runtime.settings.model;
+  const fit = placementFor(hw, selected);
+  const recText = rec.tag
+    ? `recommended model: ${rec.tag} (${rec.placement === 'gpu' ? 'GPU' : 'CPU'})`
+    : 'no Gemma 4 preset fits comfortably';
+  const data = { hardware: hw, recommendation: rec, selectedFit: fit };
+  if (fit && fit.placement !== 'gpu' && rec.placement === 'gpu') {
+    return {
+      id: 'runtime.hardware',
+      title: 'Hardware & model fit',
+      status: 'warn',
+      message: `${rec.hardware}; ${recText}.`,
+      remediation:
+        fit.placement === 'cpu'
+          ? `${selected} needs ≈${fit.approxMemoryGiB} GiB (approximate), more than GPU memory: it will run partly on the CPU and answer slowly. Consider ${rec.tag}.`
+          : `${selected} needs ≈${fit.approxMemoryGiB} GiB (approximate), more than this machine has: it may fail to load. Consider ${rec.tag}.`,
+      data,
+    };
+  }
+  if (fit?.placement === 'none' || !rec.tag) {
+    return {
+      id: 'runtime.hardware',
+      title: 'Hardware & model fit',
+      status: 'warn',
+      message: `${rec.hardware}; ${recText}.`,
+      remediation:
+        fit?.placement === 'none'
+          ? `${selected} needs ≈${fit.approxMemoryGiB} GiB (approximate), more than this machine has: it may fail to load.${rec.tag ? ` Consider ${rec.tag}.` : ''}`
+          : rec.reason,
+      data,
+    };
+  }
+  return {
+    id: 'runtime.hardware',
+    title: 'Hardware & model fit',
+    status: 'pass',
+    message: `${rec.hardware}; ${recText}.`,
+    data,
   };
 }
 

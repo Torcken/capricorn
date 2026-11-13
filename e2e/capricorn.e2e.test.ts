@@ -421,6 +421,25 @@ describe('failure handling', () => {
   });
 });
 
+describe('first run (no model installed)', () => {
+  // Hardware detection is real here (RAM, nvidia-smi, sysfs), so only the
+  // shape of the advice is asserted, not which model this machine gets.
+  it('recommends a model for this machine and downloads nothing', async () => {
+    await env.cleanup();
+    env = await createEnv({ models: [] });
+    const r = await headless('hi');
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain('This machine: ');
+    expect(r.stderr).toMatch(
+      /Recommended: gemma4:\w+ \(runs on the (GPU|CPU)\)[\s\S]*capricorn models pull gemma4:|Not enough memory/,
+    );
+    const list = await env.run(['models', 'list']);
+    expect(list.stdout).toContain('This machine: ');
+    expect(env.mock.requests.some((q) => q.path === '/api/pull')).toBe(false);
+    expect(env.mock.chatRequests()).toHaveLength(0);
+  });
+});
+
 describe('agent loop limits', () => {
   // Guards against a runaway local agent: the per-prompt wall-clock budget
   // stops further model turns once spent (model.maxRunMinutes).

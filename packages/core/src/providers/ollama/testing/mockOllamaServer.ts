@@ -123,9 +123,16 @@ export async function startMockOllama(
     models?: MockModel[];
     version?: string;
     defaultReply?: string;
+    /**
+     * Models `/api/pull` can "download": pulling one adds it to the installed
+     * list, so pull-then-verify flows can be tested. Pulling any other name
+     * still reports success without installing anything.
+     */
+    pullable?: MockModel[];
   } = {},
 ): Promise<MockOllama> {
-  const models = options.models ?? DEFAULT_MOCK_MODELS;
+  // Copied: pulls add to this list, and callers' arrays must not change.
+  const models = [...(options.models ?? DEFAULT_MOCK_MODELS)];
   const version = options.version ?? '0.30.11';
   const queue: MockChatScript[] = [];
   const requests: RecordedRequest[] = [];
@@ -213,6 +220,10 @@ export async function startMockOllama(
             completed: 100,
           }) + '\n',
         );
+        const pulled = options.pullable?.find((m) => m.name === model);
+        if (pulled && !models.some((m) => m.name === pulled.name)) {
+          models.push(pulled);
+        }
         res.end(JSON.stringify({ status: 'success' }) + '\n');
         return;
       }

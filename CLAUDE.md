@@ -63,7 +63,10 @@ CI uses Node 20 (`.nvmrc`, the minimum in `engines`): avoid Node 21+ features
 - CLI additions: `cli/src/commands/capricorn.ts`
   (doctor/status/models/config/init, all wrapped in `defer()` so parsing has no
   side effects), `cli/src/capricorn/` (runtime resolution, diagnostics,
-  preflight, arg aliases for `run`/`sessions`).
+  preflight, hardware detection + model recommendation (`recommend.ts`), arg
+  aliases for `run`/`sessions`). Startup prompts must write via
+  `createWorkingStdio()`/`writeToStderr`: stdio is patched before the preflight
+  runs.
 - Gemma 4 system prompt: `core/src/prompts/capricornSnippets.ts` (reuses
   upstream section renderers).
 - Storage: `~/.capricorn`, `<project>/.capricorn`, `CAPRICORN.md`,

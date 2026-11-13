@@ -17,8 +17,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 // optional native build that is not installed on Windows runners.
 import * as pty from '@lydell/node-pty';
 import {
+  DEFAULT_MOCK_MODELS,
   doneFrame,
   textFrame,
+  type MockModel,
 } from '../packages/core/dist/src/providers/ollama/testing/mockOllamaServer.js';
 import { CLI_ENTRY, createEnv, type E2EEnv } from './harness.js';
 
@@ -61,26 +63,30 @@ function pick(names: string[]): Record<string, string> {
   return out;
 }
 
-function spawnTui() {
-  const term = pty.spawn(process.execPath, ['--no-deprecation', CLI_ENTRY], {
-    name: 'xterm-256color',
-    cols: 120,
-    rows: 40,
-    cwd: env.repo,
-    env: {
-      // Windows needs these to open sockets and temp files. child_process
-      // adds them automatically (libuv does), but node-pty passes only what
-      // it is given; without SystemRoot, fetch to the mock daemon fails.
-      ...pick(['SystemRoot', 'SYSTEMDRIVE', 'TEMP', 'TMP', 'windir']),
-      PATH: process.env['PATH'] ?? '',
-      HOME: env.home,
-      USERPROFILE: env.home,
-      CAPRICORN_OLLAMA_HOST: env.mock.url,
-      GEMINI_CLI_NO_RELAUNCH: 'true',
-      GEMINI_CLI_TRUST_WORKSPACE: 'true',
-      TERM: 'xterm-256color',
+function spawnTui(args: string[] = []) {
+  const term = pty.spawn(
+    process.execPath,
+    ['--no-deprecation', CLI_ENTRY, ...args],
+    {
+      name: 'xterm-256color',
+      cols: 120,
+      rows: 40,
+      cwd: env.repo,
+      env: {
+        // Windows needs these to open sockets and temp files. child_process
+        // adds them automatically (libuv does), but node-pty passes only what
+        // it is given; without SystemRoot, fetch to the mock daemon fails.
+        ...pick(['SystemRoot', 'SYSTEMDRIVE', 'TEMP', 'TMP', 'windir']),
+        PATH: process.env['PATH'] ?? '',
+        HOME: env.home,
+        USERPROFILE: env.home,
+        CAPRICORN_OLLAMA_HOST: env.mock.url,
+        GEMINI_CLI_NO_RELAUNCH: 'true',
+        GEMINI_CLI_TRUST_WORKSPACE: 'true',
+        TERM: 'xterm-256color',
+      },
     },
-  });
+  );
   let screen = '';
   term.onData((d) => (screen += d));
   let exitCode: number | undefined;
@@ -162,5 +168,52 @@ describe('interactive UI', () => {
     expect(code, `TUI did not exit:\n${tui.screen().slice(-1500)}`).not.toBe(
       -1,
     );
+  }, 90_000);
+});
+
+describe('startup model prompts', () => {
+  // Regression: the preflight prompt used to be written to the patched
+  // process.stderr, so the user faced a blank screen waiting for an answer.
+  it('shows the "use the installed model instead?" question and accepts Enter', async () => {
+    const tui = spawnTui(['--model', 'gemma4:31b']);
+    await tui.waitFor(/Use the installed model "gemma4:12b".*\[Y\/n\]/s);
+    tui.term.write('\r');
+    await tui.waitFor(/Type your message/i);
+  });
+});
+
+describe('first-run download offer', () => {
+  // Every preset the recommendation can pick, whatever this machine's
+  // hardware (detection is real here): pulling one installs it in the mock.
+  const gemma = DEFAULT_MOCK_MODELS.filter((m) => m.family === 'gemma4');
+  const pullable: MockModel[] = [
+    ...gemma,
+    { ...gemma[gemma.length - 1], name: 'gemma4:e2b' },
+  ];
+  const pulls = () => env.mock.requests.filter((q) => q.path === '/api/pull');
+
+  beforeEach(async () => {
+    await env.cleanup();
+    env = await createEnv({ models: [], pullable });
+  });
+
+  it('downloads nothing when the user just presses Enter (default: no)', async () => {
+    const tui = spawnTui();
+    await tui.waitFor(/Download gemma4:\S+ now\?.*\[y\/N\]/s);
+    tui.term.write('\r');
+    expect(await tui.exited).toBe(1);
+    expect(tui.screen()).toContain('No model downloaded');
+    expect(pulls()).toHaveLength(0);
+  });
+
+  it('pulls the recommended model after "y" and starts the session', async () => {
+    const tui = spawnTui();
+    await tui.waitFor(/Download (gemma4:\S+) now\?/);
+    const tag = /Download (gemma4:\S+) now\?/.exec(tui.screen())![1];
+    tui.term.write('y\r');
+    await tui.waitFor(/Type your message/i, 60_000);
+    expect(pulls().map((q) => (q.body as { model: string }).model)).toEqual([
+      tag,
+    ]);
   }, 90_000);
 });

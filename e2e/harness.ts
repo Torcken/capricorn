@@ -64,7 +64,7 @@ export interface E2EEnv {
  * commit so git-aware features behave as in a user project.
  */
 export async function createEnv(
-  options: { models?: MockModel[] } = {},
+  options: { models?: MockModel[]; pullable?: MockModel[] } = {},
 ): Promise<E2EEnv> {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'capricorn-e2e-'));
   const repo = path.join(root, 'repo');
@@ -95,7 +95,10 @@ export async function createEnv(
     'init',
   ]);
 
-  const mock = await startMockOllama({ models: options.models });
+  const mock = await startMockOllama({
+    models: options.models,
+    pullable: options.pullable,
+  });
 
   const run: E2EEnv['run'] = (args, runOptions = {}) =>
     new Promise((resolve) => {

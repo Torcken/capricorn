@@ -228,3 +228,51 @@ describe('compareVersions', () => {
     expect(compareVersions('0.12.0-rc1', '0.12.0')).toBe(0);
   });
 });
+
+describe('runDiagnostics hardware check', () => {
+  const GIB = 1024 ** 3;
+  const hardware = {
+    totalMemoryBytes: 32 * GIB,
+    platform: 'linux' as const,
+    arch: 'x64',
+    cpus: 8,
+    gpus: [
+      {
+        vendor: 'nvidia' as const,
+        name: 'RTX 4070',
+        memoryBytes: 12 * GIB,
+        unified: false,
+      },
+    ],
+  };
+
+  it('recommends a model for this machine', async () => {
+    const report = await runDiagnostics({
+      runtime: runtime(),
+      client: new OllamaClient({ endpoint: mock.url }),
+      version: 'test',
+      cwd: process.cwd(),
+      hardware,
+    });
+    const hw = byId(report, 'runtime.hardware');
+    expect(hw.status).toBe('pass');
+    expect(hw.message).toBe(
+      '32 GiB RAM, RTX 4070 (12 GiB); recommended model: gemma4:12b (GPU).',
+    );
+  });
+
+  it('warns, without failing, when the selected model exceeds GPU memory', async () => {
+    const report = await runDiagnostics({
+      runtime: runtime('gemma4:31b'),
+      client: new OllamaClient({ endpoint: mock.url }),
+      version: 'test',
+      cwd: process.cwd(),
+      hardware,
+    });
+    const hw = byId(report, 'runtime.hardware');
+    expect(hw.status).toBe('warn');
+    expect(hw.remediation).toMatch(
+      /gemma4:31b needs ≈24 GiB.*partly on the CPU/,
+    );
+  });
+});

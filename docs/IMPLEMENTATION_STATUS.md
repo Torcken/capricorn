@@ -28,7 +28,8 @@ fully tested · **deferred** · **blocked**.
 | Behavioural eval suite (14 tasks, outcome-based checkers)                           | done                                   | `evals/capricorn/`, `e2e/evals-*.e2e.test.ts`           |
 | Prompt tuning from evals (`gemma4:12b`: 74% → 95%)                                  | in progress                            | `evals/capricorn/RESULTS.md`                            |
 | Settings-reachable Google paths (voice, telemetry, MCP/agent auth) closed           | done                                   | unit tests per path                                     |
-| Hardware-aware onboarding, local web fetch                                          | deferred                               | docs/ROADMAP.md                                         |
+| Hardware-aware onboarding (recommend, offer download, test load)                    | done (Linux/NVIDIA verified)           | `recommend.test.ts`, `preflight.test.ts`, pty e2e       |
+| Local web fetch                                                                     | deferred                               | docs/ROADMAP.md                                         |
 | Removal of Google network code (OAuth, Code Assist, Clearcut, GCP export) and deps  | done (see UPSTREAM.md for leftovers)   | docs/UPSTREAM.md                                        |
 | npm publication                                                                     | blocked                                | needs package-name ownership and maintainer credentials |
 
@@ -120,6 +121,11 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   an allowlist is given.
 - Approved shell commands and local MCP processes are outside the egress guard.
 - `web_fetch` and web search are unavailable.
+- `gemma4:e4b` (also `gemma4:latest`) fails to load on Ollama 0.30.11
+  (`Gemma4Assistant requires ctx_other to be set`), at any context size. The
+  onboarding still recommends E4B for GPUs under ≈11 GiB; its test load reports
+  the failure right after the download. AMD and Apple GPU detection are
+  unit-tested only.
 - Some retained upstream unit tests write to the real `~/.capricorn`.
 - Upstream integration/eval/perf suites are not part of the quality gate.
 - Internal package names remain `@google/gemini-cli-*` (private, bundled).

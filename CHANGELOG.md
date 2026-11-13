@@ -8,6 +8,14 @@ All notable changes to Capricorn are documented here. The format follows
 
 ### Added
 
+- Hardware-aware onboarding: when no verified Gemma 4 model is installed,
+  startup detects RAM and GPU (NVIDIA via `nvidia-smi`, AMD via sysfs, Apple
+  Silicon unified memory), recommends a preset that fits (12B, else E4B, else
+  E2B; larger presets listed but not auto-recommended) and, interactively,
+  offers to download it (default: no). The model is then test-loaded, so one
+  Ollama cannot run is reported before the session starts. `capricorn doctor`
+  gains a `runtime.hardware` check (and warns when the selected model exceeds
+  GPU memory); `capricorn models list` shows the recommendation.
 - Behavioural eval suite for local Gemma 4 models (`npm run eval:capricorn`,
   `evals/capricorn/`): 14 tasks with deterministic, outcome-based checkers; the
   suite itself is validated in the e2e tests.
@@ -39,6 +47,10 @@ All notable changes to Capricorn are documented here. The format follows
   non-Gemma-4 model.
 
 ### Fixed
+
+- Startup questions (e.g. "Use the installed model … instead? [Y/n]") were
+  invisible: they were written to the already-redirected stderr, leaving a blank
+  screen waiting for an answer. They now use the real terminal.
 
 - Headless runs could hang until the time limit: the model could call
   `enter_plan_mode` and then never leave Plan Mode. The tool is now only offered
