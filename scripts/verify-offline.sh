@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Copyright 2026 Capricorn Contributors
+# Copyright (C) 2026 Guillaume S. Condamine & all awesome contributors.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Offline/privacy verification (spec §8): runs the end-to-end suite inside a

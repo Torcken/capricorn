@@ -27,8 +27,9 @@ Contributions are accepted under the Apache License 2.0 (inbound = outbound); no
 CLA is required. By submitting a PR you confirm you have the right to license
 your contribution this way.
 
-- New files: `Copyright <year> Capricorn Contributors` license header (ESLint
-  enforces the format).
+- New files:
+  `Copyright (C) <year> Guillaume S. Condamine & all awesome contributors.`
+  license header (ESLint enforces the format).
 - Modified upstream files: keep the `Google LLC` header and mark your change
   with a `Capricorn:` comment.
 

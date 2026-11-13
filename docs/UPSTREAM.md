@@ -19,8 +19,9 @@ The repository history starts with the unmodified upstream commit, so
 - Upstream files keep their `Copyright Google LLC` headers. When Capricorn
   modifies such a file, the change is marked with a `Capricorn modification`
   block comment or an inline `Capricorn:` comment.
-- New files carry `Copyright 2026 Capricorn Contributors`. The ESLint header
-  rule accepts exactly these two holders.
+- New files carry
+  `Copyright (C) <year> Guillaume S. Condamine & all awesome contributors.` The
+  ESLint header rule accepts exactly these two holders.
 - `NOTICE` states the fork relationship, non-affiliation with Google and
   trademark use. Gemma 4 weights are not distributed.
 

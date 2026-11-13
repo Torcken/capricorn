@@ -41,8 +41,10 @@ Run one Vitest process per package at a time.
    unapproved network calls. Never weaken endpoint, model-verification, egress,
    workspace-boundary or approval checks.
 2. Security decisions belong in code with tests, not in prompts.
-3. New files get the `Capricorn Contributors` license header; modified upstream
-   files keep the Google header and get a `Capricorn:` comment.
+3. New files get the
+   `Copyright (C) <year> Guillaume S. Condamine & all awesome contributors.`
+   license header; modified upstream files keep the Google header and get a
+   `Capricorn:` comment.
 4. Comment _why_ for protocol translation, streaming, security and fallback
    code; add TSDoc to exported APIs.
 5. Report test results truthfully; never mark unverified work as complete in

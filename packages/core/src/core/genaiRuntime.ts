@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2026 Capricorn Contributors
+ * Copyright (C) 2026 Guillaume S. Condamine & all awesome contributors.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Portions adapted from @google/genai 1.30.0 (Copyright 2025 Google LLC,

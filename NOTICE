@@ -1,5 +1,5 @@
 Capricorn
-Copyright 2026 Capricorn Contributors
+Copyright (C) 2026 Guillaume S. Condamine & all awesome contributors.
 
 This product is a fork of, and includes software from, Gemini CLI
 (https://github.com/google-gemini/gemini-cli), developed by Google LLC and
@@ -9,9 +9,9 @@ Copyright 2025-2026 Google LLC.
 Fork base: Gemini CLI v0.67.0
 (commit dc6602cec4a6e823aa33937144245dc421e5165f). Files retained from
 upstream keep their original copyright headers; files written for Capricorn
-carry "Copyright 2026 Capricorn Contributors". Modifications to upstream files
-are marked with a "Capricorn modification" or "Capricorn:" comment. See
-docs/UPSTREAM.md for the list of major changes.
+carry "Copyright (C) 2026 Guillaume S. Condamine & all awesome contributors."
+Modifications to upstream files are marked with a "Capricorn modification" or
+"Capricorn:" comment. See docs/UPSTREAM.md for the list of major changes.
 
 Capricorn is an independent project. It is not affiliated with, endorsed by,
 or sponsored by Google LLC. "Google", "Gemini" and "Gemma" are trademarks of

@@ -74,10 +74,11 @@ CI uses Node 20 (`.nvmrc`, the minimum in `engines`): avoid Node 21+ features
 - Never add hosted inference, non-Gemma-4 models, telemetry, update checks or
   unapproved network calls; never weaken endpoint, model-verification, egress,
   workspace or approval checks.
-- New files use the `Copyright <year> Capricorn Contributors` header; modified
-  upstream files keep the Google header and get a `Capricorn:` comment. Comment
-  the _why_ of protocol, streaming, security and fallback code; TSDoc exported
-  APIs.
+- New files use the
+  `Copyright (C) <year> Guillaume S. Condamine & all awesome contributors.`
+  header; modified upstream files keep the Google header and get a `Capricorn:`
+  comment. Comment the _why_ of protocol, streaming, security and fallback code;
+  TSDoc exported APIs.
 - Mark upstream behaviour changes in tests with a comment; remove Google-only
   tests only when the functionality was intentionally removed.
 - Report test results truthfully; don't mark unverified work complete.
