@@ -43,6 +43,7 @@ import type { Config } from '../config/config.js';
 import { UserTierId } from '../code_assist/types.js';
 import { ApiRequestEvent, LlmRole } from '../telemetry/types.js';
 import { FatalAuthenticationError } from '../utils/errors.js';
+import { OllamaError, OllamaErrorKind } from '../providers/ollama/errors.js';
 import {
   GeminiCliOperation,
   GEN_AI_PROMPT_NAME,
@@ -431,6 +432,55 @@ describe('LoggingContentGenerator', () => {
       ).rejects.toThrow(abortError);
 
       expect(logApiError).not.toHaveBeenCalled();
+    });
+
+    // Capricorn: a cancelled Ollama request is a cancellation, not an error.
+    it('should NOT log error when an Ollama request is cancelled', async () => {
+      const req = {
+        contents: [{ role: 'user', parts: [{ text: 'hello' }] }],
+        model: 'gemini-3.1-flash-lite',
+      };
+      const cancelled = new OllamaError(
+        OllamaErrorKind.CANCELLED,
+        'Chat cancelled.',
+      );
+      vi.mocked(wrapped.generateContent).mockRejectedValue(cancelled);
+
+      await expect(
+        loggingContentGenerator.generateContent(
+          req,
+          'prompt-123',
+          LlmRole.UTILITY_SUMMARIZER,
+        ),
+      ).rejects.toThrow(cancelled);
+
+      expect(logApiError).not.toHaveBeenCalled();
+    });
+
+    // Capricorn: stats must name the model that served the request.
+    it('should log the model the wrapped generator resolves', async () => {
+      wrapped.resolveModelName = vi.fn().mockReturnValue('gemma4:12b');
+      const req = {
+        contents: [{ role: 'user', parts: [{ text: 'hello' }] }],
+        model: 'gemini-3.1-flash-lite',
+      };
+      vi.mocked(wrapped.generateContent).mockRejectedValue(
+        new Error('daemon down'),
+      );
+
+      await expect(
+        loggingContentGenerator.generateContent(
+          req,
+          'prompt-123',
+          LlmRole.UTILITY_SUMMARIZER,
+        ),
+      ).rejects.toThrow('daemon down');
+
+      expect(wrapped.resolveModelName).toHaveBeenCalledWith(
+        'gemini-3.1-flash-lite',
+      );
+      const event = vi.mocked(logApiError).mock.calls[0][1];
+      expect(event.model).toBe('gemma4:12b');
     });
   });
 

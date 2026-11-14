@@ -155,6 +155,15 @@ export class LoggingContentGenerator implements ContentGenerator {
     return this.wrapped;
   }
 
+  /**
+   * Capricorn: the name to record for a request. Usage stats are grouped by
+   * this name, so recording the requested Gemini alias showed models that
+   * never ran (see {@link ContentGenerator.resolveModelName}).
+   */
+  private modelForLogs(requested: string): string {
+    return this.wrapped.resolveModelName?.(requested) ?? requested;
+  }
+
   get userTier(): UserTierId | undefined {
     return this.wrapped.userTier;
   }
@@ -358,7 +367,7 @@ export class LoggingContentGenerator implements ContentGenerator {
         tracesEnabled: this.config.getTelemetryTracesEnabled(),
         sessionId: this.config.getSessionId(),
         attributes: {
-          [GEN_AI_REQUEST_MODEL]: req.model,
+          [GEN_AI_REQUEST_MODEL]: this.modelForLogs(req.model),
           [GEN_AI_PROMPT_NAME]: userPromptId,
           [GEN_AI_SYSTEM_INSTRUCTIONS]: safeJsonStringify(
             req.config?.systemInstruction ?? [],
@@ -374,7 +383,7 @@ export class LoggingContentGenerator implements ContentGenerator {
         const serverDetails = this._getEndpointUrl(req, 'generateContent');
         this.logApiRequest(
           contents,
-          req.model,
+          this.modelForLogs(req.model),
           userPromptId,
           role,
           req.config,
@@ -396,7 +405,7 @@ export class LoggingContentGenerator implements ContentGenerator {
           this._logApiResponse(
             contents,
             durationMs,
-            response.modelVersion || req.model,
+            response.modelVersion || this.modelForLogs(req.model),
             userPromptId,
             role,
             response.responseId,
@@ -425,7 +434,7 @@ export class LoggingContentGenerator implements ContentGenerator {
           this._logApiError(
             durationMs,
             error,
-            req.model,
+            this.modelForLogs(req.model),
             userPromptId,
             contents,
             role,
@@ -450,7 +459,7 @@ export class LoggingContentGenerator implements ContentGenerator {
         tracesEnabled: this.config.getTelemetryTracesEnabled(),
         sessionId: this.config.getSessionId(),
         attributes: {
-          [GEN_AI_REQUEST_MODEL]: req.model,
+          [GEN_AI_REQUEST_MODEL]: this.modelForLogs(req.model),
           [GEN_AI_PROMPT_NAME]: userPromptId,
           [GEN_AI_SYSTEM_INSTRUCTIONS]: safeJsonStringify(
             req.config?.systemInstruction ?? [],
@@ -475,7 +484,7 @@ export class LoggingContentGenerator implements ContentGenerator {
 
         this.logApiRequest(
           toContents(req.contents),
-          req.model,
+          this.modelForLogs(req.model),
           userPromptId,
           role,
           req.config,
@@ -497,7 +506,7 @@ export class LoggingContentGenerator implements ContentGenerator {
           this._logApiError(
             durationMs,
             error,
-            req.model,
+            this.modelForLogs(req.model),
             userPromptId,
             toContents(req.contents),
             role,
@@ -545,7 +554,7 @@ export class LoggingContentGenerator implements ContentGenerator {
       this._logApiResponse(
         requestContents,
         durationMs,
-        responses[0]?.modelVersion || req.model,
+        responses[0]?.modelVersion || this.modelForLogs(req.model),
         userPromptId,
         role,
         responses[0]?.responseId,
@@ -581,7 +590,7 @@ export class LoggingContentGenerator implements ContentGenerator {
       this._logApiError(
         durationMs,
         error,
-        responses[0]?.modelVersion || req.model,
+        responses[0]?.modelVersion || this.modelForLogs(req.model),
         userPromptId,
         requestContents,
         role,
@@ -606,7 +615,7 @@ export class LoggingContentGenerator implements ContentGenerator {
         tracesEnabled: this.config.getTelemetryTracesEnabled(),
         sessionId: this.config.getSessionId(),
         attributes: {
-          [GEN_AI_REQUEST_MODEL]: req.model,
+          [GEN_AI_REQUEST_MODEL]: this.modelForLogs(req.model),
         },
       },
       async ({ metadata: spanMetadata }) => {

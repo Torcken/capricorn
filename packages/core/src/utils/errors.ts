@@ -30,7 +30,21 @@ export function isNodeError(error: unknown): error is NodeJS.ErrnoException {
  * Checks if an error is an AbortError.
  */
 export function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === 'AbortError';
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  // Capricorn: the Ollama client turns a fired abort signal into an
+  // OllamaError of kind 'cancelled' (see providers/ollama/errors.ts). It is
+  // the same deliberate cancellation, so callers must not report it as an API
+  // failure. Matched by shape to keep this module free of provider imports.
+  if (
+    error.name === 'OllamaError' &&
+    'kind' in error &&
+    error.kind === 'cancelled'
+  ) {
+    return true;
+  }
+  return error.name === 'AbortError';
 }
 
 export function getErrorMessage(error: unknown): string {

@@ -141,9 +141,7 @@ const ModelUsageTable: React.FC<ModelUsageTableProps> = ({ models }) => {
       <Text bold color={theme.text.primary}>
         Model Usage
       </Text>
-      <Text color={theme.text.secondary}>
-        Use /model to view model quota information
-      </Text>
+      {/* Capricorn: no quota hint; local models have no quota. */}
       <Box height={1} />
 
       {/* Header */}

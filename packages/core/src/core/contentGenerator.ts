@@ -55,6 +55,14 @@ export interface ContentGenerator {
   userTierName?: string;
 
   paidTier?: GeminiUserTier;
+
+  /**
+   * Capricorn: the model that will actually serve a request naming
+   * `requested`. Upstream code asks for Gemini names (e.g. the summarizer's
+   * `gemini-3.1-flash-lite`); the Ollama generator serves all of them with the
+   * session's Gemma 4 model, and logs and usage stats must show that model.
+   */
+  resolveModelName?(requested: string | undefined): string;
 }
 
 /**

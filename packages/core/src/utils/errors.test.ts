@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { OllamaError, OllamaErrorKind } from '../providers/ollama/errors.js';
 import {
   isAuthenticationError,
   isAbortError,
@@ -50,6 +51,16 @@ describe('getErrorMessage', () => {
 });
 
 describe('isAbortError', () => {
+  // Capricorn: the Ollama client reports a fired abort signal this way.
+  it('should return true for a cancelled OllamaError only', () => {
+    expect(
+      isAbortError(new OllamaError(OllamaErrorKind.CANCELLED, 'cancelled')),
+    ).toBe(true);
+    expect(
+      isAbortError(new OllamaError(OllamaErrorKind.TIMEOUT, 'timed out')),
+    ).toBe(false);
+  });
+
   it('should return true for AbortError', () => {
     const error = new Error('Aborted');
     error.name = 'AbortError';
