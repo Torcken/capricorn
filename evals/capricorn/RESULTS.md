@@ -7,6 +7,51 @@ machine that ran it.
 All runs: Linux x64, 24 CPUs, 94 GiB RAM, Ollama 0.30.11; 3 runs per task unless
 noted.
 
+## 2026-11-14 — cheaper compression in small windows (`gemma4:12b`)
+
+Follow-up to the 2026-11-13 entry. Calls to the model were timed per role (a
+temporary, uncommitted hook in the build) to see where the time went at
+`--num-ctx 8192`:
+
+| Task (2 runs)         | Main turns | Compression calls | Compression time | Output per summary |
+| --------------------- | ---------- | ----------------- | ---------------- | ------------------ |
+| `context-long-read`   | 28 · 168 s | 16                | 361 s (68%)      | ≈1,180 tokens      |
+| `testfix-two-modules` | 21 · 178 s | 6                 | 206 s (54%)      | ≈1,850 tokens      |
+
+Each summary read only 2–3K tokens but wrote 1.2–1.8K, and locally generation is
+the slow part. The logged replies showed why: **the summarizer was thinking.**
+Upstream resolves utility calls (compression, loop detection, next-speaker and
+edit checks) through configs keyed by Gemini model names, and several of those
+ask for thoughts. The prompt also asked for a scratchpad before the snapshot,
+which Capricorn discards.
+
+Changes (commit after `cf27a4e87`):
+
+- In `ollama.think: auto`, only main-agent and subagent turns may think; utility
+  calls never do (`ollamaContentGenerator.ts`).
+- Local compression uses its own prompt (`getLocalCompressionPrompt`): snapshot
+  only, no scratchpad, a word budget, and the most needed sections first
+  (requirements, then progress and next step). The reply is capped at 8% of the
+  window (512–2,048 tokens).
+
+An intermediate version capped the output while the model still thought: the
+reasoning used most of the cap, the snapshot was cut mid-way, and
+`context-long-read` failed 0/2 (the tax-exempt rule was lost). Thinking off plus
+the section order fixed it:
+
+| 8K window             | Baseline (`cf27a4e87`) | Change                   |
+| --------------------- | ---------------------- | ------------------------ |
+| `context-long-read`   | 2/2, median ≈268 s     | 4/4 + 2/2, median ≈150 s |
+| `testfix-two-modules` | 2/2, median ≈196 s     | 2/2 + 2/2, median ≈85 s  |
+| Time per summary      | 23–34 s                | ≈10 s                    |
+
+Full suite with the change: **97% (29/30) at 8K** (2 runs per task) and **93%
+(14/15) at 32K**. Both failures are `tooluse-create-module`: the model wrote the
+module and its test but did not run the test; no utility call takes place in a
+run that short, so the change is not involved (6 more runs at 32K: 5/6). At 8K,
+`context-long-read` now takes ≈2.5 minutes instead of 5–8, and no task hit its
+time limit.
+
 ## 2026-11-13 — context management under pressure (`gemma4:12b`)
 
 `--num-ctx 8192` forces history compression: the fixed part of every request
@@ -51,7 +96,8 @@ times rose, e.g. `edit-rename-symbol` 36 → 74 s, `testfix-two-modules` 52 → 
 s; `context-long-read` took 5–8 minutes. At 32K the same tasks ran in their
 usual times (`testfix-two-modules` 54 s). The failure among the 14 tasks at 8K
 was a model-written test that failed (2 tool calls, no compression involved).
-Making compression cheaper in tight windows is the next step.
+Making compression cheaper in tight windows is the next step (done: see the
+2026-11-14 entry).
 
 ## 2026-11-11 — prompt and tool iterations (`gemma4:12b`, 11.9B Q4_K_M)
 

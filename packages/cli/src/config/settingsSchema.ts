@@ -1110,7 +1110,7 @@ const SETTINGS_SCHEMA = {
         requiresRestart: false,
         default: 'auto',
         description:
-          "Gemma 4 thinking channel: 'auto' follows the agent's request, 'on' forces it, 'off' disables it (faster).",
+          "Gemma 4 thinking channel: 'auto' follows the agent's request (never on internal calls such as compression), 'on' forces it, 'off' disables it (faster).",
         showInDialog: true,
         options: [
           { value: 'auto', label: 'Auto' },

@@ -533,6 +533,25 @@ describe('BaseLlmClient', () => {
   });
 
   describe('generateContent', () => {
+    // Capricorn: callers may cap generation (local summaries).
+    it('passes maxOutputTokens and disabled thinking to the generator', async () => {
+      mockGenerateContent.mockResolvedValue(createMockResponse('summary'));
+
+      await client.generateContent({
+        modelConfigKey: { model: 'test-model' },
+        contents: [{ role: 'user', parts: [{ text: 'Summarize.' }] }],
+        abortSignal: abortController.signal,
+        promptId: 'summary-prompt-id',
+        role: LlmRole.UTILITY_COMPRESSOR,
+        maxOutputTokens: 655,
+        disableThinking: true,
+      });
+
+      const config = mockGenerateContent.mock.calls[0][0].config;
+      expect(config.maxOutputTokens).toBe(655);
+      expect(config.thinkingConfig).toEqual({ thinkingBudget: 0 });
+    });
+
     it('should call generateContent with correct parameters and utilize retry mechanism', async () => {
       const mockResponse = createMockResponse('This is the content.');
       mockGenerateContent.mockResolvedValue(mockResponse);

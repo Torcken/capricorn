@@ -41,6 +41,11 @@ All notable changes to Capricorn are documented here. The format follows
 
 ### Changed
 
+- Cheaper history compression on local models: in `ollama.think: auto`, internal
+  calls (compression, loop detection, next-speaker and edit checks) no longer
+  think (upstream configs keyed by Gemini names asked for thoughts), and local
+  summaries use a short prompt without a scratchpad, with a length cap. At an 8K
+  window the slowest eval tasks run about twice as fast.
 - Gemma 4 system prompt (v2): rules follow the session's real tools (shell is
   only mentioned when available; read-only sessions get a "describe, don't edit"
   rule), plans are written inline and followed by action, answers must name

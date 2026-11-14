@@ -715,8 +715,8 @@
         },
         "think": {
           "title": "Thinking Mode",
-          "description": "Gemma 4 thinking channel: 'auto' follows the agent's request, 'on' forces it, 'off' disables it (faster).",
-          "markdownDescription": "Gemma 4 thinking channel: 'auto' follows the agent's request, 'on' forces it, 'off' disables it (faster).\n\n- Category: `Model`\n- Requires restart: `no`\n- Default: `auto`",
+          "description": "Gemma 4 thinking channel: 'auto' follows the agent's request (never on internal calls such as compression), 'on' forces it, 'off' disables it (faster).",
+          "markdownDescription": "Gemma 4 thinking channel: 'auto' follows the agent's request (never on internal calls such as compression), 'on' forces it, 'off' disables it (faster).\n\n- Category: `Model`\n- Requires restart: `no`\n- Default: `auto`",
           "default": "auto",
           "type": "string",
           "enum": ["auto", "on", "off"]

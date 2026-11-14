@@ -14,6 +14,7 @@ import {
   windowBudget,
 } from '../core/tokenLimits.js';
 import { getCompressionPrompt } from '../core/prompts.js';
+import { getLocalCompressionPrompt } from '../prompts/capricornSnippets.js';
 import { getResponseText } from '../utils/partUtils.js';
 import { logChatCompression } from '../telemetry/loggers.js';
 import { makeChatCompressionEvent, LlmRole } from '../telemetry/types.js';
@@ -655,6 +656,9 @@ export class ChatCompressionService {
       ? 'A previous <state_snapshot> exists in the history. You MUST integrate all still-relevant information from that snapshot into the new one, updating it with the more recent events. Do not lose established constraints or critical knowledge.'
       : 'Generate a new <state_snapshot> based on the provided history.';
 
+    // Capricorn: locally the snapshot is written directly (no scratchpad)
+    // and its length is capped; see getLocalCompressionPrompt.
+    const local = getActiveContextWindow() !== undefined;
     const summaryResponse = await config.getBaseLlmClient().generateContent({
       modelConfigKey: { model: modelStringToModelConfigAlias(model) },
       contents: [
@@ -663,16 +667,26 @@ export class ChatCompressionService {
           role: 'user',
           parts: [
             {
-              text: `${anchorInstruction}\n\nFirst, reason in your scratchpad. Then, generate the updated <state_snapshot>.`,
+              text: local
+                ? `${anchorInstruction}\n\nWrite the <state_snapshot> now, and nothing else.`
+                : `${anchorInstruction}\n\nFirst, reason in your scratchpad. Then, generate the updated <state_snapshot>.`,
             },
           ],
         },
       ],
-      systemInstruction: { text: getCompressionPrompt(config) },
+      systemInstruction: { text: compressionPrompt(config) },
       promptId,
       // TODO(joshualitt): wire up a sensible abort signal,
       abortSignal: abortSignal ?? new AbortController().signal,
       role: LlmRole.UTILITY_COMPRESSOR,
+      // Capricorn: no thinking either. The compression alias resolves to a
+      // Gemini config that asks for thoughts; Gemma then spent most of the
+      // capped output reasoning and the snapshot was cut off (seen at 8K:
+      // the tax-exempt rule was lost and the task failed).
+      ...(local && {
+        maxOutputTokens: localSummaryMaxTokens(),
+        disableThinking: true,
+      }),
     });
     // Capricorn: keep only the snapshot. The prompt asks the model to reason
     // in a scratchpad first; storing that reasoning in history wastes the
@@ -846,7 +860,7 @@ function summarizerInputBudget(config: Config, model: string): number {
   const window = getActiveContextWindow();
   if (window === undefined) return tokenLimit(model);
   const promptTokens = estimateTokenCountSync([
-    { text: getCompressionPrompt(config) },
+    { text: compressionPrompt(config) },
   ]);
   const reserve = Math.min(
     SUMMARY_OUTPUT_RESERVE_TOKENS,
@@ -947,3 +961,42 @@ export const LOCAL_SUMMARY_PREAMBLE =
 
 /** Capricorn: latest point (share of the window) to start compressing. */
 const MAX_LOCAL_TRIGGER_SHARE = 0.7;
+
+/**
+ * Capricorn: output cap for a local summary, as a share of the window and
+ * clamped to [LOCAL_SUMMARY_MIN_TOKENS, LOCAL_SUMMARY_MAX_TOKENS]. A short
+ * snapshot is cheaper to write (generation dominates the cost locally) and
+ * leaves more room after compression, so compression runs less often.
+ *
+ * Exported for testing purposes.
+ */
+export function localSummaryMaxTokens(): number {
+  const window = getActiveContextWindow() ?? 0;
+  return Math.min(
+    LOCAL_SUMMARY_MAX_TOKENS,
+    Math.max(
+      LOCAL_SUMMARY_MIN_TOKENS,
+      Math.round(window * LOCAL_SUMMARY_WINDOW_SHARE),
+    ),
+  );
+}
+const LOCAL_SUMMARY_WINDOW_SHARE = 0.08;
+const LOCAL_SUMMARY_MIN_TOKENS = 512;
+const LOCAL_SUMMARY_MAX_TOKENS = 2048;
+/** Words per token for the prompt's word budget (a token is ≈0.75 words;
+ * kept lower so the model stays under the hard token cap). */
+const WORDS_PER_TOKEN = 0.6;
+
+/**
+ * Capricorn: the compression system prompt. Locally a direct, length-bounded
+ * prompt (see getLocalCompressionPrompt); otherwise upstream's.
+ */
+function compressionPrompt(config: Config): string {
+  if (getActiveContextWindow() === undefined) {
+    return getCompressionPrompt(config);
+  }
+  return getLocalCompressionPrompt(
+    config.getApprovedPlanPath?.(),
+    Math.round(localSummaryMaxTokens() * WORDS_PER_TOKEN),
+  );
+}

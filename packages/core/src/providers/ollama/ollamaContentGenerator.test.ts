@@ -264,6 +264,7 @@ describe('OllamaContentGenerator thinking', () => {
     settings: Partial<OllamaGeneratorSettings>,
     model: string,
     includeThoughts?: boolean,
+    role: LlmRole = LlmRole.MAIN,
   ) => {
     active = model;
     mock.enqueueChat({ frames: [doneFrame()] });
@@ -278,7 +279,7 @@ describe('OllamaContentGenerator thinking', () => {
               : { thinkingConfig: { includeThoughts } },
         },
         'p',
-        LlmRole.MAIN,
+        role,
       ),
     );
     return mock.chatRequests().at(-1)!.body as { think?: boolean };
@@ -287,6 +288,27 @@ describe('OllamaContentGenerator thinking', () => {
   it('follows the request in auto mode', async () => {
     expect((await send({}, 'gemma4:12b', true)).think).toBe(true);
     expect((await send({}, 'gemma4:12b', false)).think).toBe(false);
+  });
+
+  it('follows the request for subagents too', async () => {
+    expect((await send({}, 'gemma4:12b', true, LlmRole.SUBAGENT)).think).toBe(
+      true,
+    );
+  });
+
+  // Upstream utility configs (resolved by Gemini model name) ask for thoughts.
+  it('never thinks on utility calls in auto mode', async () => {
+    for (const role of [
+      LlmRole.UTILITY_COMPRESSOR,
+      LlmRole.UTILITY_LOOP_DETECTOR,
+      LlmRole.UTILITY_NEXT_SPEAKER,
+    ]) {
+      expect((await send({}, 'gemma4:12b', true, role)).think).toBe(false);
+    }
+    expect(
+      (await send({ think: 'on' }, 'gemma4:12b', true, LlmRole.UTILITY_TOOL))
+        .think,
+    ).toBe(true);
   });
 
   it('honours forced modes', async () => {

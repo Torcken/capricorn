@@ -12,6 +12,7 @@ import {
   collapseOlderFunctionResponses,
   RECENT_TURNS_PROTECTED,
   LOCAL_SUMMARY_PREAMBLE,
+  localSummaryMaxTokens,
   compressionTriggerTokens,
   extractStateSnapshot,
   fitToTokenBudget,
@@ -342,6 +343,26 @@ describe('ChatCompressionService', () => {
         ),
       ).toBe(true);
       expect(stored).not.toContain('Scratchpad');
+
+      // Capricorn: the snapshot is asked for directly and its length capped
+      // (generation dominates local cost; see getLocalCompressionPrompt).
+      const request = generateContent.mock.calls[0][0];
+      expect(request.systemInstruction.text).toContain(
+        'Reply with the <state_snapshot> block only',
+      );
+      expect(request.systemInstruction.text).toContain('At most 1229 words');
+      expect(JSON.stringify(request.contents)).not.toContain('scratchpad');
+      expect(request.maxOutputTokens).toBe(2048);
+      expect(request.disableThinking).toBe(true);
+    });
+
+    it('caps the local summary at a share of the window', () => {
+      setActiveContextWindow(8192);
+      expect(localSummaryMaxTokens()).toBe(655);
+      setActiveContextWindow(4096);
+      expect(localSummaryMaxTokens()).toBe(512);
+      setActiveContextWindow(131_072);
+      expect(localSummaryMaxTokens()).toBe(2048);
     });
 
     it('compresses within one long task, splitting between tool exchanges', async () => {

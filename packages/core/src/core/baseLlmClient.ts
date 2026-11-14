@@ -96,6 +96,18 @@ export interface GenerateContentOptions {
    * The maximum number of attempts for the request.
    */
   maxAttempts?: number;
+  /**
+   * Capricorn: upper bound for generated tokens (e.g. a local summary,
+   * where generation time dominates). Unset: the model config's default.
+   */
+  maxOutputTokens?: number;
+  /**
+   * Capricorn: turn the model's thinking off for this call, whatever the
+   * resolved model config says. Upstream configs are keyed by Gemini model
+   * names, and some (e.g. `gemini-3-pro-preview`, which the compression
+   * alias resolves to) ask for thoughts.
+   */
+  disableThinking?: boolean;
 }
 
 interface _CommonGenerateOptions {
@@ -106,8 +118,10 @@ interface _CommonGenerateOptions {
   promptId: string;
   maxAttempts?: number;
   additionalProperties?: {
-    responseJsonSchema: Record<string, unknown>;
-    responseMimeType: string;
+    responseJsonSchema?: Record<string, unknown>;
+    responseMimeType?: string;
+    maxOutputTokens?: number;
+    thinkingConfig?: { thinkingBudget: number };
   };
 }
 
@@ -264,6 +278,8 @@ export class BaseLlmClient {
       promptId,
       role,
       maxAttempts,
+      maxOutputTokens,
+      disableThinking,
     } = options;
 
     const shouldRetryOnContent = (response: GenerateContentResponse) => {
@@ -279,6 +295,12 @@ export class BaseLlmClient {
         abortSignal,
         promptId,
         maxAttempts,
+        ...((maxOutputTokens !== undefined || disableThinking) && {
+          additionalProperties: {
+            ...(maxOutputTokens !== undefined && { maxOutputTokens }),
+            ...(disableThinking && { thinkingConfig: { thinkingBudget: 0 } }),
+          },
+        }),
       },
       shouldRetryOnContent,
       'generateContent',

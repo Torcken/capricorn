@@ -42,7 +42,7 @@ import type {
   Part,
 } from '@google/genai';
 import type { ContentGenerator } from '../../core/contentGenerator.js';
-import type { LlmRole } from '../../telemetry/llmRole.js';
+import { LlmRole } from '../../telemetry/llmRole.js';
 import { estimateTokenCountSync } from '../../utils/tokenCalculation.js';
 import { debugLogger } from '../../utils/debugLogger.js';
 import { coreEvents } from '../../utils/events.js';
@@ -80,8 +80,8 @@ export interface OllamaGeneratorSettings {
   /** Context window to allocate (`num_ctx`). */
   numCtx: number;
   /**
-   * `auto` follows the request's `thinkingConfig` (upstream asks for thoughts
-   * on main-agent turns); `on`/`off` force it. Ignored for models that do not
+   * `auto` follows the request's `thinkingConfig` on main-agent and subagent
+   * turns and turns thinking off for utility calls; `on`/`off` force it. Ignored for models that do not
    * report the `thinking` capability.
    */
   think: OllamaThinkMode;
@@ -132,9 +132,9 @@ export class OllamaContentGenerator implements ContentGenerator {
   async generateContent(
     request: GenerateContentParameters,
     _userPromptId: string,
-    _role: LlmRole,
+    role: LlmRole,
   ): Promise<GenerateContentResponse> {
-    const { body, verdict, estimate } = await this.buildRequest(request);
+    const { body, verdict, estimate } = await this.buildRequest(request, role);
     const signal = request.config?.abortSignal;
     const frame = await this.withRetry(signal, () =>
       this.client.chat(body, signal),
@@ -156,11 +156,11 @@ export class OllamaContentGenerator implements ContentGenerator {
   async generateContentStream(
     request: GenerateContentParameters,
     _userPromptId: string,
-    _role: LlmRole,
+    role: LlmRole,
   ): Promise<AsyncGenerator<GenerateContentResponse>> {
     // Build (and verify the model) eagerly so configuration errors surface as
     // a rejected promise, matching upstream generators' behavior.
-    const { body, verdict, estimate } = await this.buildRequest(request);
+    const { body, verdict, estimate } = await this.buildRequest(request, role);
     const signal = request.config?.abortSignal;
     return this.streamResponses(body, verdict.model, estimate, signal);
   }
@@ -271,7 +271,10 @@ export class OllamaContentGenerator implements ContentGenerator {
    * Resolves and verifies the model, then converts the request.
    * @throws {OllamaError} If the resolved model is missing or not allowed.
    */
-  private async buildRequest(request: GenerateContentParameters): Promise<{
+  private async buildRequest(
+    request: GenerateContentParameters,
+    role: LlmRole,
+  ): Promise<{
     body: OllamaChatRequest;
     verdict: ModelVerdict;
     estimate: number;
@@ -293,7 +296,7 @@ export class OllamaContentGenerator implements ContentGenerator {
     if (tools.length > 0) body.tools = tools;
     const format = toOllamaFormat(config);
     if (format) body.format = format;
-    const think = this.resolveThink(config?.thinkingConfig, verdict);
+    const think = this.resolveThink(config?.thinkingConfig, verdict, role);
     if (think !== undefined) body.think = think;
     if (this.settings.keepAlive) body.keep_alive = this.settings.keepAlive;
 
@@ -386,6 +389,7 @@ export class OllamaContentGenerator implements ContentGenerator {
       | { includeThoughts?: boolean; thinkingBudget?: number }
       | undefined,
     verdict: ModelVerdict,
+    role: LlmRole,
   ): boolean | undefined {
     if (verdict.capabilities && !verdict.capabilities.includes('thinking')) {
       return undefined;
@@ -396,6 +400,13 @@ export class OllamaContentGenerator implements ContentGenerator {
       case 'off':
         return false;
       default:
+        // Utility calls (compression, loop detection, next-speaker and edit
+        // checks...) never think in `auto`. Upstream configs are keyed by
+        // Gemini model names and several of them ask for thoughts, which
+        // Gemini writes quickly; on local hardware a utility call then spent
+        // most of its time, and its output cap, reasoning (seen at an 8K
+        // window: compression summaries cut off mid-snapshot).
+        if (role !== LlmRole.MAIN && role !== LlmRole.SUBAGENT) return false;
         if (!thinkingConfig) return false;
         if (thinkingConfig.thinkingBudget === 0) return false;
         return thinkingConfig.includeThoughts === true;
