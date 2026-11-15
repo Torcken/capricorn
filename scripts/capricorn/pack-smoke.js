@@ -78,6 +78,14 @@ try {
     ]) {
       if (!files.includes(required)) fail(`package is missing ${required}`);
     }
+    // Only these may ship. npm adds every root file whose name starts with
+    // README (e.g. a local README draft) whatever `files` says, so an
+    // allowlist catches what the `files` field alone cannot.
+    const allowed = /^(bundle\/.+|LICENSE|NOTICE|README\.md|package\.json)$/;
+    const unexpected = files.filter((f) => !allowed.test(f));
+    if (unexpected.length > 0) {
+      fail(`package contains unexpected files: ${unexpected.join(', ')}`);
+    }
     if (
       files.some((f) => /(^|\/)\.env($|\.)|\.pem$|credentials\.json$/.test(f))
     ) {

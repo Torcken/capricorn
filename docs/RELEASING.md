@@ -1,8 +1,8 @@
 # Releasing
 
-Capricorn is **not published yet**. Nothing in this repository publishes to npm,
-GitHub Releases, Homebrew or a container registry automatically; every step
-below is run by a maintainer with their own credentials.
+Nothing in this repository publishes to npm, GitHub Releases, Homebrew or a
+container registry automatically; every step below is run by a maintainer with
+their own credentials.
 
 ## Versioning
 
@@ -30,11 +30,13 @@ The version lives in the root `package.json` and every workspace `package.json`
    `npm sbom --sbom-format cyclonedx > capricorn-<x.y.z>.cdx.json` and review
    `npm audit --omit=dev`.
 8. Commit, tag `v<x.y.z>`, push the tag.
-9. Publish (manual): flip `"private": true` to `false` in the **root**
-   `package.json` only after the package name is confirmed available and owned
-   (`capricorn-code`: free on npm as of 2026-11-15; `capricorn` and
-   `capricorn-cli` belong to other projects), then `npm publish --access public`
-   (add `--tag next` for pre-releases). Workspace packages stay private.
+9. Publish (manual, with the maintainer's npm login and 2FA): set
+   `"private": false` in the **root** `package.json` (workspace packages stay
+   private), then `npm publish --access public`, adding `--tag next` for
+   pre-releases. The name `capricorn-code` is reserved by a code-free `0.0.0`
+   placeholder (2026-11-15); `capricorn` and `capricorn-cli` belong to other
+   projects. Do not publish while `npm audit --omit=dev` reports unaddressed
+   critical or high issues.
 10. Create the GitHub release with the changelog section, the SBOM and the
     real-model smoke results.
 

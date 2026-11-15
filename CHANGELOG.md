@@ -48,6 +48,10 @@ All notable changes to Capricorn are documented here. The format follows
 
 ### Changed
 
+- Package: runtime libraries are bundled into `bundle/capricorn.js`, so
+  installing the package no longer pulls them as dependencies (only the optional
+  native terminal modules remain). The package check now fails on any file
+  outside `bundle/`, `README.md`, `LICENSE`, `NOTICE` and `package.json`.
 - npm package name: `capricorn-code` (`capricorn-cli` and `capricorn` belong to
   other projects on npm). The command is still `capricorn`. Repository links
   added to `package.json`; the package stays private until it is published.
