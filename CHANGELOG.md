@@ -6,6 +6,10 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.1] - 2026-11-15
+
+First release on npm, as `capricorn-code`.
+
 ### Security
 
 - The upstream browser agent is disabled: it drove a Chrome process that browsed
@@ -72,7 +76,7 @@ All notable changes to Capricorn are documented here. The format follows
   outside `bundle/`, `README.md`, `LICENSE`, `NOTICE` and `package.json`.
 - npm package name: `capricorn-code` (`capricorn-cli` and `capricorn` belong to
   other projects on npm). The command is still `capricorn`. Repository links
-  added to `package.json`; the package stays private until it is published.
+  added to `package.json`.
 - Cheaper history compression on local models: in `ollama.think: auto`, internal
   calls (compression, loop detection, next-speaker and edit checks) no longer
   think (upstream configs keyed by Gemini names asked for thoughts), and local
