@@ -25,7 +25,6 @@ import {
 import { App } from './App.js';
 import { AppContext } from './contexts/AppContext.js';
 import { UIStateContext, type UIState } from './contexts/UIStateContext.js';
-import { QuotaContext } from './contexts/QuotaContext.js';
 import {
   UIActionsContext,
   type UIActions,
@@ -36,7 +35,6 @@ import {
   AuthState,
   type ConfirmationRequest,
   type PermissionConfirmationRequest,
-  type QuotaStats,
   MessageType,
   StreamingState,
   type HistoryItemInfo,
@@ -50,8 +48,6 @@ import {
   type Config,
   type IdeInfo,
   type IdeContext,
-  type UserTierId,
-  type GeminiUserTier,
   type UserFeedbackPayload,
   type HookSystemMessagePayload,
   type AgentDefinition,
@@ -61,7 +57,6 @@ import {
   getErrorMessage,
   getAllGeminiMdFilenames,
   AuthType,
-  clearCachedCredentialFile,
   type ResumedSessionData,
   recordExitFail,
   ShellExecutionService,
@@ -72,7 +67,6 @@ import {
   CoreEvent,
   flattenMemory,
   type MemoryChangedPayload,
-  writeToStdout,
   disableMouseEvents,
   enterAlternateScreen,
   enableMouseEvents,
@@ -85,11 +79,7 @@ import {
   generateSummary,
   type ConsentRequestPayload,
   type AgentsDiscoveredPayload,
-  ChangeAuthRequestedError,
-  ProjectIdRequiredError,
   buildUserSteeringHintPrompt,
-  logBillingEvent,
-  ApiKeyUpdatedEvent,
   LegacyAgentProtocol,
   type InjectionSource,
 } from '@capricorn/core';
@@ -99,7 +89,6 @@ import { useHistory } from './hooks/useHistoryManager.js';
 import { useMemoryMonitor } from './hooks/useMemoryMonitor.js';
 import { useThemeCommand } from './hooks/useThemeCommand.js';
 import { useAuthCommand } from './auth/useAuth.js';
-import { useQuotaAndFallback } from './hooks/useQuotaAndFallback.js';
 import { useEditorSettings } from './hooks/useEditorSettings.js';
 import { useSettingsCommand } from './hooks/useSettingsCommand.js';
 import { useModelCommand } from './hooks/useModelCommand.js';
@@ -123,7 +112,7 @@ import { useGeminiStream } from './hooks/useGeminiStream.js';
 import { useAgentStream } from './hooks/useAgentStream.js';
 import { type BackgroundTask } from './hooks/useExecutionLifecycle.js';
 import { useVim } from './hooks/vim.js';
-import { type LoadableSettingScope, SettingScope } from '../config/settings.js';
+import { SettingScope } from '../config/settings.js';
 import { type InitializationResult } from '../core/initializer.js';
 import { startAutoMemoryIfEnabled } from '../utils/autoMemory.js';
 import { useFocus } from './hooks/useFocus.js';
@@ -360,7 +349,6 @@ export const AppContainer = (props: AppContainerProps) => {
   const [quittingMessages, setQuittingMessages] = useState<
     HistoryItem[] | null
   >(null);
-  const [showPrivacyNotice, setShowPrivacyNotice] = useState<boolean>(false);
   const [themeError, setThemeError] = useState<string | null>(
     initializationResult.themeError,
   );
@@ -545,21 +533,6 @@ export const AppContainer = (props: AppContainerProps) => {
 
   const [currentModel, setCurrentModel] = useState(config.getModel());
 
-  const [userTier, setUserTier] = useState<UserTierId | undefined>(undefined);
-  const [quotaStats, setQuotaStats] = useState<QuotaStats | undefined>(() => {
-    const remaining = config.getQuotaRemaining();
-    const limit = config.getQuotaLimit();
-    const resetTime = config.getQuotaResetTime();
-    return remaining !== undefined ||
-      limit !== undefined ||
-      resetTime !== undefined
-      ? { remaining, limit, resetTime }
-      : undefined;
-  });
-  const [paidTier, setPaidTier] = useState<GeminiUserTier | undefined>(
-    undefined,
-  );
-
   const [isConfigInitialized, setConfigInitialized] = useState(false);
 
   const logger = useLogger(config);
@@ -658,23 +631,9 @@ export const AppContainer = (props: AppContainerProps) => {
       setCurrentModel(config.getModel());
     };
 
-    const handleQuotaChanged = (payload: {
-      remaining: number | undefined;
-      limit: number | undefined;
-      resetTime?: string;
-    }) => {
-      setQuotaStats({
-        remaining: payload.remaining,
-        limit: payload.limit,
-        resetTime: payload.resetTime,
-      });
-    };
-
     coreEvents.on(CoreEvent.ModelChanged, handleModelChanged);
-    coreEvents.on(CoreEvent.QuotaChanged, handleQuotaChanged);
     return () => {
       coreEvents.off(CoreEvent.ModelChanged, handleModelChanged);
-      coreEvents.off(CoreEvent.QuotaChanged, handleQuotaChanged);
     };
   }, [config]);
 
@@ -953,30 +912,9 @@ export const AppContainer = (props: AppContainerProps) => {
     }
   }, [authState, authContext, setAuthState]);
 
-  const handleShowAuthSelection = useCallback(() => {
-    setAuthState(AuthState.Updating);
-  }, [setAuthState]);
-
-  const {
-    proQuotaRequest,
-    handleProQuotaChoice,
-    validationRequest,
-    handleValidationChoice,
-    // G1 AI Credits
-    overageMenuRequest,
-    handleOverageMenuChoice,
-    emptyWalletRequest,
-    handleEmptyWalletChoice,
-  } = useQuotaAndFallback({
-    config,
-    historyManager,
-    userTier,
-    paidTier,
-    settings,
-    setModelSwitchedFromQuotaError,
-    onShowAuthSelection: handleShowAuthSelection,
-    errorVerbosity: settings.merged.ui.errorVerbosity,
-  });
+  // Capricorn: the Google quota/fallback/AI-credit dialogs were removed (their
+  // hook, useQuotaAndFallback, handled hosted-model quota errors that Ollama
+  // never produces).
 
   // Derive auth state variables for backward compatibility with UIStateContext
   const isAuthDialogOpen = authState === AuthState.Updating;
@@ -1012,60 +950,8 @@ export const AppContainer = (props: AppContainerProps) => {
     [handleDeleteSessionSync],
   );
 
-  // Create handleAuthSelect wrapper for backward compatibility
-  const handleAuthSelect = useCallback(
-    async (authType: AuthType | undefined, scope: LoadableSettingScope) => {
-      if (authType) {
-        const previousAuthType =
-          config.getContentGeneratorConfig()?.authType ?? 'unknown';
-        if (authType === AuthType.LOGIN_WITH_GOOGLE) {
-          setAuthContext({ requiresRestart: true });
-        } else {
-          setAuthContext({});
-        }
-        await clearCachedCredentialFile();
-        settings.setValue(scope, 'security.auth.selectedType', authType);
-
-        try {
-          config.setRemoteAdminSettings(undefined);
-          await config.refreshAuth(authType);
-          setAuthState(AuthState.Authenticated);
-          logBillingEvent(
-            config,
-            new ApiKeyUpdatedEvent(previousAuthType, authType),
-          );
-        } catch (e) {
-          if (e instanceof ChangeAuthRequestedError) {
-            return;
-          }
-          if (e instanceof ProjectIdRequiredError) {
-            // OAuth succeeded but account setup requires project ID
-            // Show the error message directly without "Failed to authenticate" prefix
-            onAuthError(getErrorMessage(e));
-            return;
-          }
-          onAuthError(
-            `Failed to authenticate: ${e instanceof Error ? e.message : String(e)}`,
-          );
-          return;
-        }
-
-        if (
-          authType === AuthType.LOGIN_WITH_GOOGLE &&
-          config.isBrowserLaunchSuppressed()
-        ) {
-          writeToStdout(`
-----------------------------------------------------------------
-Logging in with Google... Restarting Capricorn to continue.
-----------------------------------------------------------------
-          `);
-          await relaunchApp();
-        }
-      }
-      setAuthState(AuthState.Authenticated);
-    },
-    [settings, config, setAuthState, onAuthError, setAuthContext],
-  );
+  // Capricorn: handleAuthSelect (Google sign-in / API key switch) removed with
+  // the sign-in dialog; there is no provider to choose.
 
   const handleApiKeySubmit = useCallback(
     async (apiKey: string) => {
@@ -1093,15 +979,6 @@ Logging in with Google... Restarting Capricorn to continue.
     // Go back to auth method selection
     setAuthState(AuthState.Updating);
   }, [setAuthState]);
-
-  // Sync user tier from config when authentication changes
-  useEffect(() => {
-    // Only sync when not currently authenticating
-    if (authState === AuthState.Authenticated) {
-      setUserTier(config.getUserTier());
-      setPaidTier(config.getUserPaidTier());
-    }
-  }, [config, authState]);
 
   // Check for enforced auth type mismatch
   useEffect(() => {
@@ -1201,7 +1078,6 @@ Logging in with Google... Restarting Capricorn to continue.
       openAuthDialog: () => setAuthState(AuthState.Updating),
       openThemeDialog,
       openEditorDialog,
-      openPrivacyNotice: () => setShowPrivacyNotice(true),
       openSettingsDialog,
       openSessionBrowser,
       openModelDialog,
@@ -1250,7 +1126,6 @@ Logging in with Google... Restarting Capricorn to continue.
       setQuittingMessages,
       awaitCancelPromise,
       setDebugMessage,
-      setShowPrivacyNotice,
       setCorgiMode,
       dispatchExtensionStateUpdate,
       openPermissionsDialog,
@@ -1747,8 +1622,7 @@ Logging in with Google... Restarting Capricorn to continue.
     !isResuming &&
     (streamingState === StreamingState.Idle ||
       streamingState === StreamingState.Responding ||
-      streamingState === StreamingState.WaitingForConfirmation) &&
-    !proQuotaRequest;
+      streamingState === StreamingState.WaitingForConfirmation);
 
   const observerRef = useRef<ResizeObserver | null>(null);
 
@@ -1837,7 +1711,6 @@ Logging in with Google... Restarting Capricorn to continue.
       !isAuthDialogOpen &&
       !isThemeDialogOpen &&
       !isEditorDialogOpen &&
-      !showPrivacyNotice &&
       geminiClient?.isInitialized?.()
     ) {
       void handleFinalSubmit(initialPrompt);
@@ -1851,7 +1724,6 @@ Logging in with Google... Restarting Capricorn to continue.
     isAuthDialogOpen,
     isThemeDialogOpen,
     isEditorDialogOpen,
-    showPrivacyNotice,
     geminiClient,
   ]);
 
@@ -2129,12 +2001,7 @@ Logging in with Google... Restarting Capricorn to continue.
     isAuthenticating ||
     isAuthDialogOpen ||
     isEditorDialogOpen ||
-    showPrivacyNotice ||
     showIdeRestartPrompt ||
-    !!proQuotaRequest ||
-    !!validationRequest ||
-    !!overageMenuRequest ||
-    !!emptyWalletRequest ||
     isSessionBrowserOpen ||
     authState === AuthState.AwaitingApiKeyInput ||
     isAwaitingLoginRestart ||
@@ -2551,10 +2418,6 @@ Logging in with Google... Restarting Capricorn to continue.
     !!authConsentRequest ||
     hasConfirmUpdateExtensionRequests ||
     hasLoopDetectionConfirmationRequest ||
-    !!proQuotaRequest ||
-    !!validationRequest ||
-    !!overageMenuRequest ||
-    !!emptyWalletRequest ||
     !!customDialog;
 
   const loadingPhrases = settings.merged.ui.loadingPhrases;
@@ -2740,26 +2603,6 @@ Logging in with Google... Restarting Capricorn to continue.
     ],
   );
 
-  const quotaState = useMemo(
-    () => ({
-      userTier,
-      stats: quotaStats,
-      proQuotaRequest,
-      validationRequest,
-      // G1 AI Credits dialog state
-      overageMenuRequest,
-      emptyWalletRequest,
-    }),
-    [
-      userTier,
-      quotaStats,
-      proQuotaRequest,
-      validationRequest,
-      overageMenuRequest,
-      emptyWalletRequest,
-    ],
-  );
-
   const uiState: UIState = useMemo(
     () => ({
       history: historyManager.history,
@@ -2778,7 +2621,6 @@ Logging in with Google... Restarting Capricorn to continue.
       apiKeyDefaultValue,
       editorError,
       isEditorDialogOpen,
-      showPrivacyNotice,
       mouseMode,
       corgiMode,
       debugMessage,
@@ -2892,7 +2734,6 @@ Logging in with Google... Restarting Capricorn to continue.
       isAuthDialogOpen,
       editorError,
       isEditorDialogOpen,
-      showPrivacyNotice,
       mouseMode,
       corgiMode,
       debugMessage,
@@ -2999,22 +2840,15 @@ Logging in with Google... Restarting Capricorn to continue.
     ],
   );
 
-  const exitPrivacyNotice = useCallback(
-    () => setShowPrivacyNotice(false),
-    [setShowPrivacyNotice],
-  );
-
   const uiActions: UIActions = useMemo(
     () => ({
       handleThemeSelect,
       closeThemeDialog,
       handleThemeHighlight,
-      handleAuthSelect,
       setAuthState,
       onAuthError,
       handleEditorSelect,
       exitEditorDialog,
-      exitPrivacyNotice,
       closeSettingsDialog,
       closeModelDialog,
       openVoiceModelDialog,
@@ -3033,11 +2867,6 @@ Logging in with Google... Restarting Capricorn to continue.
       refreshStatic,
       handleFinalSubmit,
       handleClearScreen,
-      handleProQuotaChoice,
-      handleValidationChoice,
-      // G1 AI Credits handlers
-      handleOverageMenuChoice,
-      handleEmptyWalletChoice,
       openSessionBrowser,
       closeSessionBrowser,
       handleResumeSession,
@@ -3111,12 +2940,10 @@ Logging in with Google... Restarting Capricorn to continue.
       handleThemeSelect,
       closeThemeDialog,
       handleThemeHighlight,
-      handleAuthSelect,
       setAuthState,
       onAuthError,
       handleEditorSelect,
       exitEditorDialog,
-      exitPrivacyNotice,
       closeSettingsDialog,
       closeModelDialog,
       openVoiceModelDialog,
@@ -3135,10 +2962,6 @@ Logging in with Google... Restarting Capricorn to continue.
       refreshStatic,
       handleFinalSubmit,
       handleClearScreen,
-      handleProQuotaChoice,
-      handleValidationChoice,
-      handleOverageMenuChoice,
-      handleEmptyWalletChoice,
       openSessionBrowser,
       closeSessionBrowser,
       handleResumeSession,
@@ -3170,36 +2993,34 @@ Logging in with Google... Restarting Capricorn to continue.
 
   return (
     <UIStateContext.Provider value={uiState}>
-      <QuotaContext.Provider value={quotaState}>
-        <InputContext.Provider value={inputState}>
-          <UIActionsContext.Provider value={uiActions}>
-            <ConfigContext.Provider value={config}>
-              <AppContext.Provider
-                value={{
-                  version: props.version,
-                  startupWarnings: props.startupWarnings || [],
-                }}
+      <InputContext.Provider value={inputState}>
+        <UIActionsContext.Provider value={uiActions}>
+          <ConfigContext.Provider value={config}>
+            <AppContext.Provider
+              value={{
+                version: props.version,
+                startupWarnings: props.startupWarnings || [],
+              }}
+            >
+              <ToolActionsProvider
+                config={config}
+                toolCalls={allToolCalls}
+                isExpanded={isExpanded}
+                toggleExpansion={toggleExpansion}
+                toggleAllExpansion={toggleAllExpansion}
               >
-                <ToolActionsProvider
-                  config={config}
-                  toolCalls={allToolCalls}
-                  isExpanded={isExpanded}
-                  toggleExpansion={toggleExpansion}
-                  toggleAllExpansion={toggleAllExpansion}
-                >
-                  <ShellFocusContext.Provider value={isFocused}>
-                    <MouseProvider mouseEventsEnabled={mouseMode}>
-                      <ScrollProvider>
-                        <App />
-                      </ScrollProvider>
-                    </MouseProvider>
-                  </ShellFocusContext.Provider>
-                </ToolActionsProvider>
-              </AppContext.Provider>
-            </ConfigContext.Provider>
-          </UIActionsContext.Provider>
-        </InputContext.Provider>
-      </QuotaContext.Provider>
+                <ShellFocusContext.Provider value={isFocused}>
+                  <MouseProvider mouseEventsEnabled={mouseMode}>
+                    <ScrollProvider>
+                      <App />
+                    </ScrollProvider>
+                  </MouseProvider>
+                </ShellFocusContext.Provider>
+              </ToolActionsProvider>
+            </AppContext.Provider>
+          </ConfigContext.Provider>
+        </UIActionsContext.Provider>
+      </InputContext.Provider>
     </UIStateContext.Provider>
   );
 };

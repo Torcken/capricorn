@@ -21,7 +21,6 @@ export * from './policy/config.js';
 export * from './policy/integrity.js';
 export * from './config/extensions/integrity.js';
 export * from './config/extensions/integrityTypes.js';
-export * from './billing/index.js';
 export * from './confirmation-bus/types.js';
 export * from './confirmation-bus/message-bus.js';
 
@@ -59,12 +58,7 @@ export * from './routing/modelRouterService.js';
 export * from './fallback/types.js';
 export * from './fallback/handler.js';
 
-export * from './code_assist/codeAssist.js';
-export * from './code_assist/oauth2.js';
-export * from './code_assist/server.js';
-export * from './code_assist/setup.js';
 export * from './code_assist/types.js';
-export * from './code_assist/telemetry.js';
 export * from './code_assist/admin/admin_controls.js';
 export * from './code_assist/admin/mcpUtils.js';
 export * from './core/apiKeyCredentialStorage.js';
@@ -279,8 +273,6 @@ export {
 
 // Export telemetry functions
 export * from './telemetry/index.js';
-export * from './telemetry/billingEvents.js';
-export { logBillingEvent } from './telemetry/loggers.js';
 export * from './telemetry/constants.js';
 export { createSessionId } from './utils/session.js';
 export * from './utils/compatibility.js';

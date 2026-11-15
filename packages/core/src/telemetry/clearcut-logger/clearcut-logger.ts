@@ -188,10 +188,6 @@ export class ClearcutLogger {
   logOnboardingStartEvent(..._args: unknown[]): void {}
   logOnboardingSuccessEvent(..._args: unknown[]): void {}
   logStartupStatsEvent(..._args: unknown[]): void {}
-  logCreditsUsedEvent(..._args: unknown[]): void {}
-  logOverageOptionSelectedEvent(..._args: unknown[]): void {}
-  logEmptyWalletMenuShownEvent(..._args: unknown[]): void {}
-  logCreditPurchaseClickEvent(..._args: unknown[]): void {}
   logBrowserAgentConnectionEvent(..._args: unknown[]): void {}
   logBrowserAgentVisionStatusEvent(..._args: unknown[]): void {}
   logBrowserAgentTaskOutcomeEvent(..._args: unknown[]): void {}

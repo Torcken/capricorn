@@ -6,6 +6,22 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Removed
+
+- The remaining Google leftovers: the Code Assist client, Google sign-in and
+  onboarding code, Code Assist telemetry, remote experiments and admin controls,
+  `billing/` and billing telemetry; the quota, overage, AI-credit,
+  account-validation, suspended-account, API-key, sign-in and privacy-notice
+  dialogs; the `quota` footer item and Google AI Credits in `/stats`; the
+  `billing` setting (it showed a Google "Overage Strategy" in `/settings`) and
+  Vertex AI routing; the unused issue-triage screens; Gemini CLI's documentation
+  generators.
+
+### Changed
+
+- The settings schema `$id` and the web-fetch User-Agent point to the Capricorn
+  repository instead of Google's.
+
 ## [0.1.0-alpha.3] - 2026-11-15
 
 ### Changed

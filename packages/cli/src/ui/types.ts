@@ -12,7 +12,6 @@ import {
   type SerializableConfirmationDetails,
   type ToolResultDisplay,
   type ToolDisplay,
-  type RetrieveUserQuotaResponse,
   type SkillDefinition,
   type AgentDefinition,
   type ApprovalMode,
@@ -220,22 +219,11 @@ export interface HistoryItemQuotaBase extends HistoryItemBase {
   userEmail?: string;
   tier?: string;
   currentModel?: string;
-  pooledRemaining?: number;
-  pooledLimit?: number;
-  pooledResetTime?: string;
-}
-
-export interface QuotaStats {
-  remaining: number | undefined;
-  limit: number | undefined;
-  resetTime?: string;
 }
 
 export type HistoryItemStats = HistoryItemQuotaBase & {
   type: 'stats';
   duration: string;
-  quotas?: RetrieveUserQuotaResponse;
-  creditBalance?: number;
 };
 
 export type HistoryItemModelStats = HistoryItemQuotaBase & {

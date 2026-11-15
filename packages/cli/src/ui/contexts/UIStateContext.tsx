@@ -21,9 +21,6 @@ import type {
   IdeContext,
   ApprovalMode,
   IdeInfo,
-  AuthType,
-  FallbackIntent,
-  ValidationIntent,
   AgentDefinition,
   FolderDiscoveryResults,
   PolicyUpdateConfirmationRequest,
@@ -33,52 +30,6 @@ import type { DOMElement } from 'ink';
 import type { SessionStatsState } from '../contexts/SessionContext.js';
 import type { ExtensionUpdateState } from '../state/extensions.js';
 import type { UpdateObject } from '../utils/updateCheck.js';
-
-export interface ProQuotaDialogRequest {
-  failedModel: string;
-  fallbackModel: string;
-  message: string;
-  isTerminalQuotaError: boolean;
-  isModelNotFoundError?: boolean;
-  isCapacityExceeded?: boolean;
-  authType?: AuthType;
-  resolve: (intent: FallbackIntent) => void;
-}
-
-export interface ValidationDialogRequest {
-  validationLink?: string;
-  validationDescription?: string;
-  learnMoreUrl?: string;
-  resolve: (intent: ValidationIntent) => void;
-}
-
-/** Intent for overage menu dialog */
-export type OverageMenuIntent =
-  | 'use_credits'
-  | 'use_fallback'
-  | 'manage'
-  | 'stop';
-
-export interface OverageMenuDialogRequest {
-  failedModel: string;
-  fallbackModel?: string;
-  resetTime?: string;
-  creditBalance: number;
-  userEmail?: string;
-  resolve: (intent: OverageMenuIntent) => void;
-}
-
-/** Intent for empty wallet dialog */
-export type EmptyWalletIntent = 'get_credits' | 'use_fallback' | 'stop';
-
-export interface EmptyWalletDialogRequest {
-  failedModel: string;
-  fallbackModel?: string;
-  resetTime?: string;
-  userEmail?: string;
-  onGetCredits: () => void;
-  resolve: (intent: EmptyWalletIntent) => void;
-}
 
 import { type UseHistoryManagerReturn } from '../hooks/useHistoryManager.js';
 import { type RestartReason } from '../hooks/useIdeTrustListener.js';
@@ -107,7 +58,6 @@ export interface UIState {
   apiKeyDefaultValue?: string;
   editorError: string | null;
   isEditorDialogOpen: boolean;
-  showPrivacyNotice: boolean;
   mouseMode: boolean;
   corgiMode: boolean;
   debugMessage: string;

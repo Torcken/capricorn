@@ -20,8 +20,6 @@ import {
 import { Table, type Column } from './Table.js';
 import { useSettings } from '../contexts/SettingsContext.js';
 import { getDisplayString, isAutoModel, LlmRole } from '@capricorn/core';
-import type { QuotaStats } from '../types.js';
-import { QuotaStatsInfo } from './QuotaStatsInfo.js';
 
 interface StatRowData {
   metric: string;
@@ -38,7 +36,6 @@ interface ModelStatsDisplayProps {
   userEmail?: string;
   tier?: string;
   currentModel?: string;
-  quotaStats?: QuotaStats;
 }
 
 export const ModelStatsDisplay: React.FC<ModelStatsDisplayProps> = ({
@@ -46,13 +43,8 @@ export const ModelStatsDisplay: React.FC<ModelStatsDisplayProps> = ({
   userEmail,
   tier,
   currentModel,
-  quotaStats,
 }) => {
   const { stats } = useSessionStats();
-
-  const pooledRemaining = quotaStats?.remaining;
-  const pooledLimit = quotaStats?.limit;
-  const pooledResetTime = quotaStats?.resetTime;
 
   const { models } = stats.metrics;
   const settings = useSettings();
@@ -350,16 +342,6 @@ export const ModelStatsDisplay: React.FC<ModelStatsDisplayProps> = ({
           <Text color={theme.text.primary}>{tier}</Text>
         </Box>
       )}
-      {isAuto &&
-        pooledRemaining !== undefined &&
-        pooledLimit !== undefined &&
-        pooledLimit > 0 && (
-          <QuotaStatsInfo
-            remaining={pooledRemaining}
-            limit={pooledLimit}
-            resetTime={pooledResetTime}
-          />
-        )}
       {(showUserIdentity || isAuto) && <Box height={1} />}
 
       <Table data={rows} columns={columns} />

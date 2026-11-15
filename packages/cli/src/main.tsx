@@ -31,7 +31,6 @@ import {
   ExitCodes,
   SessionStartSource,
   SessionEndReason,
-  ValidationCancelledError,
   ValidationRequiredError,
   type AdminControlsSettings,
   debugLogger,
@@ -660,12 +659,6 @@ export async function main() {
         await partialConfig.refreshAuth(authType);
       }
     } catch (err) {
-      if (err instanceof ValidationCancelledError) {
-        // User cancelled verification, exit immediately.
-        await runExitCleanup();
-        process.exit(ExitCodes.SUCCESS);
-      }
-
       // If validation is required, we don't treat it as a fatal failure.
       // We allow the app to start, and the React-based ValidationDialog
       // will handle it.

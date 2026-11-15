@@ -12,9 +12,7 @@ import {
   loadApiKey,
   debugLogger,
   isAccountSuspendedError,
-  ProjectIdRequiredError,
   ChangeAuthRequestedError,
-  ValidationCancelledError,
 } from '@capricorn/core';
 import { getErrorMessage } from '@capricorn/core';
 import { AuthState } from '../types.js';
@@ -143,10 +141,7 @@ export const useAuthCommand = (
         setAuthError(null);
         setAuthState(AuthState.Authenticated);
       } catch (e) {
-        if (
-          e instanceof ChangeAuthRequestedError ||
-          e instanceof ValidationCancelledError
-        ) {
+        if (e instanceof ChangeAuthRequestedError) {
           setAuthError(null);
           setAuthState(AuthState.Updating);
           return;
@@ -158,10 +153,6 @@ export const useAuthCommand = (
             appealUrl: suspendedError.appealUrl,
             appealLinkText: suspendedError.appealLinkText,
           });
-        } else if (e instanceof ProjectIdRequiredError) {
-          // OAuth succeeded but account setup requires project ID
-          // Show the error message directly without "Failed to login" prefix
-          onAuthError(getErrorMessage(e));
         } else {
           // Capricorn: there is no sign-in; this is the local inference setup.
           onAuthError(`Local inference could not start: ${getErrorMessage(e)}`);

@@ -23,7 +23,6 @@ describe('footerItems', () => {
         'git-branch',
         'sandbox',
         'model-name',
-        'quota',
       ]);
     });
 
@@ -117,7 +116,6 @@ describe('footerItems', () => {
         'git-branch',
         'sandbox',
         'context-used',
-        'quota',
         'memory-usage',
         'session-id',
         'hostname',

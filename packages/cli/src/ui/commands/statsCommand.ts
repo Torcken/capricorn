@@ -11,7 +11,7 @@ import type {
 } from '../types.js';
 import { MessageType } from '../types.js';
 import { formatDuration } from '../utils/formatters.js';
-import { UserAccountManager, getG1CreditBalance } from '@capricorn/core';
+import { UserAccountManager } from '@capricorn/core';
 import {
   type CommandContext,
   type SlashCommand,
@@ -27,10 +27,7 @@ function getUserIdentity(context: CommandContext) {
   const userEmail = cachedAccount ?? undefined;
 
   const tier = context.services.agentContext?.config.getUserTierName();
-  const paidTier = context.services.agentContext?.config.getUserPaidTier();
-  const creditBalance = getG1CreditBalance(paidTier) ?? undefined;
-
-  return { selectedAuthType, userEmail, tier, creditBalance };
+  return { selectedAuthType, userEmail, tier };
 }
 
 async function defaultSessionView(context: CommandContext) {
@@ -45,8 +42,7 @@ async function defaultSessionView(context: CommandContext) {
   }
   const wallDuration = now.getTime() - sessionStartTime.getTime();
 
-  const { selectedAuthType, userEmail, tier, creditBalance } =
-    getUserIdentity(context);
+  const { selectedAuthType, userEmail, tier } = getUserIdentity(context);
   const currentModel = context.services.agentContext?.config.getModel();
 
   const statsItem: HistoryItemStats = {
@@ -56,24 +52,8 @@ async function defaultSessionView(context: CommandContext) {
     userEmail,
     tier,
     currentModel,
-    creditBalance,
   };
-
-  if (context.services.agentContext?.config) {
-    const [quota] = await Promise.all([
-      context.services.agentContext.config.refreshUserQuota(),
-      context.services.agentContext.config.refreshAvailableCredits(),
-    ]);
-    if (quota) {
-      statsItem.quotas = quota;
-      statsItem.pooledRemaining =
-        context.services.agentContext.config.getQuotaRemaining();
-      statsItem.pooledLimit =
-        context.services.agentContext.config.getQuotaLimit();
-      statsItem.pooledResetTime =
-        context.services.agentContext.config.getQuotaResetTime();
-    }
-  }
+  // Capricorn: no Google quota or AI-credit lookup; local models have none.
 
   context.ui.addItem(statsItem);
 }
@@ -108,21 +88,12 @@ export const statsCommand: SlashCommand = {
       action: (context: CommandContext) => {
         const { selectedAuthType, userEmail, tier } = getUserIdentity(context);
         const currentModel = context.services.agentContext?.config.getModel();
-        const pooledRemaining =
-          context.services.agentContext?.config.getQuotaRemaining();
-        const pooledLimit =
-          context.services.agentContext?.config.getQuotaLimit();
-        const pooledResetTime =
-          context.services.agentContext?.config.getQuotaResetTime();
         context.ui.addItem({
           type: MessageType.MODEL_STATS,
           selectedAuthType,
           userEmail,
           tier,
           currentModel,
-          pooledRemaining,
-          pooledLimit,
-          pooledResetTime,
         } as HistoryItemModelStats);
       },
     },

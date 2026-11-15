@@ -1168,8 +1168,6 @@ export async function loadCliConfig(
     fakeResponsesNonStrict: argv.fakeResponsesNonStrict,
     recordResponses: argv.recordResponses,
     retryFetchErrors: settings.general?.retryFetchErrors,
-    billing: settings.billing,
-    vertexAiRouting: settings.billing?.vertexAi,
     maxAttempts: settings.general?.maxAttempts,
     ptyInfo: ptyInfo?.name,
     disableLLMCorrection: settings.tools?.disableLLMCorrection,

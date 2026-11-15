@@ -61,16 +61,7 @@ const HOST_EXCEPTIONS: Record<string, { hosts: string[]; reason: string }> = {
     hosts: ['cloudcode-pa.googleapis.com'],
     reason: 'example error payload in a doc comment',
   },
-  'core/src/billing/billing.ts': {
-    hosts: ['accounts.google.com'],
-    reason:
-      'unreachable upstream "buy credits" link builder (no Code Assist server exists); slated for removal',
-  },
   // Capricorn's own explanatory comments about what was removed.
-  'core/src/code_assist/server.ts': {
-    hosts: ['cloudcode-pa.googleapis.com'],
-    reason: 'file overview comment',
-  },
   'core/src/telemetry/clearcut-logger/clearcut-logger.ts': {
     hosts: ['play.googleapis.com'],
     reason: 'file overview comment',

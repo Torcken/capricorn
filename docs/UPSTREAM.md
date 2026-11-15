@@ -121,24 +121,23 @@ The repository history starts with the unmodified upstream commit, so
 - **LiteRT-LM client** (`core/localLiteRtLmClient.ts`) is an inert stand-in and
   the experimental Gemma model router is forced off: it classified prompts with
   a non-Gemma-4 model on a separate local server.
-- **Inert stand-ins for removed Google modules.** Google sign-in
-  (`code_assist/oauth2.ts`), the Code Assist client (`code_assist/server.ts`),
-  account onboarding (`code_assist/setup.ts`) and the Clearcut usage logger keep
-  their exported names so upstream call sites compile unchanged, but they
-  contain no network code: requesting a Google client throws, and the logger
-  never exists. The Google Cloud telemetry exporters, Google-credential MCP /
-  agent auth providers and Gemini Live transcription were deleted outright, and
-  `google-auth-library` / `@google-cloud/*` are no longer dependencies of
-  `packages/core`. `security/noGoogleServices.test.ts` keeps it that way.
-- **Still present, all unreachable:** upstream billing/quota helpers
-  (`billing/`, `utils/googleQuotaErrors.ts`: string handling only, listed as
-  exceptions in the guard test), the quota, overage and validation dialogs, and
-  the Google privacy notices (no command opens them). Until 2026-11-15 the quota
-  path _was_ reachable: `retryWithBackoff` ran Ollama errors through
-  `classifyGoogleError`, so an Ollama 404 or 429 started Gemini model fallback
-  and its dialogs. `OllamaError` now bypasses that classification and the 5xx
-  fallback path (`utils/retry.ts`). Kept rather than deleted to keep upstream
-  merges small; remove them if upstream changes them substantially.
+- **Removed Google modules.** Google sign-in (`code_assist/oauth2.ts`), the Code
+  Assist client (`code_assist/server.ts`, `codeAssist.ts`), account onboarding
+  (`code_assist/setup.ts`), Code Assist telemetry, remote experiments and admin
+  controls, `billing/` and the billing telemetry events are deleted, as are the
+  quota, overage, AI-credit, account-validation, suspended-account, API-key,
+  sign-in and privacy-notice dialogs, the `quota` footer item and the `billing`
+  setting. The Clearcut usage logger remains as an inert stand-in (no network
+  code), and `code_assist/types.ts` keeps the data types the agent loop still
+  uses. The Google Cloud telemetry exporters, Google-credential MCP / agent auth
+  providers and Gemini Live transcription were deleted earlier, and
+  `google-auth-library` / `@google-cloud/*` are not dependencies.
+  `security/noGoogleServices.test.ts` keeps it that way.
+- **Still present:** `utils/googleQuotaErrors.ts` (string handling only, listed
+  as an exception in the guard test). `OllamaError` bypasses its classification
+  and the 5xx fallback path (`utils/retry.ts`). The internal sign-in state
+  machine (`ui/auth/useAuth.ts`) still drives startup and the local inference
+  setup dialog.
 - **Environment variable names** used by the retained test harness
   (`GEMINI_CLI_HOME`, `GEMINI_CLI_TRUST_WORKSPACE`, …). Capricorn-prefixed
   equivalents exist where they are user-facing (`CAPRICORN_HOME`,
@@ -154,5 +153,5 @@ still be ported by hand: rewrite `@google/gemini-cli*` imports to
 telemetry before running the full test suite, `npm run test:e2e:capricorn` and
 `npm run verify:offline`.
 
-Code kept only "to ease upstream merges" (the browser agent sources, Google
-billing and quota helpers) no longer has that reason to stay and can be removed.
+Code kept only "to ease upstream merges" has been removed (browser agent, Google
+billing, quota, sign-in and Code Assist code).

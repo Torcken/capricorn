@@ -27,7 +27,6 @@ import {
   coreEvents,
   CoreEvent,
   createWorkingStdio,
-  recordToolCallInteractions,
   ToolErrorType,
   Scheduler,
   ROOT_SCHEDULER_ID,
@@ -575,8 +574,6 @@ export async function runNonInteractive(
             geminiClient
               .getChat()
               .recordCompletedToolCalls(currentModel, completedToolCalls);
-
-            await recordToolCallInteractions(config, completedToolCalls);
           } catch (error) {
             debugLogger.error(
               `Error recording completed tool call information: ${error}`,

@@ -30,7 +30,6 @@ import {
   SHELL_TOOL_NAME,
   hasRedirection,
   processRestorableToolCalls,
-  recordToolCallInteractions,
   ToolErrorType,
   ValidationRequiredError,
   coreEvents,
@@ -390,8 +389,6 @@ export const useGeminiStream = (
           client
             ?.getChat?.()
             ?.recordCompletedToolCalls(currentModel, normalizedCompletedCalls);
-
-          await recordToolCallInteractions(config, normalizedCompletedCalls);
         } catch (error) {
           debugLogger.warn(
             `Error recording completed tool call information: ${error}`,
@@ -1872,9 +1869,6 @@ export const useGeminiStream = (
             autoNudgeAttemptCountRef.current = 0;
             setModelSwitchedFromQuotaError(false);
             config.setQuotaErrorOccurred(false);
-            config.resetBillingTurnState(
-              settings.merged.billing?.overageStrategy,
-            );
             suppressedToolErrorCountRef.current = 0;
             suppressedToolErrorNoteShownRef.current = false;
             lowVerbosityFailureNoteShownRef.current = false;
@@ -2045,7 +2039,6 @@ export const useGeminiStream = (
       maybeAddSuppressedToolErrorNote,
       maybeAddLowVerbosityFailureNote,
       isRespondingRef,
-      settings.merged.billing?.overageStrategy,
       setIsResponding,
     ],
   );

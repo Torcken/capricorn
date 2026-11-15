@@ -5,8 +5,10 @@
  */
 
 // --------------------------------------------------------------------------
-// IMPORTANT: After adding or updating settings, run `npm run docs:settings`
-// to regenerate the settings reference in `docs/get-started/configuration.md`.
+// IMPORTANT: After adding or updating settings, run `npm run schema:settings`
+// to regenerate `schemas/settings.schema.json`. Capricorn: the upstream
+// settings reference generator was removed with Gemini CLI's docs site;
+// document user-facing settings in `docs/CONFIGURATION.md`.
 // --------------------------------------------------------------------------
 
 import {
@@ -22,7 +24,6 @@ import {
   type AgentOverride,
   type CustomTheme,
   type SandboxConfig,
-  type VertexAiRoutingConfig,
 } from '@capricorn/core';
 import type { SessionRetentionSettings } from './settings.js';
 import { DEFAULT_MIN_RETENTION } from '../utils/sessionCleanup.js';
@@ -991,75 +992,6 @@ const SETTINGS_SCHEMA = {
     description: 'Telemetry configuration.',
     showInDialog: false,
     ref: 'TelemetrySettings',
-  },
-
-  billing: {
-    type: 'object',
-    label: 'Billing',
-    category: 'Advanced',
-    requiresRestart: false,
-    default: {},
-    description: 'Billing and AI credits settings.',
-    showInDialog: false,
-    properties: {
-      overageStrategy: {
-        type: 'enum',
-        label: 'Overage Strategy',
-        category: 'Advanced',
-        requiresRestart: false,
-        default: 'ask',
-        description: oneLine`
-          How to handle quota exhaustion when AI credits are available.
-          'ask' prompts each time, 'always' automatically uses credits,
-          'never' disables credit usage.
-        `,
-        showInDialog: true,
-        options: [
-          { value: 'ask', label: 'Ask each time' },
-          { value: 'always', label: 'Always use credits' },
-          { value: 'never', label: 'Never use credits' },
-        ],
-      },
-      vertexAi: {
-        type: 'object',
-        label: 'Vertex AI',
-        category: 'Advanced',
-        requiresRestart: true,
-        default: undefined as VertexAiRoutingConfig | undefined,
-        description: 'Vertex AI request routing settings.',
-        showInDialog: false,
-        properties: {
-          requestType: {
-            type: 'enum',
-            label: 'Vertex AI Request Type',
-            category: 'Advanced',
-            requiresRestart: true,
-            default: undefined as VertexAiRoutingConfig['requestType'],
-            description:
-              'Sets the X-Vertex-AI-LLM-Request-Type header for Vertex AI requests.',
-            showInDialog: false,
-            options: [
-              { value: 'dedicated', label: 'Dedicated' },
-              { value: 'shared', label: 'Shared' },
-            ],
-          },
-          sharedRequestType: {
-            type: 'enum',
-            label: 'Vertex AI Shared Request Type',
-            category: 'Advanced',
-            requiresRestart: true,
-            default: undefined as VertexAiRoutingConfig['sharedRequestType'],
-            description:
-              'Sets the X-Vertex-AI-LLM-Shared-Request-Type header for Vertex AI requests.',
-            showInDialog: false,
-            options: [
-              { value: 'priority', label: 'Priority' },
-              { value: 'flex', label: 'Flex' },
-            ],
-          },
-        },
-      },
-    },
   },
 
   // Capricorn: local inference provider settings. See docs/CONFIGURATION.md.

@@ -36,7 +36,6 @@ vi.mock('./components/CliSpinner.js', () => ({
 // Mock hooks to align with codebase style, even if App uses UIState directly
 vi.mock('./hooks/useGeminiStream.js');
 vi.mock('./hooks/useHistoryManager.js');
-vi.mock('./hooks/useQuotaAndFallback.js');
 vi.mock('./hooks/useThemeCommand.js');
 vi.mock('./auth/useAuth.js');
 vi.mock('./hooks/useEditorSettings.js');
@@ -136,13 +135,6 @@ describe('Full Terminal Tool Confirmation Snapshot', () => {
     const { waitUntilReady, lastFrame, generateSvg, unmount } =
       await renderWithProviders(<App />, {
         uiState: mockUIState,
-        quotaState: {
-          userTier: 'PRO',
-          stats: {
-            remaining: 100,
-            limit: 1000,
-          },
-        },
         config: mockConfig,
         settings: createMockSettings({
           merged: {

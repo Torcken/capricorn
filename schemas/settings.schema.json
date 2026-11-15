@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
+  "$id": "https://raw.githubusercontent.com/Torcken/capricorn/main/schemas/settings.schema.json",
   "title": "Gemini CLI Settings",
   "description": "Configuration file schema for Gemini CLI settings. This schema enables IDE completion for `settings.json`.",
   "type": "object",
@@ -10,7 +10,7 @@
       "title": "Schema",
       "description": "The URL of the JSON schema for this settings file. Used by editors for validation and autocompletion.",
       "type": "string",
-      "default": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json"
+      "default": "https://raw.githubusercontent.com/Torcken/capricorn/main/schemas/settings.schema.json"
     },
     "mcpServers": {
       "title": "MCP Servers",
@@ -643,47 +643,6 @@
       "description": "Telemetry configuration.",
       "markdownDescription": "Telemetry configuration.\n\n- Category: `Advanced`\n- Requires restart: `yes`",
       "$ref": "#/$defs/TelemetrySettings"
-    },
-    "billing": {
-      "title": "Billing",
-      "description": "Billing and AI credits settings.",
-      "markdownDescription": "Billing and AI credits settings.\n\n- Category: `Advanced`\n- Requires restart: `no`\n- Default: `{}`",
-      "default": {},
-      "type": "object",
-      "properties": {
-        "overageStrategy": {
-          "title": "Overage Strategy",
-          "description": "How to handle quota exhaustion when AI credits are available. 'ask' prompts each time, 'always' automatically uses credits, 'never' disables credit usage.",
-          "markdownDescription": "How to handle quota exhaustion when AI credits are available. 'ask' prompts each time, 'always' automatically uses credits, 'never' disables credit usage.\n\n- Category: `Advanced`\n- Requires restart: `no`\n- Default: `ask`",
-          "default": "ask",
-          "type": "string",
-          "enum": ["ask", "always", "never"]
-        },
-        "vertexAi": {
-          "title": "Vertex AI",
-          "description": "Vertex AI request routing settings.",
-          "markdownDescription": "Vertex AI request routing settings.\n\n- Category: `Advanced`\n- Requires restart: `yes`",
-          "type": "object",
-          "properties": {
-            "requestType": {
-              "title": "Vertex AI Request Type",
-              "description": "Sets the X-Vertex-AI-LLM-Request-Type header for Vertex AI requests.",
-              "markdownDescription": "Sets the X-Vertex-AI-LLM-Request-Type header for Vertex AI requests.\n\n- Category: `Advanced`\n- Requires restart: `yes`",
-              "type": "string",
-              "enum": ["dedicated", "shared"]
-            },
-            "sharedRequestType": {
-              "title": "Vertex AI Shared Request Type",
-              "description": "Sets the X-Vertex-AI-LLM-Shared-Request-Type header for Vertex AI requests.",
-              "markdownDescription": "Sets the X-Vertex-AI-LLM-Shared-Request-Type header for Vertex AI requests.\n\n- Category: `Advanced`\n- Requires restart: `yes`",
-              "type": "string",
-              "enum": ["priority", "flex"]
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
     },
     "ollama": {
       "title": "Ollama",

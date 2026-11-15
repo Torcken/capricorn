@@ -69,28 +69,13 @@ describe('statsCommand', () => {
     });
   });
 
-  it('should fetch and display quota if config is available', async () => {
+  // Capricorn: no Google quota lookup; the stats item carries no quota.
+  it('shows tier and model without fetching any quota', async () => {
     if (!statsCommand.action) throw new Error('Command has no action');
 
-    const mockQuota = { buckets: [] };
-    const mockRefreshUserQuota = vi.fn().mockResolvedValue(mockQuota);
-    const mockGetUserTierName = vi.fn().mockReturnValue('Basic');
-    const mockGetModel = vi.fn().mockReturnValue('gemini-pro');
-    const mockGetQuotaRemaining = vi.fn().mockReturnValue(85);
-    const mockGetQuotaLimit = vi.fn().mockReturnValue(100);
-    const mockGetQuotaResetTime = vi
-      .fn()
-      .mockReturnValue('2025-01-01T12:00:00Z');
-
     mockContext.services.agentContext = {
-      refreshUserQuota: mockRefreshUserQuota,
-      getUserTierName: mockGetUserTierName,
-      getModel: mockGetModel,
-      getQuotaRemaining: mockGetQuotaRemaining,
-      getQuotaLimit: mockGetQuotaLimit,
-      getQuotaResetTime: mockGetQuotaResetTime,
-      getUserPaidTier: vi.fn(),
-      refreshAvailableCredits: vi.fn(),
+      getUserTierName: vi.fn().mockReturnValue('Basic'),
+      getModel: vi.fn().mockReturnValue('gemma4:12b'),
       get config() {
         return this;
       },
@@ -98,17 +83,12 @@ describe('statsCommand', () => {
 
     await statsCommand.action(mockContext, '');
 
-    expect(mockRefreshUserQuota).toHaveBeenCalled();
-    expect(mockContext.ui.addItem).toHaveBeenCalledWith(
-      expect.objectContaining({
-        quotas: mockQuota,
-        tier: 'Basic',
-        currentModel: 'gemini-pro',
-        pooledRemaining: 85,
-        pooledLimit: 100,
-        pooledResetTime: '2025-01-01T12:00:00Z',
-      }),
+    const item = vi.mocked(mockContext.ui.addItem).mock.calls[0][0];
+    expect(item).toEqual(
+      expect.objectContaining({ tier: 'Basic', currentModel: 'gemma4:12b' }),
     );
+    expect(item).not.toHaveProperty('quotas');
+    expect(item).not.toHaveProperty('pooledRemaining');
   });
 
   it('should display model stats when using the "model" subcommand', () => {

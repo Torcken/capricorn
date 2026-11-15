@@ -4,20 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { CodeAssistServer } from '../server.js';
-import { debugLogger } from '../../utils/debugLogger.js';
-import { isDeepStrictEqual } from 'node:util';
 import {
   type FetchAdminControlsResponse,
   FetchAdminControlsResponseSchema,
   McpConfigDefinitionSchema,
   type AdminControlsSettings,
 } from '../types.js';
-import { getCodeAssistServer } from '../codeAssist.js';
 import type { Config } from '../../config/config.js';
-
-let pollingInterval: NodeJS.Timeout | undefined;
-let currentSettings: AdminControlsSettings | undefined;
 
 export function sanitizeAdminSettings(
   settings: FetchAdminControlsResponse,
@@ -95,139 +88,6 @@ export function sanitizeAdminSettings(
 }
 
 /**
- * Fetches the admin controls from the server if enabled by experiment flag.
- * Safely handles polling start/stop based on the flag and server availability.
- *
- * @param server The CodeAssistServer instance.
- * @param cachedSettings The cached settings to use if available.
- * @param adminControlsEnabled Whether admin controls are enabled.
- * @param onSettingsChanged Callback to invoke when settings change during polling.
- * @returns The fetched settings if enabled and successful, otherwise undefined.
- */
-export async function fetchAdminControls(
-  server: CodeAssistServer | undefined,
-  cachedSettings: AdminControlsSettings | undefined,
-  adminControlsEnabled: boolean,
-  onSettingsChanged: (settings: AdminControlsSettings) => void,
-): Promise<AdminControlsSettings> {
-  if (!server || !server.projectId || !adminControlsEnabled) {
-    stopAdminControlsPolling();
-    currentSettings = undefined;
-    return {};
-  }
-
-  // If we already have settings (e.g. from IPC during relaunch), use them
-  // to avoid blocking startup with another fetch. We'll still start polling.
-  if (cachedSettings && Object.keys(cachedSettings).length !== 0) {
-    currentSettings = cachedSettings;
-    startAdminControlsPolling(server, server.projectId, onSettingsChanged);
-    return cachedSettings;
-  }
-
-  try {
-    const rawSettings = await server.fetchAdminControls({
-      project: server.projectId,
-    });
-
-    if (rawSettings.adminControlsApplicable !== true) {
-      stopAdminControlsPolling();
-      currentSettings = undefined;
-      return {};
-    }
-
-    const sanitizedSettings = sanitizeAdminSettings(rawSettings);
-    currentSettings = sanitizedSettings;
-    startAdminControlsPolling(server, server.projectId, onSettingsChanged);
-    return sanitizedSettings;
-  } catch (e) {
-    debugLogger.error('Failed to fetch admin controls: ', e);
-    throw e;
-  }
-}
-
-/**
- * Fetches the admin controls from the server a single time.
- * This function does not start or stop any polling.
- *
- * @param server The CodeAssistServer instance.
- * @param adminControlsEnabled Whether admin controls are enabled.
- * @returns The fetched settings if enabled and successful, otherwise undefined.
- */
-export async function fetchAdminControlsOnce(
-  server: CodeAssistServer | undefined,
-  adminControlsEnabled: boolean,
-): Promise<FetchAdminControlsResponse> {
-  if (!server || !server.projectId || !adminControlsEnabled) {
-    return {};
-  }
-
-  try {
-    const rawSettings = await server.fetchAdminControls({
-      project: server.projectId,
-    });
-
-    if (rawSettings.adminControlsApplicable !== true) {
-      return {};
-    }
-
-    return sanitizeAdminSettings(rawSettings);
-  } catch (e) {
-    debugLogger.error(
-      'Failed to fetch admin controls: ',
-      e instanceof Error ? e.message : e,
-    );
-    throw e;
-  }
-}
-
-/**
- * Starts polling for admin controls.
- */
-function startAdminControlsPolling(
-  server: CodeAssistServer,
-  project: string,
-  onSettingsChanged: (settings: AdminControlsSettings) => void,
-) {
-  stopAdminControlsPolling();
-
-  pollingInterval = setInterval(
-    async () => {
-      try {
-        const rawSettings = await server.fetchAdminControls({
-          project,
-        });
-
-        if (rawSettings.adminControlsApplicable !== true) {
-          stopAdminControlsPolling();
-          currentSettings = undefined;
-          return;
-        }
-
-        const newSettings = sanitizeAdminSettings(rawSettings);
-
-        if (!isDeepStrictEqual(newSettings, currentSettings)) {
-          currentSettings = newSettings;
-          onSettingsChanged(newSettings);
-        }
-      } catch (e) {
-        debugLogger.error('Failed to poll admin controls: ', e);
-      }
-    },
-    5 * 60 * 1000,
-  ); // 5 minutes
-}
-
-/**
- * Stops polling for admin controls.
- */
-export function stopAdminControlsPolling() {
-  if (pollingInterval) {
-    clearInterval(pollingInterval);
-    pollingInterval = undefined;
-  }
-}
-
-/**
  * Returns a standardized error message for features disabled by admin settings.
  *
  * @param featureName The name of the disabled feature
@@ -238,10 +98,10 @@ export function getAdminErrorMessage(
   featureName: string,
   config: Config | undefined,
 ): string {
-  const server = config ? getCodeAssistServer(config) : undefined;
-  const projectId = server?.projectId;
-  const projectParam = projectId ? `?project=${projectId}` : '';
-  return `${featureName} is disabled by your administrator. To enable it, please request an update to the settings at: https://goo.gle/manage-gemini-cli${projectParam}`;
+  void config;
+  // Capricorn: admin settings come only from a system settings file; there
+  // is no hosted admin console to link to.
+  return `${featureName} is disabled by your administrator.`;
 }
 
 /**
@@ -255,13 +115,9 @@ export function getAdminBlockedMcpServersMessage(
   blockedServers: string[],
   config: Config | undefined,
 ): string {
-  const server = config ? getCodeAssistServer(config) : undefined;
-  const projectId = server?.projectId;
-  const projectParam = projectId ? `?project=${projectId}` : '';
+  void config;
   const count = blockedServers.length;
   const serverText = count === 1 ? 'server is' : 'servers are';
 
-  return `${count} MCP ${serverText} not allowlisted by your administrator. To enable ${
-    count === 1 ? 'it' : 'them'
-  }, please request an update to the settings at: https://goo.gle/manage-gemini-cli${projectParam}`;
+  return `${count} MCP ${serverText} not allowlisted by your administrator.`;
 }

@@ -80,7 +80,6 @@ export type { TelemetryEvent } from './types.js';
 export { SpanStatusCode, ValueType } from '@opentelemetry/api';
 export { SemanticAttributes } from '@opentelemetry/semantic-conventions';
 export * from './uiTelemetry.js';
-export * from './billingEvents.js';
 export {
   MemoryMonitor,
   initializeMemoryMonitor,

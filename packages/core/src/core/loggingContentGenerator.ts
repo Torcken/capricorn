@@ -35,7 +35,6 @@ import type { ContentGenerator } from './contentGenerator.js';
 import { toContents } from '../code_assist/converter.js';
 import { isStructuredError } from '../utils/quotaErrorDetection.js';
 import { runInDevTraceSpan, type SpanMetadata } from '../telemetry/trace.js';
-import { debugLogger } from '../utils/debugLogger.js';
 import { isAbortError, getErrorType } from '../utils/errors.js';
 import {
   GeminiCliOperation,
@@ -421,9 +420,6 @@ export class LoggingContentGenerator implements ContentGenerator {
             req.config,
             serverDetails,
           );
-          this.config
-            .refreshUserQuotaIfStale()
-            .catch((e) => debugLogger.debug('quota refresh failed', e));
           return response;
         } catch (error) {
           spanMetadata.error = error;
@@ -572,9 +568,6 @@ export class LoggingContentGenerator implements ContentGenerator {
         req.config,
         serverDetails,
       );
-      this.config
-        .refreshUserQuotaIfStale()
-        .catch((e) => debugLogger.debug('quota refresh failed', e));
       spanMetadata.output = responses.map(
         (response) => response.candidates?.[0]?.content ?? null,
       );
