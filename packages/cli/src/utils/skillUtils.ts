@@ -10,7 +10,7 @@ import {
   Storage,
   loadSkillsFromDir,
   type SkillDefinition,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { cloneFromGit } from '../config/extensions/github.js';
 // Capricorn: ZIPs go through extractZipSafely (extract-zip follows symlinks).
 import { extractZipSafely } from './safeZip.js';

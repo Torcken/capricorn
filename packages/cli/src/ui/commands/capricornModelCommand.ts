@@ -23,7 +23,7 @@ import {
   discoverModels,
   normalizeTag,
   selectModel,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { SettingScope } from '../../config/settings.js';
 import { MessageType } from '../types.js';
 import {

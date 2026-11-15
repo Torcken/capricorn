@@ -39,7 +39,7 @@ import {
 import { Terminal, type IUnicodeVersionProvider } from '@xterm/headless';
 import stringWidth from 'string-width';
 import { afterEach, describe, expect, it } from 'vitest';
-import { shouldDisableLineWrapping } from '@google/gemini-cli-core';
+import { shouldDisableLineWrapping } from '@capricorn/core';
 import {
   getCachedStringWidth,
   setAmbiguousCharactersWide,

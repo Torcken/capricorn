@@ -11,7 +11,7 @@ import {
   SessionEndReason,
   type Config,
   type HookSystem,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 
 // Capricorn: startup preflight (Ollama + model check) and the egress guard
 // are exercised by their own tests; here they are stubbed so main() flow
@@ -29,9 +29,8 @@ vi.mock('./capricorn/networkPolicy.js', () => ({
   installCapricornNetworkPolicy: () => {},
 }));
 
-vi.mock('@google/gemini-cli-core', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@google/gemini-cli-core')>();
+vi.mock('@capricorn/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@capricorn/core')>();
   return {
     ...actual,
     writeToStdout: vi.fn(),

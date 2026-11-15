@@ -14,7 +14,7 @@ import {
   GEMINI_DIR,
   homedir,
   resolveToRealPath,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 
 /**
  * Capricorn: the default, locally built sandbox image (`npm run build:sandbox`;

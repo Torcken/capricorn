@@ -4,11 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {
-  type AgentLoopContext,
-  AuthType,
-  getVersion,
-} from '@google/gemini-cli-core';
+import { type AgentLoopContext, AuthType, getVersion } from '@capricorn/core';
 import * as acp from '@agentclientprotocol/sdk';
 import type { LoadedSettings } from '../config/settings.js';
 import type { CliArgs } from '../config/config.js';

@@ -18,7 +18,7 @@ import {
   disableBracketedPasteMode,
   disableMouseEvents,
   enableLineWrapping,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import * as fs from 'node:fs';
 
 // Mock fs
@@ -27,7 +27,7 @@ vi.mock('node:fs', () => ({
 }));
 
 // Mock core
-vi.mock('@google/gemini-cli-core', () => ({
+vi.mock('@capricorn/core', () => ({
   debugLogger: {
     log: vi.fn(),
     warn: vi.fn(),

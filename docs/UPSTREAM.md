@@ -82,22 +82,27 @@ The repository history starts with the unmodified upstream commit, so
 
 **Agents and archives**
 
-- The browser agent (`agents/browser/`) is never registered: it would browse the
-  web through Chrome outside the egress guard. Its sources stay to ease merges;
-  `bundle:browser-mcp` is no longer part of `npm run bundle` and its output is
-  not shipped.
+- The browser agent (`agents/browser/`, chrome-devtools-mcp) is removed: it
+  would browse the web through Chrome outside the egress guard. Enabling
+  `agents.browser` in settings only shows a notice.
 - ZIP extraction (extension and skill installs) goes through
   `cli/src/utils/safeZip.ts`, which refuses symbolic links and escaping paths
   before `extract-zip` runs.
 - `bundle/` is emptied before each bundle build, and `docs/planning/` is not
   copied into it.
 
+**Package names**
+
+- Internal workspaces use the `@capricorn` scope: `@capricorn/cli`,
+  `@capricorn/core`, `@capricorn/devtools`, `@capricorn/sdk`,
+  `@capricorn/test-utils` and `capricorn-vscode-ide-companion` (upstream:
+  `@google/gemini-cli*`). They stay private and bundled; only `capricorn-code`
+  is published. VS Code Marketplace IDs
+  (`google.gemini-cli-vscode-ide-companion`) and links to upstream issues are
+  unchanged, because they name external things.
+
 ## Intentionally retained (and why)
 
-- **Internal package names** (`@google/gemini-cli-core`, …). They are bundled
-  into `bundle/capricorn.js` and never published; renaming thousands of imports
-  would make upstream merges impractical. All workspaces are marked
-  `"private": true` so they cannot be published under Google's scope.
 - **`@google/genai` types** as the internal message model. The agent loop,
   history, tools and UI are written against them; translation happens only at
   the provider boundary (ADR 0001). Only the _types_ are used: the few runtime
@@ -135,14 +140,15 @@ The repository history starts with the unmodified upstream commit, so
   equivalents exist where they are user-facing (`CAPRICORN_HOME`,
   `CAPRICORN_OLLAMA_HOST`, `CAPRICORN_MODEL`, `CAPRICORN_SYSTEM_SETTINGS_PATH`).
 
-## Updating from upstream
+## Upstream status
 
-1. `git fetch --depth 50 upstream refs/tags/<tag>:refs/tags/upstream-<tag>`
-2. Create a branch and `git merge upstream-<tag>`; expect conflicts mainly in
-   `contentGenerator.ts`, `config.ts` (both packages), `settingsSchema.ts`,
-   `gemini.tsx`, `BuiltinCommandLoader.ts` and prompt files.
-3. Re-check every _new_ upstream network endpoint, auth path, telemetry hook and
-   tool for compatibility with the local-only contract
-   (`grep -rn "https://" packages/*/src`).
-4. Run the full test suite, `npm run test:e2e:capricorn` and
-   `npm run verify:offline`, then update this file.
+Gemini CLI is no longer developed by Google, so no further upstream releases
+will be merged. v0.67.0 (`dc6602ce`) is the final base, and Capricorn is
+maintained independently from here on. A fix found in the upstream history can
+still be ported by hand: rewrite `@google/gemini-cli*` imports to
+`@capricorn/*`, and check that it adds no network endpoint, auth path or
+telemetry before running the full test suite, `npm run test:e2e:capricorn` and
+`npm run verify:offline`.
+
+Code kept only "to ease upstream merges" (the browser agent sources, Google
+billing and quota helpers) no longer has that reason to stay and can be removed.

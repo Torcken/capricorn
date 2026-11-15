@@ -22,8 +22,8 @@ import {
   homedir,
   type Config,
   type SandboxConfig,
-} from '@google/gemini-cli-core';
-import { createMockSandboxConfig } from '@google/gemini-cli-test-utils';
+} from '@capricorn/core';
+import { createMockSandboxConfig } from '@capricorn/test-utils';
 import { EventEmitter } from 'node:events';
 
 const { mockedHomedir, mockedGetContainerPath, mockedExecCommands } =
@@ -105,9 +105,8 @@ vi.mock('node:util', async (importOriginal) => {
   };
 });
 
-vi.mock('@google/gemini-cli-core', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@google/gemini-cli-core')>();
+vi.mock('@capricorn/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@capricorn/core')>();
   return {
     ...actual,
     debugLogger: {

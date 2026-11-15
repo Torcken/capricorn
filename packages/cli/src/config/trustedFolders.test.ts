@@ -12,7 +12,7 @@ import {
   FatalConfigError,
   ideContextStore,
   normalizePath,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import {
   loadTrustedFolders,
   TrustLevel,
@@ -25,9 +25,8 @@ import { createMockSettings } from '../test-utils/settings.js';
 // We explicitly do NOT mock 'fs' or 'proper-lockfile' here to ensure
 // we are testing the actual behavior on the real file system.
 
-vi.mock('@google/gemini-cli-core', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@google/gemini-cli-core')>();
+vi.mock('@capricorn/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@capricorn/core')>();
   return {
     ...actual,
     homedir: () => '/mock/home/user',
@@ -424,7 +423,7 @@ describe('Trusted Folders', () => {
     };
 
     it('should NOT return true when isHeadlessMode is true, ignoring config', async () => {
-      const geminiCore = await import('@google/gemini-cli-core');
+      const geminiCore = await import('@capricorn/core');
       vi.spyOn(geminiCore, 'isHeadlessMode').mockReturnValue(true);
 
       expect(isWorkspaceTrusted(mockSettings)).toEqual({
@@ -446,7 +445,7 @@ describe('Trusted Folders', () => {
     });
 
     it('should fall back to config when isHeadlessMode is false', async () => {
-      const geminiCore = await import('@google/gemini-cli-core');
+      const geminiCore = await import('@capricorn/core');
       vi.spyOn(geminiCore, 'isHeadlessMode').mockReturnValue(false);
 
       const config = { '/projectA': TrustLevel.DO_NOT_TRUST };
@@ -458,7 +457,7 @@ describe('Trusted Folders', () => {
     });
 
     it('should return undefined for isPathTrusted when isHeadlessMode is true', async () => {
-      const geminiCore = await import('@google/gemini-cli-core');
+      const geminiCore = await import('@capricorn/core');
       vi.spyOn(geminiCore, 'isHeadlessMode').mockReturnValue(true);
 
       const folders = loadTrustedFolders();

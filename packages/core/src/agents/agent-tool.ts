@@ -20,8 +20,6 @@ import { LocalSubagentInvocation } from './local-invocation.js';
 import { RemoteAgentInvocation } from './remote-invocation.js';
 import { LocalSessionInvocation } from './local-session-invocation.js';
 import { RemoteSessionInvocation } from './remote-session-invocation.js';
-import { BROWSER_AGENT_NAME } from './browser/browserAgentDefinition.js';
-import { BrowserAgentInvocation } from './browser/browserAgentInvocation.js';
 import type { AgentEvent } from '../agent/types.js';
 import { formatUserHintsForModel } from '../utils/fastAckHelper.js';
 import { isRecord } from '../utils/markdownUtils.js';
@@ -156,16 +154,6 @@ class DelegateInvocation extends BaseToolInvocation<
   private buildChildInvocation(
     agentArgs: AgentInputs,
   ): ToolInvocation<AgentInputs, ToolResult> {
-    if (this.definition.name === BROWSER_AGENT_NAME) {
-      return new BrowserAgentInvocation(
-        this.context,
-        agentArgs,
-        this.messageBus,
-        this._toolName,
-        this._toolDisplayName,
-      );
-    }
-
     const useSession = this.context.config.isAgentSessionSubagentEnabled();
     const options = this.onAgentEvent
       ? { onAgentEvent: this.onAgentEvent }

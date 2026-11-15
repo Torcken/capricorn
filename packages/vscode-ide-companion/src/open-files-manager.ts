@@ -5,11 +5,8 @@
  */
 
 import * as vscode from 'vscode';
-import { isExcludedIdeContextFile } from '@google/gemini-cli-core/src/ide/ideContext.js';
-import type {
-  File,
-  IdeContext,
-} from '@google/gemini-cli-core/src/ide/types.js';
+import { isExcludedIdeContextFile } from '@capricorn/core/src/ide/ideContext.js';
+import type { File, IdeContext } from '@capricorn/core/src/ide/types.js';
 
 export const MAX_FILES = 10;
 const MAX_SELECTED_TEXT_LENGTH = 16384; // 16 KiB limit

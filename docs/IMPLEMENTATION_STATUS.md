@@ -123,7 +123,7 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   an allowlist is given.
 - Approved shell commands and local MCP processes are outside the egress guard.
 - `web_fetch` and web search are unavailable.
-- The upstream browser agent is disabled (it would browse outside the network
+- The upstream browser agent is removed (it would browse outside the network
   policy).
 - `npm audit` reports two high-severity advisories in bundled code (`zod` 3,
   OpenTelemetry's Jaeger propagator); see docs/SECURITY.md "Known limits".
@@ -134,4 +134,4 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   unit-tested only.
 - Some retained upstream unit tests write to the real `~/.capricorn`.
 - Upstream integration/eval/perf suites are not part of the quality gate.
-- Internal package names remain `@google/gemini-cli-*` (private, bundled).
+- Internal packages use the `@capricorn/*` scope (private, bundled).

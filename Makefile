@@ -1,9 +1,9 @@
-# Makefile for gemini-cli
+# Makefile for Capricorn
 
-.PHONY: help install build build-sandbox build-all test lint format preflight clean start debug release run-npx create-alias
+.PHONY: help install build build-sandbox build-all test lint format preflight clean start debug
 
 help:
-	@echo "Makefile for gemini-cli"
+	@echo "Makefile for Capricorn"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make install          - Install npm dependencies"
@@ -14,11 +14,8 @@ help:
 	@echo "  make format           - Format the code"
 	@echo "  make preflight        - Run formatting, linting, and tests"
 	@echo "  make clean            - Remove generated files"
-	@echo "  make start            - Start the Gemini CLI"
-	@echo "  make debug            - Start the Gemini CLI in debug mode"
-	@echo ""
-	@echo "  make run-npx          - Run the CLI using npx (for testing the published package)"
-	@echo "  make create-alias     - Create a 'gemini' alias for your shell"
+	@echo "  make start            - Start Capricorn"
+	@echo "  make debug            - Start Capricorn in debug mode"
 
 install:
 	npm install
@@ -51,9 +48,3 @@ start:
 debug:
 	npm run debug
 
-
-run-npx:
-	npx https://github.com/google-gemini/gemini-cli
-
-create-alias:
-	scripts/create_alias.sh

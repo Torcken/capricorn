@@ -17,11 +17,10 @@ import {
   showMemory,
   listMemoryFiles,
   flattenMemory,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 
-vi.mock('@google/gemini-cli-core', async (importOriginal) => {
-  const original =
-    await importOriginal<typeof import('@google/gemini-cli-core')>();
+vi.mock('@capricorn/core', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@capricorn/core')>();
   return {
     ...original,
     getErrorMessage: vi.fn((error: unknown) => {

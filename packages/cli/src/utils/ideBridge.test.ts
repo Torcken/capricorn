@@ -34,7 +34,7 @@ import {
   IdeClient,
   IDEConnectionStatus,
   ideContextStore,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { IdeBridge, resolveIdeBridgeUpstream } from './ideBridge.js';
 import {
   IDE_BRIDGE_HELPER_SOURCE,

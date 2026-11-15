@@ -20,7 +20,7 @@ import {
   isOverageEligibleModel,
   getDisplayString,
   type GeminiUserTier,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { type UseHistoryManagerReturn } from './useHistoryManager.js';
 import { MessageType } from '../types.js';

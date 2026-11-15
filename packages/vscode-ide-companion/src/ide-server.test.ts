@@ -15,7 +15,7 @@ import type { DiffManager } from './diff-manager.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { IdeContextNotificationSchema } from '@google/gemini-cli-core/src/ide/types.js';
+import { IdeContextNotificationSchema } from '@capricorn/core/src/ide/types.js';
 
 const { vscodeMock: baseVscodeMock } = await vi.hoisted(
   () => import('./utils/vscode-mock.js'),
@@ -46,9 +46,8 @@ vi.mock('node:os', async (importOriginal) => {
   };
 });
 
-vi.mock('@google/gemini-cli-core', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@google/gemini-cli-core')>();
+vi.mock('@capricorn/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@capricorn/core')>();
   return {
     ...actual,
     tmpdir: vi.fn(() => '/tmp'),

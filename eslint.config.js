@@ -56,7 +56,6 @@ export default tseslint.config(
       'eslint.config.js',
       '**/coverage/**',
       'packages/**/dist/**',
-      'tools/**/dist/**',
       'bundle/**',
       'package/bundle/**',
       '.integration-tests/**',
@@ -85,8 +84,8 @@ export default tseslint.config(
     },
   },
   {
-    // Rules for packages/*/src and tools/caretaker-agent (TS/TSX)
-    files: ['packages/*/src/**/*.{ts,tsx}', 'tools/caretaker-agent/**/*.{ts,tsx}'],
+    // Rules for packages/*/src (TS/TSX)
+    files: ['packages/*/src/**/*.{ts,tsx}'],
     plugins: {
       import: importPlugin,
     },
@@ -178,13 +177,13 @@ export default tseslint.config(
               name: 'node:os',
               importNames: ['homedir', 'tmpdir'],
               message:
-                'Please use the helpers from @google/gemini-cli-core instead of node:os homedir()/tmpdir() to ensure strict environment isolation.',
+                'Please use the helpers from @capricorn/core instead of node:os homedir()/tmpdir() to ensure strict environment isolation.',
             },
             {
               name: 'os',
               importNames: ['homedir', 'tmpdir'],
               message:
-                'Please use the helpers from @google/gemini-cli-core instead of os homedir()/tmpdir() to ensure strict environment isolation.',
+                'Please use the helpers from @capricorn/core instead of os homedir()/tmpdir() to ensure strict environment isolation.',
             },
           ],
         },
@@ -258,8 +257,8 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
-          name: '@google/gemini-cli-core',
-          message: 'Please use relative imports within the @google/gemini-cli-core package.',
+          name: '@capricorn/core',
+          message: 'Please use relative imports within the @capricorn/core package.',
         },
       ],
     },
@@ -270,8 +269,8 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
-          name: '@google/gemini-cli',
-          message: 'Please use relative imports within the @google/gemini-cli package.',
+          name: '@capricorn/cli',
+          message: 'Please use relative imports within the @capricorn/cli package.',
         },
       ],
     },
@@ -282,14 +281,14 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
-          name: '@google/gemini-cli-sdk',
-          message: 'Please use relative imports within the @google/gemini-cli-sdk package.',
+          name: '@capricorn/sdk',
+          message: 'Please use relative imports within the @capricorn/sdk package.',
         },
       ],
     },
   },
   {
-    files: ['packages/*/src/**/*.test.{ts,tsx}', 'tools/**/*.test.ts'],
+    files: ['packages/*/src/**/*.test.{ts,tsx}'],
     plugins: {
       vitest,
     },
@@ -416,13 +415,6 @@ export default tseslint.config(
     rules: {
       'no-restricted-syntax': 'off',
       '@typescript-eslint/no-require-imports': 'off',
-    },
-  },
-  // Allow console logging for backend services (Cloud Logging)
-  {
-    files: ['tools/**/*.ts', 'tools/**/*.test.ts'],
-    rules: {
-      'no-console': 'off',
     },
   },
   // Prettier config must be last

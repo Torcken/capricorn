@@ -10,7 +10,7 @@ import {
   debugLogger,
   getErrorMessage,
   type ExtensionInstallMetadata,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 
 import {
   INSTALL_WARNING_MESSAGE,

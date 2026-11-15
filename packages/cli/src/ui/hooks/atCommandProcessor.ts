@@ -6,7 +6,7 @@
 
 import * as path from 'node:path';
 import type { PartListUnion, PartUnion } from '@google/genai';
-import type { AnyToolInvocation, Config } from '@google/gemini-cli-core';
+import type { AnyToolInvocation, Config } from '@capricorn/core';
 import {
   debugLogger,
   getErrorMessage,
@@ -19,7 +19,7 @@ import {
   CoreToolCallStatus,
   resolveAtCommandPath,
   stripLineNumberSuffix,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { Buffer } from 'node:buffer';
 import type {
   HistoryItemToolGroup,

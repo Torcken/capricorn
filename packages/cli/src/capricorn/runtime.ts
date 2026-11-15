@@ -21,7 +21,7 @@ import {
   OllamaClient,
   resolveOllamaSettings,
   type OllamaSettings,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import type { LoadedSettings } from '../config/settings.js';
 
 /** Effective runtime values plus where each came from (for diagnostics). */

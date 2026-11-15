@@ -65,7 +65,7 @@ import {
   getPortFromEnv,
   getVersion,
   isSubpath,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { IDE_BRIDGE_READY_MARKER } from './ideBridgeHelper.js';
 
 const logger = {

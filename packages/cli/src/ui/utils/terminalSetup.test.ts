@@ -47,9 +47,8 @@ vi.mock('node:os', () => ({
   platform: mocks.platform,
 }));
 
-vi.mock('@google/gemini-cli-core', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@google/gemini-cli-core')>();
+vi.mock('@capricorn/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@capricorn/core')>();
   return {
     ...actual,
     homedir: mocks.homedir,

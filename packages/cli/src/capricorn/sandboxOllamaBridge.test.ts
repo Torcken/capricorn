@@ -14,7 +14,7 @@ import {
   startMockOllama,
   textFrame,
   type MockOllama,
-} from '@google/gemini-cli-core/dist/src/providers/ollama/testing/mockOllamaServer.js';
+} from '@capricorn/core/dist/src/providers/ollama/testing/mockOllamaServer.js';
 import {
   isBridgeRouteAllowed,
   startOllamaBridge,

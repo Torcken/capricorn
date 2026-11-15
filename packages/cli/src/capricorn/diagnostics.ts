@@ -33,7 +33,7 @@ import {
   GEMMA4_PRESETS,
   type DiscoveredModel,
   type OllamaClient,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import type { CapricornRuntime } from './runtime.js';
 import { detectHardware, type HardwareProfile } from './hardware.js';
 import { placementFor, recommendModel } from './recommend.js';

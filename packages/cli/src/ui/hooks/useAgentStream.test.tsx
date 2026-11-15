@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act } from 'react';
-import type { LegacyAgentProtocol } from '@google/gemini-cli-core';
+import type { LegacyAgentProtocol } from '@capricorn/core';
 import { renderHookWithProviders } from '../../test-utils/render.js';
 
 // --- MOCKS ---
@@ -221,8 +221,7 @@ describe('useAgentStream', () => {
     const { result } = await renderHookWithProviders(() =>
       useAgentStream({
         agent: mockLegacyAgentProtocol as unknown as LegacyAgentProtocol,
-        config:
-          mockConfig as unknown as import('@google/gemini-cli-core').Config,
+        config: mockConfig as unknown as import('@capricorn/core').Config,
         addItem: mockAddItem,
         onCancelSubmit: mockOnCancelSubmit,
         isShellFocused: false,

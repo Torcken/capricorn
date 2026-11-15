@@ -38,7 +38,7 @@ import {
   loadConversationRecord,
   type MessageRecord,
   resolveOllamaEndpoint,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 
 import { loadCliConfig, parseArguments } from './config/config.js';
 import * as cliConfig from './config/config.js';

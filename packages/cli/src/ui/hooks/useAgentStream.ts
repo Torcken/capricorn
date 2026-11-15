@@ -27,7 +27,7 @@ import {
   type Logger,
   type Part,
   type ToolCallRequestInfo,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import type {
   HistoryItemWithoutId,
   LoopDetectionConfirmationRequest,

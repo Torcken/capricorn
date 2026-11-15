@@ -12,12 +12,8 @@ import {
   convertSessionToClientHistory,
   uiTelemetryService,
   loadConversationRecord,
-} from '@google/gemini-cli-core';
-import type {
-  HistoryTurn,
-  Config,
-  ResumedSessionData,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
+import type { HistoryTurn, Config, ResumedSessionData } from '@capricorn/core';
 import {
   convertSessionToHistoryFormats,
   type SessionInfo,

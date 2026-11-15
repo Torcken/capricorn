@@ -11,12 +11,12 @@ import {
   type SlashCommand,
   type CommandContext,
 } from '../ui/commands/types.js';
-import type { MessageActionReturn, Config } from '@google/gemini-cli-core';
+import type { MessageActionReturn, Config } from '@capricorn/core';
 import {
   isNightly,
   startupProfiler,
   getAdminErrorMessage,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { aboutCommand } from '../ui/commands/aboutCommand.js';
 import { agentsCommand } from '../ui/commands/agentsCommand.js';
 import { chatCommand, debugCommand } from '../ui/commands/chatCommand.js';

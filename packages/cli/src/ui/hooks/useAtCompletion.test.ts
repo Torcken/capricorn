@@ -16,12 +16,12 @@ import {
   escapePath,
   type Config,
   type FileSearch,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import {
   createTmpDir,
   cleanupTmpDir,
   type FileSystemStructure,
-} from '@google/gemini-cli-test-utils';
+} from '@capricorn/test-utils';
 import type { Suggestion } from '../components/SuggestionsDisplay.js';
 
 // Test harness to capture the state from the hook's callbacks.

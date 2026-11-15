@@ -14,14 +14,14 @@ import type {
   Config,
   GeminiClient,
   CompletionBehavior,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import {
   isBinary,
   ShellExecutionService,
   ExecutionLifecycleService,
   CoreToolCallStatus,
   escapeShellArg,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 // Capricorn: type-only, so the SDK is not bundled (see genaiRuntime.ts).
 import type { PartListUnion } from '@google/genai';
 import type { UseHistoryManagerReturn } from './useHistoryManager.js';

@@ -11,7 +11,7 @@ import {
   debugLogger,
   type SkillDefinition,
   type MCPServerConfig,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import chalk from 'chalk';
 
 import type { ConfirmationRequest } from '../../ui/types.js';

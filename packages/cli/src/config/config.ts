@@ -56,7 +56,7 @@ import {
   type HookEventName,
   type OutputFormat,
   detectIdeFromEnv,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import {
   type Settings,
   type MergedSettings,
@@ -78,7 +78,7 @@ import {
 } from './policy.js';
 import { ExtensionManager } from './extension-manager.js';
 import { McpServerEnablementManager } from './mcp/mcpServerEnablement.js';
-import type { ExtensionEvents } from '@google/gemini-cli-core/src/utils/extensionLoader.js';
+import type { ExtensionEvents } from '@capricorn/core/src/utils/extensionLoader.js';
 import { requestConsentNonInteractive } from './extensions/consent.js';
 import { promptForSetting } from './extensions/extensionSettings.js';
 import type { EventEmitter } from 'node:stream';

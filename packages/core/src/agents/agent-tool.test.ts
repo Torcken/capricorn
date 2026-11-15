@@ -14,8 +14,6 @@ import { LocalSubagentInvocation } from './local-invocation.js';
 import { RemoteAgentInvocation } from './remote-invocation.js';
 import { LocalSessionInvocation } from './local-session-invocation.js';
 import { RemoteSessionInvocation } from './remote-session-invocation.js';
-import { BrowserAgentInvocation } from './browser/browserAgentInvocation.js';
-import { BROWSER_AGENT_NAME } from './browser/browserAgentDefinition.js';
 import { AgentRegistry } from './registry.js';
 import type { LocalAgentDefinition, RemoteAgentDefinition } from './types.js';
 
@@ -23,7 +21,6 @@ vi.mock('./local-invocation.js');
 vi.mock('./remote-invocation.js');
 vi.mock('./local-session-invocation.js');
 vi.mock('./remote-session-invocation.js');
-vi.mock('./browser/browserAgentInvocation.js');
 
 describe('AgentTool', () => {
   let mockConfig: Config;
@@ -71,21 +68,6 @@ describe('AgentTool', () => {
     vi.spyOn(registry, 'getDefinition').mockImplementation((name: string) => {
       if (name === 'TestLocalAgent') return testLocalDefinition;
       if (name === 'TestRemoteAgent') return testRemoteDefinition;
-      if (name === BROWSER_AGENT_NAME) {
-        return {
-          kind: 'remote',
-          name: BROWSER_AGENT_NAME,
-          displayName: 'Browser Agent',
-          description: 'Browser Agent Description',
-          inputConfig: {
-            inputSchema: {
-              type: 'object',
-              properties: { task: { type: 'string' } },
-            },
-          },
-          agentCardUrl: 'http://example.com',
-        };
-      }
       return undefined;
     });
   });
@@ -128,22 +110,6 @@ describe('AgentTool', () => {
     expect(() => {
       tool['createInvocation'](params, mockMessageBus);
     }).toThrow("Subagent 'UnknownAgent' not found.");
-  });
-
-  it('should map prompt to task and use BrowserAgentInvocation for browser agent', async () => {
-    const params = { agent_name: BROWSER_AGENT_NAME, prompt: 'Open page' };
-    const invocation = tool['createInvocation'](params, mockMessageBus);
-
-    // Trigger deferred instantiation
-    await invocation.shouldConfirmExecute(new AbortController().signal);
-
-    expect(BrowserAgentInvocation).toHaveBeenCalledWith(
-      mockConfig,
-      { task: 'Open page' },
-      mockMessageBus,
-      'invoke_agent',
-      'Invoke Browser Agent',
-    );
   });
 
   describe('agentSessionSubagentEnabled feature flag', () => {
@@ -243,24 +209,6 @@ describe('AgentTool', () => {
         mockMessageBus,
         { onAgentEvent: onEvent },
       );
-    });
-
-    it('should always use BrowserAgentInvocation for browser agent regardless of flag', async () => {
-      vi.spyOn(mockConfig, 'isAgentSessionSubagentEnabled').mockReturnValue(
-        true,
-      );
-      tool = new AgentTool(mockConfig, mockMessageBus);
-
-      const params = {
-        agent_name: BROWSER_AGENT_NAME,
-        prompt: 'Open page',
-      };
-      const invocation = tool['createInvocation'](params, mockMessageBus);
-      await invocation.shouldConfirmExecute(new AbortController().signal);
-
-      expect(BrowserAgentInvocation).toHaveBeenCalled();
-      expect(LocalSessionInvocation).not.toHaveBeenCalled();
-      expect(RemoteSessionInvocation).not.toHaveBeenCalled();
     });
   });
 });

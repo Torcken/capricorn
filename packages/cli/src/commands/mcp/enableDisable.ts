@@ -5,7 +5,7 @@
  */
 
 import type { CommandModule } from 'yargs';
-import { debugLogger } from '@google/gemini-cli-core';
+import { debugLogger } from '@capricorn/core';
 import {
   McpServerEnablementManager,
   canLoadServer,

@@ -36,7 +36,7 @@ import type {
   SpanMetadata,
   CompletedToolCall,
   ToolCallRequestInfo,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import {
   CoreToolCallStatus,
   ApprovalMode,
@@ -57,7 +57,7 @@ import {
   TRUE_EMPTY_RESPONSE_MESSAGE,
   DEFAULT_GEMINI_FLASH_MODEL,
   Kind,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import type { Part, PartListUnion } from '@google/genai';
 import type { UseHistoryManagerReturn } from './useHistoryManager.js';
 import type {
@@ -172,7 +172,7 @@ const mockRunInDevTraceSpan = vi.hoisted(() =>
   }),
 );
 
-vi.mock('@google/gemini-cli-core', async (importOriginal) => {
+vi.mock('@capricorn/core', async (importOriginal) => {
   const actualCoreModule = (await importOriginal()) as any;
   return {
     ...actualCoreModule,

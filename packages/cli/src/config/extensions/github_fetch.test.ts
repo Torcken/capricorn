@@ -12,14 +12,13 @@ import {
   getErrorMessage,
   PrivateIpError,
   validateUrlDestination,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { fetchJson, getGitHubToken } from './github_fetch.js';
 import type { ClientRequest, IncomingMessage } from 'node:http';
 
 vi.mock('node:https');
-vi.mock('@google/gemini-cli-core', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@google/gemini-cli-core')>();
+vi.mock('@capricorn/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@capricorn/core')>();
   return {
     ...actual,
     validateUrlDestination: vi.fn(),

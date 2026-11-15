@@ -25,7 +25,8 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
   `@google/genai` SDK code (only its types remain). Since 2026-11-15 Ollama
   errors can no longer reach the Google quota/fallback code, and the ACP
   integration offers local Ollama only. Optional: delete the unreachable
-  billing/quota helpers and dialogs (kept to ease upstream merges).
+  billing/quota helpers and dialogs (Gemini CLI is no longer developed, so there
+  are no upstream merges to keep them for).
 - **Platform coverage:** Linux and macOS are supported (CI on both); manual
   real-model validation on macOS still needed. Windows is not supported.
 - **Context management:** compression inside long tasks, window-scaled limits an

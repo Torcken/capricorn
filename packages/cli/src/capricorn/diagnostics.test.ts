@@ -9,12 +9,12 @@ import {
   OllamaClient,
   resolveOllamaSettings,
   resolveOllamaEndpoint,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import {
   DEFAULT_MOCK_MODELS,
   startMockOllama,
   type MockOllama,
-} from '@google/gemini-cli-core/dist/src/providers/ollama/testing/mockOllamaServer.js';
+} from '@capricorn/core/dist/src/providers/ollama/testing/mockOllamaServer.js';
 import {
   compareVersions,
   renderReport,

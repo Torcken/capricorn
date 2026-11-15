@@ -8,7 +8,7 @@ import Spinner from 'ink-spinner';
 import cliSpinners, { type SpinnerName } from 'cli-spinners';
 import { Text } from 'ink';
 import React, { type ComponentProps, useEffect, useState } from 'react';
-import { isTmux } from '@google/gemini-cli-core';
+import { isTmux } from '@capricorn/core';
 import { debugState } from '../debug.js';
 import { useSettings } from '../contexts/SettingsContext.js';
 

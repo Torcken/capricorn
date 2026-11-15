@@ -13,7 +13,7 @@ import { pickDefaultThemeName } from '../ui/themes/theme.js';
 import { getThemeTypeFromBackgroundColor } from '../ui/themes/color-utils.js';
 import { setAmbiguousCharactersWide } from '../ui/utils/textUtils.js';
 import type { LoadedSettings } from '../config/settings.js';
-import { type Config, coreEvents, debugLogger } from '@google/gemini-cli-core';
+import { type Config, coreEvents, debugLogger } from '@capricorn/core';
 
 /**
  * Detects terminal capabilities, loads themes, and sets the active theme.

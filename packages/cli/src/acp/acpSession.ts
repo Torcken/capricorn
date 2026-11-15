@@ -40,7 +40,7 @@ import {
   resolveAtCommandPath,
   type ResolvedAtCommandPath,
   tokenLimit,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import * as acp from '@agentclientprotocol/sdk';
 import type { Part, FunctionCall } from '@google/genai';
 import type { LoadedSettings } from '../config/settings.js';

@@ -15,8 +15,8 @@ import {
   ProjectIdRequiredError,
   ChangeAuthRequestedError,
   ValidationCancelledError,
-} from '@google/gemini-cli-core';
-import { getErrorMessage } from '@google/gemini-cli-core';
+} from '@capricorn/core';
+import { getErrorMessage } from '@capricorn/core';
 import { AuthState } from '../types.js';
 import { validateAuthMethod } from '../../config/auth.js';
 

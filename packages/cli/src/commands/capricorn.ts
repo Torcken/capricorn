@@ -31,7 +31,7 @@ import {
   type DiscoveredModel,
   type OllamaClient,
   type OllamaPsResponse,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { initializeOutputListenersAndFlush } from '../gemini.js';
 import {
   loadSettings,

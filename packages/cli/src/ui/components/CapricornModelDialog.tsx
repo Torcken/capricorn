@@ -18,7 +18,7 @@ import {
   discoverModels,
   normalizeTag,
   type DiscoveredModel,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { theme } from '../semantic-colors.js';
 import { useKeypress } from '../hooks/useKeypress.js';
 import { ConfigContext } from '../contexts/ConfigContext.js';

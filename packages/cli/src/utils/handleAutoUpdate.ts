@@ -19,7 +19,7 @@ import {
   getChannelFromVersion,
   getPackageJson,
   RELEASE_CHANNEL_STABILITY,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 
 let _updateInProgress = false;
 

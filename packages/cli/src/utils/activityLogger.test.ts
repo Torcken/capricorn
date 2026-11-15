@@ -10,7 +10,7 @@ import zlib from 'node:zlib';
 import { EventEmitter } from 'node:events';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ActivityLogger, type NetworkLog } from './activityLogger.js';
-import type { ConsoleLogPayload } from '@google/gemini-cli-core';
+import type { ConsoleLogPayload } from '@capricorn/core';
 
 describe('ActivityLogger', () => {
   let logger: ActivityLogger;

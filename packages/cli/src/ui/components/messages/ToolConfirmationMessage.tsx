@@ -19,7 +19,7 @@ import {
   ApprovalMode,
   hasRedirection,
   debugLogger,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { useToolActions } from '../../contexts/ToolActionsContext.js';
 import {
   RadioButtonSelect,

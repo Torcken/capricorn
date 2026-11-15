@@ -21,7 +21,7 @@ import type {
   ExtensionsStoppingEvent,
   ToolCallConfirmationDetails,
   AgentDefinition,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import {
   GitService,
   Logger,
@@ -36,7 +36,7 @@ import {
   removeMCPStatusChangeListener,
   MCPDiscoveryState,
   CoreToolCallStatus,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { useSessionStats } from '../contexts/SessionContext.js';
 import type {
   Message,

@@ -20,7 +20,7 @@ import {
   debugLogger,
   installEgressGuard,
   type BlockedConnection,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import type { LoadedSettings } from '../config/settings.js';
 
 /** Hosts reported once per process, to avoid flooding the UI. */

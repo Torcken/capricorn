@@ -6,7 +6,7 @@
 
 import { renderWithProviders } from '../../test-utils/render.js';
 import { createMockSettings } from '../../test-utils/settings.js';
-import { makeFakeConfig, CoreToolCallStatus } from '@google/gemini-cli-core';
+import { makeFakeConfig, CoreToolCallStatus } from '@capricorn/core';
 import { waitFor } from '../../test-utils/async.js';
 import { MainContent } from './MainContent.js';
 import { Composer } from './Composer.js';
@@ -26,9 +26,8 @@ const scrollableListMocks = vi.hoisted(() => ({
   })),
 }));
 
-vi.mock('@google/gemini-cli-core', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@google/gemini-cli-core')>();
+vi.mock('@capricorn/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@capricorn/core')>();
   return {
     ...actual,
     validatePlanPath: vi
@@ -666,7 +665,7 @@ describe('MainContent', () => {
 
   it('renders a ToolConfirmationQueue without an extra line when preceded by hidden tools', async () => {
     const { ApprovalMode, WRITE_FILE_DISPLAY_NAME } = await import(
-      '@google/gemini-cli-core'
+      '@capricorn/core'
     );
     const hiddenToolCalls = [
       {
@@ -744,7 +743,7 @@ describe('MainContent', () => {
 
   it('renders a spurious line when a tool group has only hidden tools and borderBottom true', async () => {
     const { ApprovalMode, WRITE_FILE_DISPLAY_NAME } = await import(
-      '@google/gemini-cli-core'
+      '@capricorn/core'
     );
     const uiState = {
       ...defaultMockUiState,
@@ -1285,7 +1284,7 @@ describe('MainContent', () => {
           update: {
             latest: '2.0.0',
             current: '1.0.0',
-            name: '@google/gemini-cli',
+            name: '@capricorn/cli',
           },
         },
       } as Partial<UIState>,

@@ -25,7 +25,7 @@ import {
   coreEvents,
   debugLogger,
   makeFakeConfig,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import type { LoadedSettings } from './config/settings.js';
 
 const settings = {} as LoadedSettings;

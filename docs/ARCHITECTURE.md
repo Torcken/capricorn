@@ -8,8 +8,8 @@ esbuild bundle, `bundle/capricorn.js`.
 
 | Package (internal name)                                                                     | Role                                                                       |
 | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `packages/cli` (`@google/gemini-cli`)                                                       | Argument parsing, subcommands, Ink/React TUI, headless mode, settings      |
-| `packages/core` (`@google/gemini-cli-core`)                                                 | Agent loop, tools, scheduler, policy, sessions, MCP, **Ollama provider**   |
+| `packages/cli` (`@capricorn/cli`)                                                           | Argument parsing, subcommands, Ink/React TUI, headless mode, settings      |
+| `packages/core` (`@capricorn/core`)                                                         | Agent loop, tools, scheduler, policy, sessions, MCP, **Ollama provider**   |
 | `packages/test-utils`, `packages/sdk`, `packages/devtools`, `packages/vscode-ide-companion` | Retained upstream packages (not part of the Capricorn product surface yet) |
 
 ## Responsibilities and where they live

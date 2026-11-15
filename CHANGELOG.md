@@ -6,6 +6,20 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Internal packages use the `@capricorn` scope (`@capricorn/cli`,
+  `@capricorn/core`, `@capricorn/devtools`, `@capricorn/sdk`,
+  `@capricorn/test-utils`) instead of `@google/gemini-cli*`. Gemini CLI is no
+  longer developed, so v0.67.0 is the final upstream base (docs/UPSTREAM.md).
+
+### Removed
+
+- The browser agent sources and the `chrome-devtools-mcp` dependency (the agent
+  was already disabled in 0.1.0-alpha.1).
+- Google's repository tooling: issue triage and caretaker bots, patch-release
+  scripts, GCP/Genkit telemetry scripts and the nightly eval regression scripts.
+
 ## [0.1.0-alpha.1] - 2026-11-15
 
 First release on npm, as `capricorn-code`.

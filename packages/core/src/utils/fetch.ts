@@ -442,7 +442,7 @@ export async function isPrivateIp(url: string): Promise<boolean> {
  *
  * @example
  * ```ts
- * import { validateUrlDestination } from '@google/gemini-cli-core';
+ * import { validateUrlDestination } from '@capricorn/core';
  *
  * if (!(await validateUrlDestination(userSuppliedUrl))) {
  *   throw new Error('Access to private or blocked host is not allowed.');

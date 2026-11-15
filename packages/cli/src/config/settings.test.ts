@@ -84,8 +84,8 @@ import {
   Storage,
   AuthType,
   type MCPServerConfig,
-} from '@google/gemini-cli-core';
-import * as core from '@google/gemini-cli-core';
+} from '@capricorn/core';
+import * as core from '@capricorn/core';
 import { updateSettingsFilePreservingFormat } from '../utils/commentJson.js';
 import {
   getSettingsSchema,
@@ -131,9 +131,8 @@ const mockCoreEvents = vi.hoisted(() => ({
   emitSettingsChanged: vi.fn(),
 }));
 
-vi.mock('@google/gemini-cli-core', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@google/gemini-cli-core')>();
+vi.mock('@capricorn/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@capricorn/core')>();
   const os = await import('node:os');
   const pathMod = await import('node:path');
   const fsMod = await import('node:fs');

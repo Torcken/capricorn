@@ -32,7 +32,7 @@ import {
   selectModel,
   writeToStderr,
   type Config,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { detectHardware, type HardwareProfile } from './hardware.js';
 import { pullAndVerify, testLoad } from './modelPull.js';
 import { recommendModel } from './recommend.js';

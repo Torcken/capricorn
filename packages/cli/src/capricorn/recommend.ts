@@ -29,7 +29,7 @@ import {
   DEFAULT_GEMMA4_MODEL,
   GEMMA4_PRESETS,
   type GemmaPreset,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import type { HardwareProfile } from './hardware.js';
 
 const GIB = 1024 ** 3;

@@ -10,7 +10,7 @@
 // is the local Ollama provider and no credential is ever read from the
 // environment or keychain.
 
-import { AuthType } from '@google/gemini-cli-core';
+import { AuthType } from '@capricorn/core';
 
 /**
  * Validates the selected inference back-end.

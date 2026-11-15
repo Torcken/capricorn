@@ -8,7 +8,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import type {
   SerializableConfirmationDetails,
   ToolEditConfirmationDetails,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { setStringWidthFunction } from 'ink';
 import {
   escapeAnsiCtrlCodes,

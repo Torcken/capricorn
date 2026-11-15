@@ -15,7 +15,7 @@ import {
   disableBracketedPasteMode,
   disableMouseEvents,
   enableLineWrapping,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import { parseColor } from '../themes/color-utils.js';
 
 export type TerminalBackgroundColor = string | undefined;

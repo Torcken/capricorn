@@ -20,7 +20,7 @@ import {
   verifyGemma4Model,
   type ModelVerdict,
   type OllamaClient,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 
 /**
  * Whether a tag may be pulled at all. Refuses cloud tags and non-Gemma-4

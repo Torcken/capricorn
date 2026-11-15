@@ -10,7 +10,7 @@ import {
   getErrorMessage,
   safeLookup,
   validateUrlDestination,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 
 export function getGitHubToken(): string | undefined {
   // An empty value counts as unset, so callers never see a blank token.

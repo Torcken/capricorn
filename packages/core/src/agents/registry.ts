@@ -289,12 +289,11 @@ export class AgentRegistry {
     this.registerLocalAgent(CliHelpAgent(this.config));
     this.registerLocalAgent(GeneralistAgent(this.config));
 
-    // Capricorn: the browser agent is never registered. It drives a Chrome
-    // process that browses the web on its own, outside the process-wide
-    // egress guard, so it would be an unapproved network path (and it needs
-    // a vision-capable hosted model for screenshots). Enabling it in settings
-    // only produces this notice. Its sources stay for upstream merges; the
-    // chrome-devtools-mcp bundle it needs is not built or shipped.
+    // Capricorn: the browser agent was removed. It drove a Chrome process
+    // that browsed the web on its own, outside the process-wide egress guard,
+    // so it would be an unapproved network path (and it needed a
+    // vision-capable hosted model for screenshots). Enabling it in settings
+    // only produces this notice.
     if (this.config.getBrowserAgentConfig().enabled) {
       coreEvents.emitFeedback(
         'info',

@@ -16,14 +16,14 @@ Ollama daemon**. The binding spec is
   → `bundle/capricorn.js`)
 - Lint / typecheck / format: `npm run lint`, `npm run typecheck`,
   `npx prettier --check .`
-- Unit tests (as CI runs them): `npm run test:ci -w @google/gemini-cli-core`,
-  `npm run test:ci -w @google/gemini-cli`; one file / test:
+- Unit tests (as CI runs them): `npm run test:ci -w @capricorn/core`,
+  `npm run test:ci -w @capricorn/cli`; one file / test:
   `cd packages/core && npx vitest run <file> [-t "<name>"]`. Run from the
   package directory (a few tests resolve fixtures from `process.cwd()`) and with
   `LC_ALL=C.UTF-8 TZ=UTC` on non-English machines (number formatting in
   snapshots); then both suites have 0 failures.
-- CLI unit tests resolve `@google/gemini-cli-core` from `packages/core/dist`:
-  rebuild core (`npm run build -w @google/gemini-cli-core`) after core changes.
+- CLI unit tests resolve `@capricorn/core` from `packages/core/dist`: rebuild
+  core (`npm run build -w @capricorn/core`) after core changes.
 - E2E (compiled CLI vs mock Ollama; needs build): `npm run test:e2e:capricorn`
 - Offline verification (Linux namespaces): `npm run verify:offline`
 - Package smoke: `node scripts/capricorn/pack-smoke.js`
@@ -49,10 +49,10 @@ CI uses Node 20 (`.nvmrc`, the minimum in `engines`): avoid Node 21+ features
   (`converter.ts`), mock server for tests (`testing/mockOllamaServer.ts`). Any
   Gemini model name requested by upstream code resolves to the session's
   verified Gemma tag.
-- Internal data model stays `@google/genai` types; internal package names stay
-  `@google/gemini-cli-*` (private, bundled) to keep upstream merges feasible —
-  don't rename. Import the SDK only with `import type { … }`; runtime values
-  (enums, `createUserContent`, `GenerateContentResponse`) come from
+- Internal data model stays `@google/genai` types; internal packages are
+  `@capricorn/*` (private, bundled; renamed from `@google/gemini-cli-*`, see
+  docs/UPSTREAM.md). Import the SDK only with `import type { … }`; runtime
+  values (enums, `createUserContent`, `GenerateContentResponse`) come from
   `core/src/core/genaiRuntime.ts` (core re-exports them for the CLI), so no SDK
   code is bundled.
 - Security: process-wide egress guard (`core/src/security/egressGuard.ts`,

@@ -10,14 +10,12 @@ import { activate } from './extension.js';
 import {
   IDE_DEFINITIONS,
   detectIdeFromEnv,
-} from '@google/gemini-cli-core/src/ide/detect-ide.js';
+} from '@capricorn/core/src/ide/detect-ide.js';
 
 const { vscodeMock } = await vi.hoisted(() => import('./utils/vscode-mock.js'));
 
-vi.mock('@google/gemini-cli-core/src/ide/detect-ide.js', async () => {
-  const actual = await vi.importActual(
-    '@google/gemini-cli-core/src/ide/detect-ide.js',
-  );
+vi.mock('@capricorn/core/src/ide/detect-ide.js', async () => {
+  const actual = await vi.importActual('@capricorn/core/src/ide/detect-ide.js');
   return {
     ...actual,
     detectIdeFromEnv: vi.fn(() => IDE_DEFINITIONS.vscode),

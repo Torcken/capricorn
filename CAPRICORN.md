@@ -9,8 +9,8 @@ below.
 
 A TypeScript monorepo (npm workspaces): a local-first coding agent forked from
 Gemini CLI v0.67.0, running only verified Gemma 4 models through a local Ollama
-daemon. Internal package names still start with `@google/gemini-cli-*` on
-purpose (see docs/UPSTREAM.md); do not rename them.
+daemon. Internal packages use the `@capricorn/*` scope (private, bundled; see
+docs/UPSTREAM.md).
 
 ## Commands
 

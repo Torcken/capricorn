@@ -8,7 +8,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { CommandService } from './CommandService.js';
 import { type ICommandLoader } from './types.js';
 import { CommandKind, type SlashCommand } from '../ui/commands/types.js';
-import { coreEvents, debugLogger } from '@google/gemini-cli-core';
+import { coreEvents, debugLogger } from '@capricorn/core';
 
 const createMockCommand = (name: string, kind: CommandKind): SlashCommand => ({
   name,

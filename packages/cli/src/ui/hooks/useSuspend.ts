@@ -14,7 +14,7 @@ import {
   enableLineWrapping,
   disableLineWrapping,
   shouldDisableLineWrapping,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import process from 'node:process';
 import {
   cleanupTerminalOnExit,

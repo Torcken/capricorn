@@ -9,7 +9,7 @@ import {
   createWorktreeService,
   writeToStderr,
   type WorktreeInfo,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 
 /**
  * Sets up a git worktree for parallel sessions.

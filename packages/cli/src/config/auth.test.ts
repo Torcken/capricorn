@@ -9,7 +9,7 @@
 // upstream Google credential cases were replaced by these tests.
 
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { AuthType } from '@google/gemini-cli-core';
+import { AuthType } from '@capricorn/core';
 import { validateAuthMethod } from './auth.js';
 
 afterEach(() => vi.unstubAllEnvs());

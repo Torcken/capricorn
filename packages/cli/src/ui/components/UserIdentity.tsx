@@ -18,7 +18,7 @@ import {
   type Config,
   ApprovalMode,
   resolveOllamaEndpoint,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 
 interface UserIdentityProps {
   config: Config;

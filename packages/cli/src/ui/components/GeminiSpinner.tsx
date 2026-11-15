@@ -8,7 +8,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Text, useIsScreenReaderEnabled } from 'ink';
 import { CliSpinner, TMUX_SPINNER_INTERVAL_MS } from './CliSpinner.js';
 import type { SpinnerName } from 'cli-spinners';
-import { isTmux } from '@google/gemini-cli-core';
+import { isTmux } from '@capricorn/core';
 import { Colors } from '../colors.js';
 import tinygradient from 'tinygradient';
 

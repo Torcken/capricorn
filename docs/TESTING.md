@@ -7,8 +7,8 @@ npm ci                          # install (runs the bundle via `prepare`)
 npm run build                   # compile all workspaces
 
 # Unit tests (Vitest), exactly as CI runs them
-npm run test:ci -w @google/gemini-cli-core
-npm run test:ci -w @google/gemini-cli
+npm run test:ci -w @capricorn/core
+npm run test:ci -w @capricorn/cli
 cd packages/core && npx vitest run src/providers/ollama/client.test.ts      # one file
 cd packages/core && npx vitest run -t "refuses a remote endpoint"          # one test
 
@@ -114,7 +114,7 @@ filing a bug.
 - **Home-directory writes.** Some retained upstream unit tests write to the real
   `~/.capricorn` (upstream wrote to `~/.gemini`). Run the suites with a
   disposable `HOME` if this matters to you, e.g.
-  `HOME=$(mktemp -d) npm run test:ci -w @google/gemini-cli`.
+  `HOME=$(mktemp -d) npm run test:ci -w @capricorn/cli`.
 - The upstream `integration-tests/`, `evals/`, `memory-tests/` and `perf-tests/`
   suites were written for hosted Gemini models and are not part of Capricorn's
   quality gate yet.

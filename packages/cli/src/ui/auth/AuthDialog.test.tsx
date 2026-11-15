@@ -16,7 +16,7 @@ import {
   type Mock,
 } from 'vitest';
 import { AuthDialog } from './AuthDialog.js';
-import { AuthType, type Config, debugLogger } from '@google/gemini-cli-core';
+import { AuthType, type Config, debugLogger } from '@capricorn/core';
 import { SettingScope, type LoadedSettings } from '../../config/settings.js';
 import { AuthState } from '../types.js';
 import { RadioButtonSelect } from '../components/shared/RadioButtonSelect.js';
@@ -27,9 +27,8 @@ import { Text } from 'ink';
 import { RELAUNCH_EXIT_CODE } from '../../utils/processUtils.js';
 
 // Mocks
-vi.mock('@google/gemini-cli-core', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@google/gemini-cli-core')>();
+vi.mock('@capricorn/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@capricorn/core')>();
   return {
     ...actual,
     clearCachedCredentialFile: vi.fn(),
@@ -359,9 +358,7 @@ describe('AuthDialog', () => {
       // User selects "Sign in with Google" again expecting to authenticate/switch accounts
       await handleAuthSelect(AuthType.LOGIN_WITH_GOOGLE);
 
-      const { clearCachedCredentialFile } = await import(
-        '@google/gemini-cli-core'
-      );
+      const { clearCachedCredentialFile } = await import('@capricorn/core');
       expect(clearCachedCredentialFile).toHaveBeenCalled();
       unmount();
     });
@@ -376,9 +373,7 @@ describe('AuthDialog', () => {
 
       await handleAuthSelect(AuthType.LOGIN_WITH_GOOGLE);
 
-      const { clearCachedCredentialFile } = await import(
-        '@google/gemini-cli-core'
-      );
+      const { clearCachedCredentialFile } = await import('@capricorn/core');
       expect(clearCachedCredentialFile).toHaveBeenCalled();
       unmount();
     });
@@ -393,9 +388,7 @@ describe('AuthDialog', () => {
 
       await handleAuthSelect(AuthType.USE_VERTEX_AI);
 
-      const { clearCachedCredentialFile } = await import(
-        '@google/gemini-cli-core'
-      );
+      const { clearCachedCredentialFile } = await import('@capricorn/core');
       expect(clearCachedCredentialFile).not.toHaveBeenCalled();
       unmount();
     });
@@ -405,9 +398,7 @@ describe('AuthDialog', () => {
       props.settings.merged.security.auth.selectedType =
         AuthType.LOGIN_WITH_GOOGLE;
 
-      const { clearCachedCredentialFile } = await import(
-        '@google/gemini-cli-core'
-      );
+      const { clearCachedCredentialFile } = await import('@capricorn/core');
       const testError = new Error('Disk I/O failure');
       vi.mocked(clearCachedCredentialFile).mockRejectedValueOnce(testError);
       const errorSpy = vi
@@ -439,9 +430,7 @@ describe('AuthDialog', () => {
       props.settings.merged.security.auth.selectedType =
         AuthType.LOGIN_WITH_GOOGLE;
 
-      const { clearCachedCredentialFile } = await import(
-        '@google/gemini-cli-core'
-      );
+      const { clearCachedCredentialFile } = await import('@capricorn/core');
       const testError = new Error('Disk I/O failure');
       vi.mocked(clearCachedCredentialFile).mockRejectedValueOnce(testError);
       const errorSpy = vi

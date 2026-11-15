@@ -31,7 +31,7 @@
  * where reading is far slower. Larger values remain a manual choice.
  */
 
-import type { OllamaClient } from '@google/gemini-cli-core';
+import type { OllamaClient } from '@capricorn/core';
 import type { HardwareProfile } from './hardware.js';
 import { cpuBudgetGiB, gpuBudgetGiB } from './recommend.js';
 

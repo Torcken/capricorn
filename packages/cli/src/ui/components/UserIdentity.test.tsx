@@ -15,7 +15,7 @@ import {
   ApprovalMode,
   makeFakeConfig,
   resolveOllamaSettings,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 
 describe('<UserIdentity />', () => {
   it('states that inference is local and shows the endpoint', async () => {

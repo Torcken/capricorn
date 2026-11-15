@@ -53,7 +53,7 @@ import {
   TRUE_EMPTY_RESPONSE_MESSAGE,
   // Capricorn: from core's genaiRuntime, so the SDK is not bundled.
   FinishReason,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import type {
   CompletedToolCall,
   Config,
@@ -69,7 +69,7 @@ import type {
   ToolCallResponseInfo,
   GeminiErrorEventValue,
   RetryAttemptPayload,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import type { Part, PartListUnion } from '@google/genai';
 import type {
   HistoryItem,

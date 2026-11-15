@@ -15,7 +15,7 @@ import {
   OutputFormat,
   ExitCodes,
   type Config,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import type { LoadedSettings } from './config/settings.js';
 import { validateAuthMethod } from './config/auth.js';
 import { handleError } from './utils/errors.js';

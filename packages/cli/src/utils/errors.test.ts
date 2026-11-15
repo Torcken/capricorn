@@ -13,7 +13,7 @@ import {
   beforeEach,
   afterEach,
 } from 'vitest';
-import type { Config } from '@google/gemini-cli-core';
+import type { Config } from '@capricorn/core';
 import {
   OutputFormat,
   FatalError,
@@ -21,7 +21,7 @@ import {
   debugLogger,
   parseAndFormatApiError,
   coreEvents,
-} from '@google/gemini-cli-core';
+} from '@capricorn/core';
 import {
   handleError,
   handleToolError,
@@ -36,9 +36,8 @@ vi.mock('./cleanup.js', () => ({
 }));
 
 // Mock the core modules
-vi.mock('@google/gemini-cli-core', async (importOriginal) => {
-  const original =
-    await importOriginal<typeof import('@google/gemini-cli-core')>();
+vi.mock('@capricorn/core', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@capricorn/core')>();
 
   return {
     ...original,

@@ -80,10 +80,6 @@ if (existsSync(builtinSkillsSrc)) {
   console.log('Copied built-in skills to bundle/builtin/');
 }
 
-// 5. Capricorn: the bundled chrome-devtools-mcp is not copied. It only
-// served the browser agent, which Capricorn never registers (it would browse
-// the web outside the egress guard).
-
 // 6. Copy Extension Examples
 const extensionExamplesSrc = join(
   root,

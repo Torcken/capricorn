@@ -17,12 +17,8 @@ import {
 import { ConfigContext } from '../contexts/ConfigContext.js';
 import { SettingsContext } from '../contexts/SettingsContext.js';
 import { createMockSettings } from '../../test-utils/settings.js';
-import {
-  ApprovalMode,
-  tokenLimit,
-  CoreToolCallStatus,
-} from '@google/gemini-cli-core';
-import type { Config } from '@google/gemini-cli-core';
+import { ApprovalMode, tokenLimit, CoreToolCallStatus } from '@capricorn/core';
+import type { Config } from '@capricorn/core';
 import { StreamingState } from '../types.js';
 import {
   appEvents,

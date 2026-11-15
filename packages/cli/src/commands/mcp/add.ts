@@ -11,7 +11,7 @@ import {
   SettingScope,
   UNTRUSTED_WORKSPACE_SETTINGS_ERROR,
 } from '../../config/settings.js';
-import { debugLogger, type MCPServerConfig } from '@google/gemini-cli-core';
+import { debugLogger, type MCPServerConfig } from '@capricorn/core';
 import { exitCli } from '../utils.js';
 
 async function addMcpServer(
