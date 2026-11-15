@@ -1,7 +1,7 @@
 {
   "name": "@google/gemini-cli",
   "version": "0.1.0-alpha.0",
-  "description": "Capricorn CLI (internal workspace; published as part of the capricorn-cli bundle)",
+  "description": "Capricorn CLI (internal workspace; published as part of the capricorn-code bundle)",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

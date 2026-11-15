@@ -31,13 +31,14 @@ The version lives in the root `package.json` and every workspace `package.json`
    `npm audit --omit=dev`.
 8. Commit, tag `v<x.y.z>`, push the tag.
 9. Publish (manual): flip `"private": true` to `false` in the **root**
-   `package.json` only after the package name is confirmed available and owned,
-   then `npm publish --access public` (add `--tag next` for pre-releases).
-   Workspace packages stay private.
+   `package.json` only after the package name is confirmed available and owned
+   (`capricorn-code`: free on npm as of 2026-11-15; `capricorn` and
+   `capricorn-cli` belong to other projects), then `npm publish --access public`
+   (add `--tag next` for pre-releases). Workspace packages stay private.
 10. Create the GitHub release with the changelog section, the SBOM and the
     real-model smoke results.
 
 ## Rollback
 
-`npm deprecate capricorn-cli@<bad-version> "<reason>"` and publish a fixed patch
-release. Do not unpublish versions others may depend on.
+`npm deprecate capricorn-code@<bad-version> "<reason>"` and publish a fixed
+patch release. Do not unpublish versions others may depend on.

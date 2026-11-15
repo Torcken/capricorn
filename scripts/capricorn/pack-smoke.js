@@ -83,7 +83,7 @@ try {
     ) {
       fail('package contains a credentials-looking file');
     }
-    if (info.name !== 'capricorn-cli')
+    if (info.name !== 'capricorn-code')
       fail(`unexpected package name ${info.name}`);
     process.stdout.write(
       `(${files.length} files, ${(info.size / 1024 / 1024).toFixed(1)} MiB) `,
@@ -116,8 +116,8 @@ try {
     // (hosted Gemini/Vertex clients, google-auth-library) must not ship.
     // These markers only occur in that SDK code (checked when introduced).
     const pkgDir = [
-      path.join(prefix, 'lib', 'node_modules', 'capricorn-cli'),
-      path.join(prefix, 'node_modules', 'capricorn-cli'),
+      path.join(prefix, 'lib', 'node_modules', 'capricorn-code'),
+      path.join(prefix, 'node_modules', 'capricorn-code'),
     ].find((d) => fs.existsSync(d));
     if (!pkgDir) fail('installed package directory not found');
     for (const dep of ['@google/genai', 'google-auth-library']) {

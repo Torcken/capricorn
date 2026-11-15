@@ -1,6 +1,14 @@
 {
-  "name": "capricorn-cli",
+  "name": "capricorn-code",
   "version": "0.1.0-alpha.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Torcken/capricorn.git"
+  },
+  "homepage": "https://github.com/Torcken/capricorn#readme",
+  "bugs": {
+    "url": "https://github.com/Torcken/capricorn/issues"
+  },
   "engines": {
     "node": ">=20.0.0"
   },

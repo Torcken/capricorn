@@ -41,6 +41,9 @@ All notable changes to Capricorn are documented here. The format follows
 
 ### Changed
 
+- npm package name: `capricorn-code` (`capricorn-cli` and `capricorn` belong to
+  other projects on npm). The command is still `capricorn`. Repository links
+  added to `package.json`; the package stays private until it is published.
 - Cheaper history compression on local models: in `ollama.think: auto`, internal
   calls (compression, loop detection, next-speaker and edit checks) no longer
   think (upstream configs keyed by Gemini names asked for thoughts), and local
