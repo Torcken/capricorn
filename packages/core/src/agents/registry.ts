@@ -18,7 +18,6 @@ import { loadAgentsFromDirectory } from './agentLoader.js';
 import { CodebaseInvestigatorAgent } from './codebase-investigator.js';
 import { CliHelpAgent } from './cli-help-agent.js';
 import { GeneralistAgent } from './generalist-agent.js';
-import { BrowserAgentDefinition } from './browser/browserAgentDefinition.js';
 import { AgentTool } from './agent-tool.js';
 import { A2AAuthProviderFactory } from './auth-provider/factory.js';
 import type { AuthenticationHandler } from '@a2a-js/sdk/client';
@@ -290,31 +289,18 @@ export class AgentRegistry {
     this.registerLocalAgent(CliHelpAgent(this.config));
     this.registerLocalAgent(GeneralistAgent(this.config));
 
-    // Register the browser agent if enabled in settings.
-    // Tools are configured dynamically at invocation time via browserAgentFactory.
-    const browserConfig = this.config.getBrowserAgentConfig();
-    if (browserConfig.enabled) {
-      // In container sandboxes (Docker/Podman/gVisor/LXC), Chrome is not
-      // available inside the container. The browser agent can only work with
-      // sessionMode "existing" (connecting to a host Chrome instance).
-      const sandboxType = process.env['SANDBOX'];
-      const isContainerSandbox =
-        !!sandboxType &&
-        sandboxType !== 'sandbox-exec' &&
-        sandboxType !== 'sandbox:none';
-      const sessionMode =
-        browserConfig.customConfig.sessionMode ?? 'persistent';
-
-      if (isContainerSandbox && sessionMode !== 'existing') {
-        coreEvents.emitFeedback(
-          'info',
-          'Browser agent disabled in container sandbox. ' +
-            'To use it, set sessionMode to "existing" in settings and start Chrome ' +
-            'with --remote-debugging-port=9222 on the host.',
-        );
-      } else {
-        this.registerLocalAgent(BrowserAgentDefinition(this.config));
-      }
+    // Capricorn: the browser agent is never registered. It drives a Chrome
+    // process that browses the web on its own, outside the process-wide
+    // egress guard, so it would be an unapproved network path (and it needs
+    // a vision-capable hosted model for screenshots). Enabling it in settings
+    // only produces this notice. Its sources stay for upstream merges; the
+    // chrome-devtools-mcp bundle it needs is not built or shipped.
+    if (this.config.getBrowserAgentConfig().enabled) {
+      coreEvents.emitFeedback(
+        'info',
+        'The browser agent is not available in Capricorn: it would browse ' +
+          'the web outside the network policy. The setting is ignored.',
+      );
     }
   }
 

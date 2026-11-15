@@ -80,6 +80,18 @@ The repository history starts with the unmodified upstream commit, so
 - Added: Capricorn docs, `e2e/` suite, offline verification, package smoke test,
   CI workflow without secrets.
 
+**Agents and archives**
+
+- The browser agent (`agents/browser/`) is never registered: it would browse the
+  web through Chrome outside the egress guard. Its sources stay to ease merges;
+  `bundle:browser-mcp` is no longer part of `npm run bundle` and its output is
+  not shipped.
+- ZIP extraction (extension and skill installs) goes through
+  `cli/src/utils/safeZip.ts`, which refuses symbolic links and escaping paths
+  before `extract-zip` runs.
+- `bundle/` is emptied before each bundle build, and `docs/planning/` is not
+  copied into it.
+
 ## Intentionally retained (and why)
 
 - **Internal package names** (`@google/gemini-cli-core`, …). They are bundled

@@ -12,7 +12,8 @@ import {
   type SkillDefinition,
 } from '@google/gemini-cli-core';
 import { cloneFromGit } from '../config/extensions/github.js';
-import extract from 'extract-zip';
+// Capricorn: ZIPs go through extractZipSafely (extract-zip follows symlinks).
+import { extractZipSafely } from './safeZip.js';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -133,7 +134,7 @@ export async function installSkill(
       sourcePath = tempDirToClean;
 
       onLog(`Extracting skill from ${source}...`);
-      await extract(path.resolve(source), { dir: tempDirToClean });
+      await extractZipSafely(path.resolve(source), tempDirToClean);
     }
 
     // If a subpath is provided, resolve it against the cloned/local root.

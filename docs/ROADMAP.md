@@ -32,6 +32,9 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
   8K-window eval and cheaper summaries (no thinking on utility calls, short
   capped snapshots; 2026-11-14) are done (`evals/capricorn/RESULTS.md`). Still
   to do: smarter selection of repository context.
+- **Dependencies:** migrate from `zod` 3 to 4 (the only fix for a high-severity
+  audit advisory; touches about 40 files and the `zod-to-json-schema`
+  conversions) and update OpenTelemetry to a fixed major version.
 - **Startup time:** profile and trim inherited initialization.
 - **npm publication** once the package name and repository are confirmed.
 

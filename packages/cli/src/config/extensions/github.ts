@@ -18,7 +18,8 @@ import * as https from 'node:https';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as tar from 'tar';
-import extract from 'extract-zip';
+// Capricorn: ZIPs go through extractZipSafely (extract-zip follows symlinks).
+import { extractZipSafely } from '../../utils/safeZip.js';
 import { fetchJson, getGitHubToken } from './github_fetch.js';
 import type { ExtensionConfig } from '../extension.js';
 import type { ExtensionManager } from '../extension-manager.js';
@@ -569,7 +570,7 @@ export async function extractFile(file: string, dest: string): Promise<void> {
       cwd: dest,
     });
   } else if (file.endsWith('.zip')) {
-    await extract(file, { dir: dest });
+    await extractZipSafely(file, dest);
   } else {
     throw new Error(`Unsupported file extension for extraction: ${file}`);
   }

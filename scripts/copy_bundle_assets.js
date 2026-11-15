@@ -18,7 +18,7 @@
 // limitations under the License.
 
 import { copyFileSync, existsSync, mkdirSync, cpSync } from 'node:fs';
-import { dirname, join, basename } from 'node:path';
+import { dirname, join, basename, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { glob } from 'glob';
 
@@ -58,7 +58,14 @@ console.log(`Copied ${policyFiles.length} policy files to bundle/policies/`);
 const docsSrc = join(root, 'docs');
 const docsDest = join(bundleDir, 'docs');
 if (existsSync(docsSrc)) {
-  cpSync(docsSrc, docsDest, { recursive: true, dereference: true });
+  // Capricorn: docs/planning/ holds the project's planning documents, not
+  // user documentation; keep them out of the package.
+  const planningDir = join(docsSrc, 'planning');
+  cpSync(docsSrc, docsDest, {
+    recursive: true,
+    dereference: true,
+    filter: (src) => src !== planningDir && !src.startsWith(planningDir + sep),
+  });
   console.log('Copied docs to bundle/docs/');
 }
 
@@ -73,18 +80,9 @@ if (existsSync(builtinSkillsSrc)) {
   console.log('Copied built-in skills to bundle/builtin/');
 }
 
-// 5. Copy bundled chrome-devtools-mcp
-const bundleMcpSrc = join(root, 'packages/core/dist/bundled');
-const bundleMcpDest = join(bundleDir, 'bundled');
-if (!existsSync(bundleMcpSrc)) {
-  console.error(
-    `Error: chrome-devtools-mcp bundle not found at ${bundleMcpSrc}.\n` +
-      `Run "npm run bundle:browser-mcp -w @google/gemini-cli-core" first.`,
-  );
-  process.exit(1);
-}
-cpSync(bundleMcpSrc, bundleMcpDest, { recursive: true, dereference: true });
-console.log('Copied bundled chrome-devtools-mcp to bundle/bundled/');
+// 5. Capricorn: the bundled chrome-devtools-mcp is not copied. It only
+// served the browser agent, which Capricorn never registers (it would browse
+// the web outside the egress guard).
 
 // 6. Copy Extension Examples
 const extensionExamplesSrc = join(

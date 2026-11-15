@@ -7,7 +7,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { writeFileSync } from 'node:fs';
+import { rmSync, writeFileSync } from 'node:fs';
 import { wasmLoader } from 'esbuild-plugin-wasm';
 
 let esbuild;
@@ -140,6 +140,11 @@ const workerConfig = {
   plugins: createWasmPlugins(),
   alias: commonAliases,
 };
+
+// Capricorn: start from an empty bundle/. Chunk names carry content hashes,
+// so without this every rebuild left the previous chunks behind and `npm
+// pack` shipped all of them (23.8 MB instead of about 7).
+rmSync('bundle', { recursive: true, force: true });
 
 // Capricorn: the upstream A2A server bundle was removed with packages/a2a-server.
 Promise.allSettled([

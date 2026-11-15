@@ -6,6 +6,21 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- The upstream browser agent is disabled: it drove a Chrome process that browsed
+  the web outside the egress guard. Enabling it in settings now only shows a
+  notice, and its chrome-devtools-mcp bundle (about 20 MB, with vulnerable
+  puppeteer dependencies) is no longer built into the package.
+- ZIP archives (extension and skill installs) are checked before extraction:
+  symbolic links and paths leaving the target are refused. `extract-zip` has no
+  release that fixes its symlink advisories.
+- Dependency upgrades for audit advisories in bundled code: `shell-quote`
+  1.12.0, `simple-git` 4.0.2, `tar` 7.5.23, `undici` 7.30.2, `ws` 8.23.0,
+  `@modelcontextprotocol/sdk` 1.32.2, `@grpc/grpc-js` 1.14.7, `js-yaml` 4.3.2,
+  `picomatch` 4.0.7, plus fixed `brace-expansion`, `fast-uri` and `protobufjs`.
+  Remaining: `zod` 3 and OpenTelemetry's Jaeger propagator (docs/SECURITY.md).
+
 ### Added
 
 - Context window sized for this machine: memory is estimated from the model's
@@ -48,6 +63,9 @@ All notable changes to Capricorn are documented here. The format follows
 
 ### Changed
 
+- Package: `bundle/` is emptied before each build (old content-hashed chunks
+  were shipped too: 23.8 MB packed, now 3.9 MB), and planning documents are no
+  longer copied into `bundle/docs`.
 - Package: runtime libraries are bundled into `bundle/capricorn.js`, so
   installing the package no longer pulls them as dependencies (only the optional
   native terminal modules remain). The package check now fails on any file

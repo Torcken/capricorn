@@ -82,7 +82,12 @@ try {
     // README (e.g. a local README draft) whatever `files` says, so an
     // allowlist catches what the `files` field alone cannot.
     const allowed = /^(bundle\/.+|LICENSE|NOTICE|README\.md|package\.json)$/;
-    const unexpected = files.filter((f) => !allowed.test(f));
+    // Planning documents and the browser agent's chrome-devtools-mcp bundle
+    // (the agent is disabled in Capricorn) must not ship either.
+    const excluded = /^bundle\/(docs\/planning|bundled)\//;
+    const unexpected = files.filter(
+      (f) => !allowed.test(f) || excluded.test(f),
+    );
     if (unexpected.length > 0) {
       fail(`package contains unexpected files: ${unexpected.join(', ')}`);
     }

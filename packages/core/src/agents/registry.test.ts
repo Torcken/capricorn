@@ -1649,86 +1649,54 @@ describe('AgentRegistry', () => {
     });
   });
 
-  describe('browser agent sandbox registration', () => {
+  // Capricorn: the browser agent is never registered (it would browse the
+  // web outside the egress guard). Upstream tested its sandbox-dependent
+  // registration here; these tests now check it stays unregistered.
+  describe('browser agent (not available in Capricorn)', () => {
     afterEach(() => {
       vi.unstubAllEnvs();
     });
 
-    it('should NOT register browser agent in container sandbox without existing mode', async () => {
-      vi.stubEnv('SANDBOX', 'docker-container-0');
+    it.each([
+      ['no sandbox', '', undefined],
+      ['seatbelt sandbox', 'sandbox-exec', undefined],
+      ['container sandbox, existing mode', 'docker-container-0', 'existing'],
+    ] as const)(
+      'is not registered when enabled (%s)',
+      async (_label, sandbox, sessionMode) => {
+        vi.stubEnv('SANDBOX', sandbox);
+        const feedbackSpy = vi
+          .spyOn(coreEvents, 'emitFeedback')
+          .mockImplementation(() => {});
+        const config = makeMockedConfig({
+          agents: {
+            overrides: { browser_agent: { enabled: true } },
+            ...(sessionMode ? { browser: { sessionMode } } : {}),
+          },
+        });
+        const registry = new TestableAgentRegistry(config);
+        await registry.initialize();
+
+        expect(registry.getDefinition('browser_agent')).toBeUndefined();
+        expect(feedbackSpy).toHaveBeenCalledWith(
+          'info',
+          expect.stringContaining('not available in Capricorn'),
+        );
+      },
+    );
+
+    it('says nothing when the browser agent is not enabled', async () => {
       const feedbackSpy = vi
         .spyOn(coreEvents, 'emitFeedback')
         .mockImplementation(() => {});
-
-      const config = makeMockedConfig({
-        agents: {
-          overrides: {
-            browser_agent: { enabled: true },
-          },
-          browser: {
-            sessionMode: 'persistent',
-          },
-        },
-      });
-      const registry = new TestableAgentRegistry(config);
+      const registry = new TestableAgentRegistry(makeMockedConfig());
       await registry.initialize();
 
       expect(registry.getDefinition('browser_agent')).toBeUndefined();
-      expect(feedbackSpy).toHaveBeenCalledWith(
+      expect(feedbackSpy).not.toHaveBeenCalledWith(
         'info',
-        expect.stringContaining('Browser agent disabled in container sandbox'),
+        expect.stringContaining('browser agent'),
       );
-    });
-
-    it('should register browser agent in container sandbox with existing mode', async () => {
-      vi.stubEnv('SANDBOX', 'docker-container-0');
-
-      const config = makeMockedConfig({
-        agents: {
-          overrides: {
-            browser_agent: { enabled: true },
-          },
-          browser: {
-            sessionMode: 'existing',
-          },
-        },
-      });
-      const registry = new TestableAgentRegistry(config);
-      await registry.initialize();
-
-      expect(registry.getDefinition('browser_agent')).toBeDefined();
-    });
-
-    it('should register browser agent normally in seatbelt sandbox', async () => {
-      vi.stubEnv('SANDBOX', 'sandbox-exec');
-
-      const config = makeMockedConfig({
-        agents: {
-          overrides: {
-            browser_agent: { enabled: true },
-          },
-        },
-      });
-      const registry = new TestableAgentRegistry(config);
-      await registry.initialize();
-
-      expect(registry.getDefinition('browser_agent')).toBeDefined();
-    });
-
-    it('should register browser agent normally when not in sandbox', async () => {
-      vi.stubEnv('SANDBOX', '');
-
-      const config = makeMockedConfig({
-        agents: {
-          overrides: {
-            browser_agent: { enabled: true },
-          },
-        },
-      });
-      const registry = new TestableAgentRegistry(config);
-      await registry.initialize();
-
-      expect(registry.getDefinition('browser_agent')).toBeDefined();
     });
   });
 });
