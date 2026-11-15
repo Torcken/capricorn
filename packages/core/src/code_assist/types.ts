@@ -372,11 +372,13 @@ export const RequiredMcpServerConfigSchema = z.object({
   type: z.enum(['sse', 'http']),
 
   // Auth
-  authProviderType: z.nativeEnum(AuthProviderType).optional(),
+  // Capricorn: lazy because config.ts and this file import each other; zod 4
+  // reads enum values eagerly, before AuthProviderType is initialised.
+  authProviderType: z.lazy(() => z.nativeEnum(AuthProviderType)).optional(),
   oauth: RequiredMcpServerOAuthSchema.optional(),
   targetAudience: z.string().optional(),
   targetServiceAccount: z.string().optional(),
-  headers: z.record(z.string()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
 
   // Common
   trust: z.boolean().optional(),
@@ -393,8 +395,10 @@ export type RequiredMcpServerConfig = z.infer<
 >;
 
 export const McpConfigDefinitionSchema = z.object({
-  mcpServers: z.record(McpServerConfigSchema).optional(),
-  requiredMcpServers: z.record(RequiredMcpServerConfigSchema).optional(),
+  mcpServers: z.record(z.string(), McpServerConfigSchema).optional(),
+  requiredMcpServers: z
+    .record(z.string(), RequiredMcpServerConfigSchema)
+    .optional(),
 });
 
 export type McpConfigDefinition = z.infer<typeof McpConfigDefinitionSchema>;
@@ -411,7 +415,9 @@ export const AdminControlsSettingsSchema = z.object({
     .object({
       mcpEnabled: z.boolean().optional(),
       mcpConfig: McpConfigDefinitionSchema.optional(),
-      requiredMcpConfig: z.record(RequiredMcpServerConfigSchema).optional(),
+      requiredMcpConfig: z
+        .record(z.string(), RequiredMcpServerConfigSchema)
+        .optional(),
     })
     .optional(),
   cliFeatureSetting: CliFeatureSettingSchema.optional(),

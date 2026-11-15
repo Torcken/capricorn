@@ -400,9 +400,7 @@ unknown_field: true
 Body`);
         const error = await parseAgentMarkdown(filePath).catch((e) => e);
         expect(error).toBeInstanceOf(AgentLoadError);
-        expect(error.message).toContain(
-          "Unrecognized key(s) in object: 'unknown_field'",
-        );
+        expect(error.message).toContain('Unrecognized key: "unknown_field"');
         expect(error.message).not.toContain(': Unrecognized key(s)');
         expect(error.message).not.toContain('Required');
       });
@@ -999,7 +997,9 @@ auth:
   authorization_url: not-a-valid-url
 ---
 `);
-      await expect(parseAgentMarkdown(filePath)).rejects.toThrow(/Invalid url/);
+      await expect(parseAgentMarkdown(filePath)).rejects.toThrow(
+        /Invalid url/i,
+      );
     });
 
     it('should reject oauth2 auth with invalid token_url', async () => {
@@ -1013,7 +1013,9 @@ auth:
   token_url: not-a-valid-url
 ---
 `);
-      await expect(parseAgentMarkdown(filePath)).rejects.toThrow(/Invalid url/);
+      await expect(parseAgentMarkdown(filePath)).rejects.toThrow(
+        /Invalid url/i,
+      );
     });
 
     it('should convert oauth2 auth config in markdownToAgentDefinition', () => {

@@ -457,7 +457,7 @@ export class OllamaClient {
  * A zod schema producing `T` from arbitrary input. The input type is
  * `unknown` on purpose: responses are untrusted until validated.
  */
-type ResponseSchema<T> = z.ZodType<T, z.ZodTypeDef, unknown>;
+type ResponseSchema<T> = z.ZodType<T, unknown>;
 
 /** Shape of Ollama's HTTP error bodies: `{"error": "..."}`. */
 const errorBodySchema = z.object({ error: z.string() });

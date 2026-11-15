@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { zodToToolJsonSchema } from '../../utils/zodJsonSchema.js';
 import type { Config } from '../../config/config.js';
 import type { SecurityPolicy } from './types.js';
 import { getResponseText } from '../../utils/partUtils.js';
@@ -72,7 +73,6 @@ Trusted Tools (Context):
 `;
 
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 
 const ToolPolicySchema = z.object({
   permissions: z.nativeEnum(SafetyCheckDecision),
@@ -115,9 +115,10 @@ export async function generatePolicy(
         model,
         config: {
           responseMimeType: 'application/json',
-          responseSchema: zodToJsonSchema(SecurityPolicyResponseSchema, {
-            target: 'openApi3',
-          }),
+          responseSchema: zodToToolJsonSchema(
+            SecurityPolicyResponseSchema,
+            'openapi-3.0',
+          ),
         },
         contents: [
           {

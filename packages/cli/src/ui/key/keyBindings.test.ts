@@ -348,7 +348,7 @@ describe('loadCustomKeybindings', () => {
     const { config, errors } = await loadCustomKeybindings();
 
     expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]).toMatch(/at least 1 element|non-empty/);
+    expect(errors[0]).toMatch(/at least 1 element|non-empty|>=1 items/);
     expect(config.get(Command.QUIT)).toEqual([new KeyBinding('ctrl+c')]);
   });
 
@@ -361,7 +361,7 @@ describe('loadCustomKeybindings', () => {
     const { config, errors } = await loadCustomKeybindings();
 
     expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0]).toMatch(/Expected array, received string/);
+    expect(errors[0]).toMatch(/expected array, received string/i);
     expect(config.get(Command.QUIT)).toEqual([new KeyBinding('ctrl+c')]);
   });
 

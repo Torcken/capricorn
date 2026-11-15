@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { zodToToolJsonSchema } from '../utils/zodJsonSchema.js';
 import {
   BaseDeclarativeTool,
   BaseToolInvocation,
@@ -17,9 +18,8 @@ import {
   COMPLETE_TASK_DISPLAY_NAME,
 } from './definitions/base-declarations.js';
 import { type OutputConfig } from '../agents/types.js';
-import { type z } from 'zod';
+import type { z } from 'zod';
 import { type MessageBus } from '../confirmation-bus/message-bus.js';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 
 /**
  * Tool for signaling task completion and optionally returning structured output.
@@ -51,7 +51,7 @@ export class CompleteTaskTool<
     outputConfig?: OutputConfig<z.ZodTypeAny>,
   ): unknown {
     if (outputConfig) {
-      const jsonSchema = zodToJsonSchema(outputConfig.schema);
+      const jsonSchema = zodToToolJsonSchema(outputConfig.schema);
       const {
         $schema: _$schema,
         definitions: _definitions,
@@ -150,6 +150,7 @@ export class CompleteTaskInvocation<
       outputValue = this.params[this.outputConfig.outputName];
       if (this.processOutput) {
         // We validated the params in validateToolParamValues, so safe to cast
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
         submittedOutput = this.processOutput(outputValue as z.infer<TOutput>);
       } else {
         submittedOutput =

@@ -5,7 +5,6 @@
  */
 
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import {
   BaseDeclarativeTool,
   BaseToolInvocation,
@@ -14,6 +13,7 @@ import {
   type ExecuteOptions,
   Kind,
   type MessageBus,
+  zodToToolJsonSchema,
 } from '@capricorn/core';
 import type { SessionContext } from './types.js';
 
@@ -37,7 +37,7 @@ export class ModelVisibleError extends Error {
  *
  * @typeParam T - The Zod schema type that validates the tool's input parameters.
  */
-export interface ToolDefinition<T extends z.ZodTypeAny> {
+export interface ToolDefinition<T extends z.ZodType<object>> {
   /**
    * A unique name for the tool, used by the model to invoke it.
    */
@@ -71,7 +71,7 @@ export interface ToolDefinition<T extends z.ZodTypeAny> {
  *
  * @typeParam T - The Zod schema type that validates the tool's input parameters.
  */
-export interface Tool<T extends z.ZodTypeAny> extends ToolDefinition<T> {
+export interface Tool<T extends z.ZodType<object>> extends ToolDefinition<T> {
   /**
    * The function executed when the model invokes this tool.
    *
@@ -84,7 +84,7 @@ export interface Tool<T extends z.ZodTypeAny> extends ToolDefinition<T> {
   action: (params: z.infer<T>, context?: SessionContext) => Promise<unknown>;
 }
 
-class SdkToolInvocation<T extends z.ZodTypeAny> extends BaseToolInvocation<
+class SdkToolInvocation<T extends z.ZodType<object>> extends BaseToolInvocation<
   z.infer<T>,
   ToolResult
 > {
@@ -143,7 +143,7 @@ class SdkToolInvocation<T extends z.ZodTypeAny> extends BaseToolInvocation<
  *
  * @typeParam T - The Zod schema type that validates the tool's input parameters.
  */
-export class SdkTool<T extends z.ZodTypeAny> extends BaseDeclarativeTool<
+export class SdkTool<T extends z.ZodType<object>> extends BaseDeclarativeTool<
   z.infer<T>,
   ToolResult
 > {
@@ -158,7 +158,7 @@ export class SdkTool<T extends z.ZodTypeAny> extends BaseDeclarativeTool<
       definition.name,
       definition.description,
       Kind.Other,
-      zodToJsonSchema(definition.inputSchema),
+      zodToToolJsonSchema(definition.inputSchema),
       messageBus,
     );
   }
@@ -224,7 +224,7 @@ export class SdkTool<T extends z.ZodTypeAny> extends BaseDeclarativeTool<
  * );
  * ```
  */
-export function tool<T extends z.ZodTypeAny>(
+export function tool<T extends z.ZodType<object>>(
   definition: ToolDefinition<T>,
   action: (params: z.infer<T>, context?: SessionContext) => Promise<unknown>,
 ): Tool<T> {

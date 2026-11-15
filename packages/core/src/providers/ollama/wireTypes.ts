@@ -181,7 +181,7 @@ export const ollamaTagsResponseSchema = z
 export const ollamaShowResponseSchema = z
   .object({
     details: ollamaModelDetailsSchema.optional(),
-    model_info: z.record(z.unknown()).optional(),
+    model_info: z.record(z.string(), z.unknown()).optional(),
     capabilities: z.array(z.string()).optional(),
     parameters: z.string().optional(),
     template: z.string().optional(),

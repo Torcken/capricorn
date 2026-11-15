@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { zodToToolJsonSchema } from '../../utils/zodJsonSchema.js';
 import type { Config } from '../../config/config.js';
 import type { FunctionCall } from '@google/genai';
 import { SafetyCheckDecision, type SafetyCheckResult } from '../protocol.js';
@@ -40,7 +41,6 @@ Output strictly JSON.
 `;
 
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 
 const EnforcementResultSchema = z.object({
   decision: z.enum(['allow', 'deny', 'ask_user']),
@@ -91,9 +91,10 @@ export async function enforcePolicy(
         model,
         config: {
           responseMimeType: 'application/json',
-          responseSchema: zodToJsonSchema(EnforcementResultSchema, {
-            target: 'openApi3',
-          }),
+          responseSchema: zodToToolJsonSchema(
+            EnforcementResultSchema,
+            'openapi-3.0',
+          ),
         },
         contents: [
           {

@@ -292,9 +292,11 @@ describe('settings-validation', () => {
       expect(result.success).toBe(false);
       if (result.error) {
         expect(result.error.issues.length).toBeGreaterThan(0);
-        // Should complain about missing 'name'
+        // Should complain about missing 'name' (zod 4: "received undefined").
         const issue = result.error.issues.find(
-          (i) => i.code === 'invalid_type' && i.message.includes('Required'),
+          (i) =>
+            i.code === 'invalid_type' &&
+            i.message.includes('received undefined'),
         );
         expect(issue).toBeDefined();
       }
@@ -387,10 +389,10 @@ describe('settings-validation', () => {
         expect(result.success).toBe(false);
         expect(result.error?.issues).toHaveLength(2);
         expect(result.error?.issues[0].message).toContain(
-          'Expected boolean, received string',
+          'expected boolean, received string',
         );
         expect(result.error?.issues[1].message).toContain(
-          'Expected number, received string',
+          'expected number, received string',
         );
       });
 
@@ -433,7 +435,8 @@ describe('settings-validation', () => {
 
         expect(formatted).toContain('/path/to/settings.json');
         expect(formatted).toContain('model.name');
-        expect(formatted).toContain('Expected: string, but received: object');
+        // Capricorn: zod 4 wording.
+        expect(formatted).toContain('expected string, received object');
         expect(formatted).toContain('Please fix the configuration.');
         expect(formatted).toContain('docs/CONFIGURATION.md');
       }

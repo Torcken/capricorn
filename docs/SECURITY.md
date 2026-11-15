@@ -135,14 +135,14 @@ isolation boundary.
   group/world-writable.
 - **Sandbox coverage varies by platform**; see above. No universal OS isolation
   is claimed.
-- **Known dependency advisories (0.1.0-alpha.1).** `npm audit` still reports two
-  high-severity advisories in bundled code: `zod` 3 (memory exhaustion when
-  validating oversized collections; only zod 4 fixes it, a migration tracked in
-  the roadmap) and OpenTelemetry's Jaeger propagator (a malformed incoming
-  header; that code only runs with telemetry, which Capricorn forces off).
-  `extract-zip` has no fixed release; Capricorn's pre-check above covers its
-  symlink advisories. The other reports concern development tools that are not
-  in the package.
+- **Known dependency advisories (0.1.0-alpha.5).** zod 4.6.7 and OpenTelemetry
+  0.223.0 / 2.12.0 fix the earlier zod and Jaeger-propagator advisories. The
+  only high-severity advisory left in bundled code is `extract-zip` (no fixed
+  release); Capricorn's pre-check above covers both of its symlink advisories.
+  `npm audit --omit=dev` also lists a `ws` 7 copy, but only
+  `react-devtools-core` uses it and it is not bundled (the bundle ships `ws`
+  8.23.0); the remaining reports concern test and build tools (vitest, vite,
+  postcss, …) that are not in the package.
 - **No Google client code ships.** Capricorn uses only `@google/genai`'s _types_
   (erased at build time); the SDK's Gemini/Vertex clients and
   `google-auth-library` are not in the package, which the package smoke test

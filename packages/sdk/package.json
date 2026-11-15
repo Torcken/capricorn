@@ -23,8 +23,7 @@
   ],
   "dependencies": {
     "@capricorn/core": "file:../core",
-    "zod": "3.25.76",
-    "zod-to-json-schema": "3.25.1"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "typescript": "5.8.3",

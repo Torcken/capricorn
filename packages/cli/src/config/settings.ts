@@ -902,7 +902,7 @@ function getParentRecord(
  */
 function coerceValidSettings(
   expandedSettings: Settings,
-  issues: ReadonlyArray<{ path: ReadonlyArray<string | number> }>,
+  issues: ReadonlyArray<{ path: readonly PropertyKey[] }>,
 ): Settings {
   const clone = structuredClone(expandedSettings);
   const pathsToRestore: string[][] = [];

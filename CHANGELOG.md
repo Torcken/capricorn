@@ -6,6 +6,24 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- zod 3.25.76 → 4.6.7 (memory exhaustion on oversized constrained collections)
+  and OpenTelemetry 0.218 / 2.7.1 → 0.223.0 / 2.12.0 (Jaeger propagator denial
+  of service). The MCP and ACP SDKs get zod 4 through an override; both declare
+  support for it.
+- Removed the unused `puppeteer-core` dependency (left from the browser agent)
+  and its transitive advisories.
+
+### Changed
+
+- Tool and response JSON Schemas come from zod 4's `z.toJSONSchema`
+  (`zodToToolJsonSchema`), producing the same schemas as before;
+  `zod-to-json-schema` is no longer a direct dependency.
+- Settings and keybinding validation errors use zod 4's wording ("Invalid input:
+  expected boolean, received string"); agent definition errors still say
+  "Required" for missing fields.
+
 ## [0.1.0-alpha.4] - 2026-11-15
 
 ### Removed

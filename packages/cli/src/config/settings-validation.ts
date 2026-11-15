@@ -102,9 +102,9 @@ function buildEnumSchema(
     return z.union(
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
       values.map((v) => z.literal(v)) as [
-        z.ZodLiteral<unknown>,
-        z.ZodLiteral<unknown>,
-        ...Array<z.ZodLiteral<unknown>>,
+        z.ZodLiteral<string | number | boolean>,
+        z.ZodLiteral<string | number | boolean>,
+        ...Array<z.ZodLiteral<string | number | boolean>>,
       ],
     );
   }
@@ -316,21 +316,18 @@ export function formatValidationError(
   const displayedIssues = error.issues.slice(0, MAX_ERRORS_TO_DISPLAY);
 
   for (const issue of displayedIssues) {
-    const path = issue.path.reduce(
+    const path = issue.path.reduce<string>(
       (acc, curr) =>
         typeof curr === 'number'
           ? `${acc}[${curr}]`
-          : `${acc ? acc + '.' : ''}${curr}`,
+          : `${acc ? acc + '.' : ''}${String(curr)}`,
       '',
     );
     lines.push(`Error in: ${path || '(root)'}`);
     lines.push(`    ${issue.message}`);
 
-    if (issue.code === 'invalid_type') {
-      const expected = issue.expected;
-      const received = issue.received;
-      lines.push(`Expected: ${expected}, but received: ${received}`);
-    }
+    // Capricorn: zod 4 issues carry no `received` field; its message already
+    // names the expected and received types.
     lines.push('');
   }
 

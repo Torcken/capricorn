@@ -53,9 +53,12 @@ export interface CommandFileGroup {
  * single source of truth for both validation and type inference.
  */
 const TomlCommandDefSchema = z.object({
+  // zod 4 replaces required_error/invalid_type_error with `error`.
   prompt: z.string({
-    required_error: "The 'prompt' field is required.",
-    invalid_type_error: "The 'prompt' field must be a string.",
+    error: (issue) =>
+      issue.input === undefined
+        ? "The 'prompt' field is required."
+        : "The 'prompt' field must be a string.",
   }),
   description: z.string().optional(),
 });

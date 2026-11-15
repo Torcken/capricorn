@@ -125,8 +125,8 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
 - `web_fetch` and web search are unavailable.
 - The upstream browser agent is removed (it would browse outside the network
   policy).
-- `npm audit` reports two high-severity advisories in bundled code (`zod` 3,
-  OpenTelemetry's Jaeger propagator); see docs/SECURITY.md "Known limits".
+- `npm audit` reports one high-severity advisory in bundled code (`extract-zip`,
+  mitigated by the ZIP pre-check); see docs/SECURITY.md "Known limits".
 - `gemma4:e4b` (also `gemma4:latest`) fails to load on Ollama 0.30.11
   (`Gemma4Assistant requires ctx_other to be set`), at any context size. The
   onboarding still recommends E4B for GPUs under ≈11 GiB; its test load reports
