@@ -6,6 +6,8 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.5] - 2026-11-16
+
 ### Removed
 
 - The VS Code companion extension and the IDE integration: IDE client and
