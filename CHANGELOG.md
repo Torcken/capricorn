@@ -6,6 +6,8 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.3] - 2026-11-15
+
 ### Changed
 
 - Extensions are described by `capricorn-extension.json`;

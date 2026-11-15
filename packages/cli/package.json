@@ -1,6 +1,6 @@
 {
   "name": "@capricorn/cli",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "Capricorn CLI (internal workspace; published as part of the capricorn-code bundle)",
   "license": "Apache-2.0",
   "repository": {
