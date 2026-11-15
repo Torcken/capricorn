@@ -464,9 +464,10 @@ export class GeminiClient {
       );
       return chat;
     } catch (error) {
+      // Capricorn: inference is local Ollama, not the Gemini API.
       await reportError(
         error,
-        'Error initializing Gemini chat session.',
+        'Error initializing the chat session.',
         [...history],
         'startChat',
       );

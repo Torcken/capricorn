@@ -7,26 +7,26 @@
 import {
   type AgentLoopContext,
   AuthType,
-  clearCachedCredentialFile,
   getVersion,
 } from '@google/gemini-cli-core';
 import * as acp from '@agentclientprotocol/sdk';
-import { z } from 'zod';
-import { SettingScope, type LoadedSettings } from '../config/settings.js';
+import type { LoadedSettings } from '../config/settings.js';
 import type { CliArgs } from '../config/config.js';
 import { getAcpErrorMessage } from './acpErrors.js';
 import { AcpSessionManager, type AuthDetails } from './acpSessionManager.js';
-import { hasMeta } from './acpUtils.js';
 
 export class GeminiAgent {
-  private apiKey: string | undefined;
-  private baseUrl: string | undefined;
-  private customHeaders: Record<string, string> | undefined;
+  // Capricorn: never set (no API keys or gateways); kept for the session
+  // manager's upstream AuthDetails shape.
+  private readonly apiKey: string | undefined = undefined;
+  private readonly baseUrl: string | undefined = undefined;
+  private readonly customHeaders: Record<string, string> | undefined =
+    undefined;
   private sessionManager: AcpSessionManager;
 
   constructor(
     private context: AgentLoopContext,
-    private settings: LoadedSettings,
+    settings: LoadedSettings,
     argv: CliArgs,
     connection: acp.AgentSideConnection,
   ) {
@@ -44,37 +44,15 @@ export class GeminiAgent {
       this.sessionManager.setClientCapabilities(args.clientCapabilities);
     }
 
+    // Capricorn: one method, the local Ollama daemon. Upstream advertised
+    // Google login, Gemini API key, Vertex AI and a gateway, none of which
+    // exist here (createContentGenerator rejects them).
     const authMethods = [
       {
-        id: AuthType.LOGIN_WITH_GOOGLE,
-        name: 'Log in with Google',
-        description: 'Log in with your Google account',
-      },
-      {
-        id: AuthType.USE_GEMINI,
-        name: 'Gemini API key',
-        description: 'Use an API key with Gemini Developer API',
-        _meta: {
-          'api-key': {
-            provider: 'google',
-          },
-        },
-      },
-      {
-        id: AuthType.USE_VERTEX_AI,
-        name: 'Vertex AI',
-        description: 'Use an API key with Vertex AI GenAI API',
-      },
-      {
-        id: AuthType.GATEWAY,
-        name: 'AI API Gateway',
-        description: 'Use a custom AI API Gateway',
-        _meta: {
-          gateway: {
-            protocol: 'google',
-            restartRequired: 'false',
-          },
-        },
+        id: AuthType.OLLAMA,
+        name: 'Local Ollama (Gemma 4)',
+        description:
+          'Run a verified Gemma 4 model through the Ollama daemon on this machine',
       },
     ];
 
@@ -84,7 +62,7 @@ export class GeminiAgent {
       protocolVersion: acp.PROTOCOL_VERSION,
       authMethods,
       agentInfo: {
-        name: 'gemini-cli',
+        name: 'capricorn',
         title: 'Capricorn',
         version,
       },
@@ -104,66 +82,19 @@ export class GeminiAgent {
   }
 
   async authenticate(req: acp.AuthenticateRequest): Promise<void> {
-    const { methodId } = req;
-    const method = z.nativeEnum(AuthType).parse(methodId);
-    const selectedAuthType = this.settings.merged.security.auth.selectedType;
-
-    // Only clear credentials when switching to a different auth method
-    if (selectedAuthType && selectedAuthType !== method) {
-      await clearCachedCredentialFile();
-    }
-    // Check for api-key in _meta
-    const meta = hasMeta(req) ? req._meta : undefined;
-    const apiKey =
-      typeof meta?.['api-key'] === 'string' ? meta['api-key'] : undefined;
-
-    // Refresh auth with the requested method
-    // This will reuse existing credentials if they're valid,
-    // or perform new authentication if needed
-    try {
-      if (apiKey) {
-        this.apiKey = apiKey;
-      }
-
-      // Extract gateway details if present
-      const gatewaySchema = z.object({
-        baseUrl: z.string().optional(),
-        headers: z.record(z.string()).optional(),
-      });
-
-      let baseUrl: string | undefined;
-      let headers: Record<string, string> | undefined;
-
-      if (meta?.['gateway']) {
-        const result = gatewaySchema.safeParse(meta['gateway']);
-        if (result.success) {
-          baseUrl = result.data.baseUrl;
-          headers = result.data.headers;
-        } else {
-          throw new acp.RequestError(
-            -32602,
-            `Malformed gateway payload: ${result.error.message}`,
-          );
-        }
-      }
-
-      this.baseUrl = baseUrl;
-      this.customHeaders = headers;
-
-      await this.context.config.refreshAuth(
-        method,
-        apiKey ?? this.apiKey,
-        baseUrl,
-        headers,
+    // Capricorn: only the local method exists; there are no credentials,
+    // API keys or gateway details to accept or store.
+    if (req.methodId !== AuthType.OLLAMA) {
+      throw new acp.RequestError(
+        -32602,
+        `Unsupported auth method "${req.methodId}". Capricorn runs Gemma 4 models through local Ollama only; use "${AuthType.OLLAMA}".`,
       );
+    }
+    try {
+      await this.context.config.refreshAuth(AuthType.OLLAMA);
     } catch (e) {
       throw new acp.RequestError(-32000, getAcpErrorMessage(e));
     }
-    this.settings.setValue(
-      SettingScope.User,
-      'security.auth.selectedType',
-      method,
-    );
   }
 
   private getAuthDetails(): AuthDetails {

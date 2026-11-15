@@ -12,6 +12,7 @@ import { type HttpError, ModelNotFoundError } from './httpErrors.js';
 import { retryWithBackoff } from './retry.js';
 import { setSimulate429 } from './testUtils.js';
 import { debugLogger } from './debugLogger.js';
+import { OllamaError, OllamaErrorKind } from '../providers/ollama/errors.js';
 import {
   TerminalQuotaError,
   RetryableQuotaError,
@@ -60,6 +61,50 @@ describe('retryWithBackoff', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
+  });
+
+  // Capricorn: Ollama errors never enter the Google quota/fallback paths.
+  describe('with Ollama errors', () => {
+    it.each([
+      [OllamaErrorKind.MODEL_NOT_FOUND, 404],
+      [OllamaErrorKind.HTTP_ERROR, 429],
+      [OllamaErrorKind.RESOURCE_EXHAUSTED, 500],
+    ])(
+      'throws a non-retryable %s (HTTP %d) as is, without model fallback',
+      async (kind, status) => {
+        const error = new OllamaError(kind, 'from Ollama', { status });
+        const fn = vi.fn().mockRejectedValue(error);
+        const onPersistent429 = vi.fn().mockResolvedValue('gemini-2.5-flash');
+
+        await expect(
+          retryWithBackoff(fn, { maxAttempts: 3, onPersistent429 }),
+        ).rejects.toBe(error);
+
+        expect(fn).toHaveBeenCalledTimes(1);
+        expect(onPersistent429).not.toHaveBeenCalled();
+      },
+    );
+
+    it('retries a retryable Ollama error by its kind, without fallback', async () => {
+      const error = new OllamaError(
+        OllamaErrorKind.STREAM_TRUNCATED,
+        'stream cut',
+        { status: 503 },
+      );
+      const fn = vi.fn().mockRejectedValueOnce(error).mockResolvedValue('ok');
+      const onPersistent429 = vi.fn();
+
+      const promise = retryWithBackoff(fn, {
+        maxAttempts: 3,
+        initialDelayMs: 1,
+        onPersistent429,
+      });
+      await vi.runAllTimersAsync();
+
+      await expect(promise).resolves.toBe('ok');
+      expect(fn).toHaveBeenCalledTimes(2);
+      expect(onPersistent429).not.toHaveBeenCalled();
+    });
   });
 
   it('should return the result on the first attempt if successful', async () => {

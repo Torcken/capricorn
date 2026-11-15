@@ -12,6 +12,7 @@ import {
   JsonStreamEventType,
   uiTelemetryService,
   parseAndFormatApiError,
+  FatalError,
   FatalTurnLimitedError,
   FatalCancellationError,
   FatalToolExecutionError,
@@ -105,6 +106,13 @@ export function handleError(
     runSyncCleanup();
     process.exit(getNumericExitCode(errorCode));
   } else {
+    // Capricorn: a model failure arrives here as a plain object (the turn's
+    // StructuredError), which the top-level handler printed as
+    // "An unexpected critical error occurred:[object Object]". Report its
+    // message instead; real Error instances keep upstream's behaviour.
+    if (!(error instanceof Error)) {
+      throw new FatalError(errorMessage, 1);
+    }
     throw error;
   }
 }

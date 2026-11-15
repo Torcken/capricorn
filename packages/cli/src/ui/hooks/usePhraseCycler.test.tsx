@@ -152,7 +152,11 @@ describe('usePhraseCycler', () => {
     await waitUntilReady();
 
     // In the new logic, both are selected independently if enabled.
-    const frame = lastFrame().trim();
+    // Capricorn: undo the terminal's line wrapping. Which tip index 0.5
+    // selects depends on the tip list, and a longer tip wraps the line.
+    const frame = lastFrame()
+      .trim()
+      .replace(/\s*\n\s*/g, ' ');
     const parts = frame.split(' | ');
     expect(parts).toHaveLength(2);
     expect(INFORMATIVE_TIPS).toContain(parts[0]);
@@ -176,7 +180,11 @@ describe('usePhraseCycler', () => {
       await vi.advanceTimersByTimeAsync(PHRASE_CHANGE_INTERVAL_MS + 100);
     });
     await waitUntilReady();
-    const frame = lastFrame().trim();
+    // Capricorn: undo the terminal's line wrapping. Which tip index 0.5
+    // selects depends on the tip list, and a longer tip wraps the line.
+    const frame = lastFrame()
+      .trim()
+      .replace(/\s*\n\s*/g, ' ');
     const parts = frame.split(' | ');
     expect(parts).toHaveLength(2);
     expect(INFORMATIVE_TIPS).toContain(parts[0]);

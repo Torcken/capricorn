@@ -76,11 +76,10 @@ export class AcpSessionManager {
       loadedSettings,
     );
 
+    // Capricorn: the settings invariants always select local Ollama; never
+    // fall back to a Google method.
     const authType =
-      loadedSettings.merged.security.auth.selectedType ||
-      (authDetails.baseUrl || process.env['GOOGLE_GEMINI_BASE_URL']
-        ? AuthType.GATEWAY
-        : AuthType.USE_GEMINI);
+      loadedSettings.merged.security.auth.selectedType || AuthType.OLLAMA;
 
     let isAuthenticated = false;
     let authErrorMessage = '';

@@ -116,13 +116,14 @@ export const INFORMATIVE_TIPS = [
   'In menus, move up/down with k/j or the arrow keys',
   'In menus, select an item by typing its number',
   "If you're using an IDE, see the context with F4",
-  'Toggle background shells with Ctrl+B or /shells',
+  // Capricorn: tips for commands that do not exist here (/bug, /docs,
+  // /find-docs, /privacy, /setup-github, /shells) are removed.
+  'Toggle background shells with Ctrl+B',
   'Toggle the background shell process list with Ctrl+L',
   // Keyboard shortcut tips end here
   // Command tips start here
   'Show version info with /about',
   'Change your authentication method with /auth',
-  'File a bug report directly with /bug',
   'List your saved chat checkpoints with /resume list',
   'Save your current conversation with /resume save <tag>',
   'Resume a saved conversation with /resume resume <tag>',
@@ -131,7 +132,6 @@ export const INFORMATIVE_TIPS = [
   'Clear the screen and history with /clear',
   'Save tokens by summarizing the context with /compress',
   'Copy the last response to your clipboard with /copy',
-  'Open the full documentation in your browser with /docs',
   'Add directories to your workspace with /directory add <path>',
   'Show all directories in your workspace with /directory show',
   'Use /dir as a shortcut for /directory',
@@ -148,7 +148,6 @@ export const INFORMATIVE_TIPS = [
   'Reload instructional context from CAPRICORN.md files with /memory reload',
   'List the paths of the CAPRICORN.md files in use with /memory list',
   'Choose your Gemma 4 model with /model',
-  'Display the privacy notice with /privacy',
   'Restore project files to a previous state with /restore',
   'Exit the CLI with /quit or /exit',
   'Check model-specific usage stats with /stats model',
@@ -157,9 +156,7 @@ export const INFORMATIVE_TIPS = [
   'List all available tools with /tools',
   'View and edit settings with the /settings editor',
   'Toggle Vim keybindings on and off with /vim',
-  'Set up GitHub Actions with /setup-github',
   'Configure terminal keybindings for multiline input with /terminal-setup',
-  'Find relevant documentation with /find-docs',
   'Execute any shell command with !<command>',
   // Command tips end here
 ];

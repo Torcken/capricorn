@@ -10,6 +10,9 @@ import path from 'node:path';
 import type { Content } from '@google/genai';
 import { debugLogger } from './debugLogger.js';
 
+/** Capricorn: reports are readable by their owner only. */
+const REPORT_FILE_MODE = 0o600;
+
 interface ErrorReportData {
   error: { message: string; stack?: string } | { message: string };
   context?: unknown;
@@ -31,7 +34,9 @@ export async function reportError(
   reportingDir = os.tmpdir(), // for testing
 ): Promise<void> {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const reportFileName = `gemini-client-error-${type}-${timestamp}.json`;
+  // Capricorn: own file name, and owner-only permissions (below): the report
+  // holds the conversation, and the temp directory is shared with other users.
+  const reportFileName = `capricorn-client-error-${type}-${timestamp}.json`;
   const reportPath = path.join(reportingDir, reportFileName);
 
   let errorToReport: { message: string; stack?: string };
@@ -78,7 +83,9 @@ export async function reportError(
       const minimalReportContent = { error: errorToReport };
       stringifiedReportContent = JSON.stringify(minimalReportContent, null, 2);
       // Still try to write the minimal report
-      await fs.writeFile(reportPath, stringifiedReportContent);
+      await fs.writeFile(reportPath, stringifiedReportContent, {
+        mode: REPORT_FILE_MODE,
+      });
       debugLogger.error(
         `${baseMessage} Partial report (excluding context) available at: ${reportPath}`,
         error,
@@ -93,10 +100,14 @@ export async function reportError(
   }
 
   try {
-    await fs.writeFile(reportPath, stringifiedReportContent);
+    await fs.writeFile(reportPath, stringifiedReportContent, {
+      mode: REPORT_FILE_MODE,
+    });
+    // Capricorn: the message only. The stack and context are in the report;
+    // printing the error object put a full stack trace in front of every
+    // user, e.g. for a model that is simply not installed.
     debugLogger.error(
-      `${baseMessage} Full report available at: ${reportPath}`,
-      error,
+      `${baseMessage}: ${errorToReport.message} (full report: ${reportPath})`,
     );
   } catch (writeError) {
     debugLogger.error(

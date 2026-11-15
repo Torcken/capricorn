@@ -16,8 +16,10 @@ import {
 import type { Config } from '@google/gemini-cli-core';
 import {
   OutputFormat,
+  FatalError,
   FatalInputError,
   debugLogger,
+  parseAndFormatApiError,
   coreEvents,
 } from '@google/gemini-cli-core';
 import {
@@ -175,6 +177,28 @@ describe('errors', () => {
         expect(() => {
           handleError(testError, mockConfig);
         }).toThrow(testError);
+      });
+
+      // Capricorn: a turn's StructuredError (e.g. from an Ollama failure)
+      // must print its message, not "[object Object]".
+      it('reports a structured error by its message, exit code 1', () => {
+        vi.mocked(parseAndFormatApiError).mockReturnValueOnce(
+          '[API Error: Model "gemma4:12b" is not installed]',
+        );
+        let thrown: unknown;
+        try {
+          handleError(
+            { message: 'Model "gemma4:12b" is not installed', status: 404 },
+            mockConfig,
+          );
+        } catch (e) {
+          thrown = e;
+        }
+        expect(thrown).toBeInstanceOf(FatalError);
+        expect((thrown as FatalError).message).toBe(
+          '[API Error: Model "gemma4:12b" is not installed]',
+        );
+        expect((thrown as FatalError).exitCode).toBe(1);
       });
     });
 

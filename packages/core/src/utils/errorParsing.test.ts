@@ -22,12 +22,27 @@ describe('parseAndFormatApiError', () => {
     expect(parseAndFormatApiError(errorMessage)).toBe(expected);
   });
 
+  // Capricorn: no quota, no Gemini fallback model for the local daemon.
+  it.each([AuthType.OLLAMA, undefined])(
+    'should format a 429 with the Ollama message (authType %s)',
+    (authType) => {
+      const result = parseAndFormatApiError(
+        { message: 'too many requests', status: 429 },
+        authType,
+      );
+      expect(result).toContain('[API Error: too many requests]');
+      expect(result).toContain('Ollama is busy');
+      expect(result).not.toMatch(/gemini|quota|\/auth/i);
+    },
+  );
+
+  // Capricorn: the upstream default now applies only to Google auth types.
   it('should format a 429 API error with the default message', () => {
     const errorMessage =
       'got status: 429 Too Many Requests. {"error":{"code":429,"message":"Rate limit exceeded","status":"RESOURCE_EXHAUSTED"}}';
     const result = parseAndFormatApiError(
       errorMessage,
-      undefined,
+      AuthType.LOGIN_WITH_GOOGLE,
       undefined,
       'gemini-2.5-pro',
       DEFAULT_GEMINI_FLASH_MODEL,

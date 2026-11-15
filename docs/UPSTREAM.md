@@ -110,7 +110,13 @@ The repository history starts with the unmodified upstream commit, so
   `packages/core`. `security/noGoogleServices.test.ts` keeps it that way.
 - **Still present, all unreachable:** upstream billing/quota helpers
   (`billing/`, `utils/googleQuotaErrors.ts`: string handling only, listed as
-  exceptions in the guard test).
+  exceptions in the guard test), the quota, overage and validation dialogs, and
+  the Google privacy notices (no command opens them). Until 2026-11-15 the quota
+  path _was_ reachable: `retryWithBackoff` ran Ollama errors through
+  `classifyGoogleError`, so an Ollama 404 or 429 started Gemini model fallback
+  and its dialogs. `OllamaError` now bypasses that classification and the 5xx
+  fallback path (`utils/retry.ts`). Kept rather than deleted to keep upstream
+  merges small; remove them if upstream changes them substantially.
 - **Environment variable names** used by the retained test harness
   (`GEMINI_CLI_HOME`, `GEMINI_CLI_TRUST_WORKSPACE`, …). Capricorn-prefixed
   equivalents exist where they are user-facing (`CAPRICORN_HOME`,

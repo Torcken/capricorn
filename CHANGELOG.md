@@ -64,6 +64,18 @@ All notable changes to Capricorn are documented here. The format follows
 
 ### Fixed
 
+- Leftover Google behaviour removed from user-visible paths: an Ollama 404 or
+  429 no longer starts Gemini model fallback or quota dialogs (a 429 now says
+  Ollama is busy, not "switching to gemini-2.5-flash"); errors say "Error when
+  talking to Ollama", not "Gemini API"; the ACP (editor) integration offers only
+  local Ollama instead of Google login, Gemini API key, Vertex AI and gateway;
+  tips for missing commands (`/bug`, `/docs`, `/privacy`, `/setup-github`, …)
+  are gone, and so is dead code (the `run-gemini-cli` GitHub release lookup,
+  Antigravity installer commands).
+- Headless runs report a model failure by its message instead of "An unexpected
+  critical error occurred:[object Object]" and a stack trace.
+- Error reports are written as `capricorn-client-error-*.json`, readable by
+  their owner only (they hold the conversation; the temp directory is shared).
 - Headless runs that hit the context window limit ended with an empty answer and
   exit code 0; they now fail with an explanation.
 

@@ -441,9 +441,10 @@ export class Turn {
         ...this.chat.getHistory(/*curated*/ true),
         createUserContent(req),
       ];
+      // Capricorn: inference is local Ollama, not the Gemini API.
       await reportError(
         error,
-        'Error when talking to Gemini API',
+        'Error when talking to Ollama',
         contextForReport,
         'Turn.run-sendMessageStream',
       );

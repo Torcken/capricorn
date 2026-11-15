@@ -412,6 +412,29 @@ describe('failure handling', () => {
     expect(r.stderr + r.stdout).toMatch(/memory/i);
   });
 
+  // Capricorn: an Ollama failure is reported by its message: no Gemini
+  // wording, no Gemini model fallback, no "[object Object]" or stack trace.
+  it.each([
+    [
+      404,
+      'model "gemma4:12b" not found, try pulling it first',
+      /not installed/,
+    ],
+    [429, 'too many requests', /Ollama is busy/],
+  ])(
+    'reports an Ollama %d during a turn plainly',
+    async (status, error, expected) => {
+      env.mock.enqueueChat({ frames: [], status, errorBody: { error } });
+      const r = await headless('hi');
+      const out = r.stdout + r.stderr;
+      expect(r.code).toBe(1);
+      expect(out).toMatch(expected);
+      expect(out).toContain('Error when talking to Ollama');
+      expect(out).not.toMatch(/gemini|quota|\[object Object\]|\n\s+at /i);
+      expect(env.mock.chatRequests()).toHaveLength(1);
+    },
+  );
+
   it('fails fast with guidance when the configured model is missing', async () => {
     const r = await headless('hi', ['--model', 'gemma4:31b']);
     expect(r.code).toBe(1);

@@ -23,7 +23,7 @@ import {
 } from '@google/gemini-cli-core';
 import type { LoadedSettings } from '../config/settings.js';
 import { loadCliConfig, type CliArgs } from '../config/config.js';
-import { loadSettings, SettingScope } from '../config/settings.js';
+import { loadSettings } from '../config/settings.js';
 
 vi.mock('../config/config.js', () => ({
   loadCliConfig: vi.fn(),
@@ -125,102 +125,36 @@ describe('GeminiAgent - RPC Dispatcher', () => {
     });
 
     expect(response.protocolVersion).toBe(acp.PROTOCOL_VERSION);
-    expect(response.authMethods).toHaveLength(4);
-    const gatewayAuth = response.authMethods?.find(
-      (m) => m.id === AuthType.GATEWAY,
-    );
-    expect(gatewayAuth?._meta).toEqual({
-      gateway: {
-        protocol: 'google',
-        restartRequired: 'false',
-      },
-    });
-    const geminiAuth = response.authMethods?.find(
-      (m) => m.id === AuthType.USE_GEMINI,
-    );
-    expect(geminiAuth?._meta).toEqual({
-      'api-key': {
-        provider: 'google',
-      },
-    });
+    // Capricorn: only the local Ollama method is offered.
+    expect(response.authMethods).toEqual([
+      expect.objectContaining({ id: AuthType.OLLAMA }),
+    ]);
+    expect(JSON.stringify(response.authMethods)).not.toMatch(/google|gemini/i);
+    expect(response.agentInfo?.name).toBe('capricorn');
     expect(response.agentCapabilities?.loadSession).toBe(true);
   });
 
-  it('should authenticate correctly', async () => {
-    await agent.authenticate({
-      methodId: AuthType.LOGIN_WITH_GOOGLE,
-    });
+  // Capricorn: local Ollama is the only method; nothing is stored.
+  it('should authenticate with local Ollama', async () => {
+    await agent.authenticate({ methodId: AuthType.OLLAMA });
 
-    expect(mockConfig.refreshAuth).toHaveBeenCalledWith(
-      AuthType.LOGIN_WITH_GOOGLE,
-      undefined,
-      undefined,
-      undefined,
-    );
-    expect(mockSettings.setValue).toHaveBeenCalledWith(
-      SettingScope.User,
-      'security.auth.selectedType',
-      AuthType.LOGIN_WITH_GOOGLE,
-    );
+    expect(mockConfig.refreshAuth).toHaveBeenCalledWith(AuthType.OLLAMA);
+    expect(mockSettings.setValue).not.toHaveBeenCalled();
   });
 
-  it('should authenticate correctly with api-key in _meta', async () => {
-    await agent.authenticate({
-      methodId: AuthType.USE_GEMINI,
-      _meta: {
-        'api-key': 'test-api-key',
-      },
-    } as unknown as acp.AuthenticateRequest);
-
-    expect(mockConfig.refreshAuth).toHaveBeenCalledWith(
-      AuthType.USE_GEMINI,
-      'test-api-key',
-      undefined,
-      undefined,
-    );
-    expect(mockSettings.setValue).toHaveBeenCalledWith(
-      SettingScope.User,
-      'security.auth.selectedType',
-      AuthType.USE_GEMINI,
-    );
-  });
-
-  it('should authenticate correctly with gateway method', async () => {
-    await agent.authenticate({
-      methodId: AuthType.GATEWAY,
-      _meta: {
-        gateway: {
-          baseUrl: 'https://example.com',
-          headers: { Authorization: 'Bearer token' },
-        },
-      },
-    } as unknown as acp.AuthenticateRequest);
-
-    expect(mockConfig.refreshAuth).toHaveBeenCalledWith(
-      AuthType.GATEWAY,
-      undefined,
-      'https://example.com',
-      { Authorization: 'Bearer token' },
-    );
-    expect(mockSettings.setValue).toHaveBeenCalledWith(
-      SettingScope.User,
-      'security.auth.selectedType',
-      AuthType.GATEWAY,
-    );
-  });
-
-  it('should throw acp.RequestError when gateway payload is malformed', async () => {
+  it.each([
+    AuthType.LOGIN_WITH_GOOGLE,
+    AuthType.USE_GEMINI,
+    AuthType.USE_VERTEX_AI,
+    AuthType.GATEWAY,
+  ])('should reject the %s auth method', async (methodId) => {
     await expect(
       agent.authenticate({
-        methodId: AuthType.GATEWAY,
-        _meta: {
-          gateway: {
-            baseUrl: 123,
-            headers: { Authorization: 'Bearer token' },
-          },
-        },
+        methodId,
+        _meta: { 'api-key': 'test-api-key' },
       } as unknown as acp.AuthenticateRequest),
-    ).rejects.toThrow(/Malformed gateway payload/);
+    ).rejects.toThrow(/local Ollama only/);
+    expect(mockConfig.refreshAuth).not.toHaveBeenCalled();
   });
 
   it('should cancel a session', async () => {

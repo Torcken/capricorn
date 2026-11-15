@@ -36,7 +36,7 @@ describe('reportError', () => {
   });
 
   const getExpectedReportPath = (type: string) =>
-    path.join(testDir, `gemini-client-error-${type}-${MOCK_TIMESTAMP}.json`);
+    path.join(testDir, `capricorn-client-error-${type}-${MOCK_TIMESTAMP}.json`);
 
   it('should generate a report and log the path', async () => {
     const error = new Error('Test error');
@@ -58,11 +58,21 @@ describe('reportError', () => {
     });
 
     // Verify the user feedback
+    // Capricorn: the message only; the stack is in the report file.
     expect(debugLoggerErrorSpy).toHaveBeenCalledWith(
-      `${baseMessage} Full report available at: ${expectedReportPath}`,
-      error,
+      `${baseMessage}: Test error (full report: ${expectedReportPath})`,
     );
   });
+
+  // Capricorn: the report holds the conversation; the temp dir is shared.
+  it.skipIf(process.platform === 'win32')(
+    'writes the report readable by its owner only',
+    async () => {
+      await reportError(new Error('x'), 'msg', { a: 1 }, 'perm', testDir);
+      const stat = await fs.stat(getExpectedReportPath('perm'));
+      expect(stat.mode & 0o777).toBe(0o600);
+    },
+  );
 
   it('should handle errors that are plain objects with a message property', async () => {
     const error = { message: 'Test plain object error' };
@@ -79,9 +89,9 @@ describe('reportError', () => {
       error: { message: 'Test plain object error' },
     });
 
+    // Capricorn: the message only; the stack is in the report file.
     expect(debugLoggerErrorSpy).toHaveBeenCalledWith(
-      `${baseMessage} Full report available at: ${expectedReportPath}`,
-      error,
+      `${baseMessage}: Test plain object error (full report: ${expectedReportPath})`,
     );
   });
 
@@ -100,9 +110,9 @@ describe('reportError', () => {
       error: { message: 'Just a string error' },
     });
 
+    // Capricorn: the message only; the stack is in the report file.
     expect(debugLoggerErrorSpy).toHaveBeenCalledWith(
-      `${baseMessage} Full report available at: ${expectedReportPath}`,
-      error,
+      `${baseMessage}: Just a string error (full report: ${expectedReportPath})`,
     );
   });
 
@@ -196,9 +206,9 @@ describe('reportError', () => {
       error: { message: 'Error without context', stack: 'No context stack' },
     });
 
+    // Capricorn: the message only; the stack is in the report file.
     expect(debugLoggerErrorSpy).toHaveBeenCalledWith(
-      `${baseMessage} Full report available at: ${expectedReportPath}`,
-      error,
+      `${baseMessage}: Error without context (full report: ${expectedReportPath})`,
     );
   });
 });

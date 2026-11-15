@@ -20,8 +20,10 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
 - **Finish removing Google code:** the OAuth/Code Assist/Clearcut network code
   and Google auth/Cloud dependencies are gone (inert stand-ins remain, see
   docs/UPSTREAM.md), as are the upstream A2A server package and all bundled
-  `@google/genai` SDK code (only its types remain); still to do: the unreachable
-  upstream billing/quota helpers.
+  `@google/genai` SDK code (only its types remain). Since 2026-11-15 Ollama
+  errors can no longer reach the Google quota/fallback code, and the ACP
+  integration offers local Ollama only. Optional: delete the unreachable
+  billing/quota helpers and dialogs (kept to ease upstream merges).
 - **Platform coverage:** Linux and macOS are supported (CI on both); manual
   real-model validation on macOS still needed. Windows is not supported.
 - **Context management:** compression inside long tasks, window-scaled limits an

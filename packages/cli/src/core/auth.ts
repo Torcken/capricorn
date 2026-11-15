@@ -64,7 +64,8 @@ export async function performInitialAuth(
       };
     }
     return {
-      authError: `Failed to sign in. Message: ${getErrorMessage(e)}`,
+      // Capricorn: there is no sign-in; this is the local inference setup.
+      authError: `Local inference could not start: ${getErrorMessage(e)}`,
       accountSuspensionInfo: null,
     };
   }

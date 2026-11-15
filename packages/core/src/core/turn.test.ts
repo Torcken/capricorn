@@ -297,7 +297,7 @@ describe('Turn', () => {
       expect(turn.getDebugResponses().length).toBe(0);
       expect(reportError).toHaveBeenCalledWith(
         error,
-        'Error when talking to Gemini API',
+        'Error when talking to Ollama',
         [...historyContent, { role: 'user', parts: reqParts }],
         'Turn.run-sendMessageStream',
       );

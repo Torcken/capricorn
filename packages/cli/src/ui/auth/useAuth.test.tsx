@@ -311,7 +311,9 @@ describe('useAuth', () => {
         deferredRefreshAuth.reject(new Error('Auth Failed'));
       });
 
-      expect(result.current.authError).toContain('Failed to sign in');
+      expect(result.current.authError).toContain(
+        'Local inference could not start',
+      );
       expect(result.current.authState).toBe(AuthState.Updating);
     });
 

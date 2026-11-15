@@ -163,7 +163,8 @@ export const useAuthCommand = (
           // Show the error message directly without "Failed to login" prefix
           onAuthError(getErrorMessage(e));
         } else {
-          onAuthError(`Failed to sign in. Message: ${getErrorMessage(e)}`);
+          // Capricorn: there is no sign-in; this is the local inference setup.
+          onAuthError(`Local inference could not start: ${getErrorMessage(e)}`);
         }
       }
     })();

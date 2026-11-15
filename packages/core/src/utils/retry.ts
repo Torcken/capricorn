@@ -351,7 +351,12 @@ export async function retryWithBackoff<T>(
       }
       throwIfAborted();
 
-      let classifiedError = classifyGoogleError(error);
+      // Capricorn: an OllamaError is already classified (kind, retryable).
+      // Run through the Google classifier, its HTTP status alone turned an
+      // Ollama 404 into ModelNotFoundError and a 429 into a quota error,
+      // which start Gemini model fallback and quota dialogs.
+      let classifiedError =
+        error instanceof OllamaError ? error : classifyGoogleError(error);
 
       const errorCode = getErrorStatus(error);
 
@@ -455,8 +460,13 @@ export async function retryWithBackoff<T>(
         throw classifiedError;
       }
 
+      // Capricorn: not for OllamaError, whose retry decision is its kind (see
+      // isRetryableError); this path ends in Gemini model fallback.
       const is500 =
-        errorCode !== undefined && errorCode >= 500 && errorCode < 600;
+        !(error instanceof OllamaError) &&
+        errorCode !== undefined &&
+        errorCode >= 500 &&
+        errorCode < 600;
 
       if (classifiedError instanceof RetryableQuotaError || is500) {
         if (attempt >= getCurrentMaxAttempts()) {
