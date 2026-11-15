@@ -6,6 +6,8 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.4] - 2026-11-15
+
 ### Removed
 
 - The remaining Google leftovers: the Code Assist client, Google sign-in and
