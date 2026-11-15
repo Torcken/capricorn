@@ -38,6 +38,12 @@ import type { CapricornRuntime } from './runtime.js';
 import { detectHardware, type HardwareProfile } from './hardware.js';
 import { placementFor, recommendModel } from './recommend.js';
 import { formatGiB } from './runtime.js';
+import {
+  estimateMemoryBytes,
+  fetchMemoryProfile,
+  formatTokens,
+  suggestContext,
+} from './contextSize.js';
 
 /** Outcome severity. `fail` makes `doctor` exit non-zero. */
 export type CheckStatus = 'pass' | 'warn' | 'fail' | 'skip';
@@ -102,10 +108,13 @@ export async function runDiagnostics(
 
   checks.push(checkNode());
   checks.push(checkSystemMemory());
+  // Detected once: the hardware and context-window checks both use it.
+  let hw: HardwareProfile | undefined = input.hardware;
   checks.push(
-    await safe('runtime.hardware', 'Hardware & model fit', async () =>
-      checkHardware(input.hardware ?? (await detectHardware()), input.runtime),
-    ),
+    await safe('runtime.hardware', 'Hardware & model fit', async () => {
+      hw ??= await detectHardware();
+      return checkHardware(hw, input.runtime);
+    }),
   );
   checks.push(checkEndpointPolicy(input));
 
@@ -127,7 +136,17 @@ export async function runDiagnostics(
     }
     checks.push(checkInstalledModels(models, discoveryError));
     checks.push(checkSelectedModel(models, input.runtime, discoveryError));
-    checks.push(checkContextWindow(models, input.runtime));
+    checks.push(
+      await safe('models.context', 'Context window', () =>
+        checkContextWindow(
+          models,
+          input.runtime,
+          hw,
+          input.client!,
+          input.signal,
+        ),
+      ),
+    );
     if (input.loadModel) {
       checks.push(
         await safe('models.load', 'Model load', () =>
@@ -510,10 +529,13 @@ async function checkModelLoad(
   };
 }
 
-function checkContextWindow(
+async function checkContextWindow(
   models: DiscoveredModel[],
   runtime: CapricornRuntime,
-): DiagnosticCheck {
+  hw: HardwareProfile | undefined,
+  client: OllamaClient,
+  signal?: AbortSignal,
+): Promise<DiagnosticCheck> {
   const selection = selectModel(models, runtime.settings.model);
   const numCtx = runtime.settings.numCtx;
   if (selection.kind !== 'selected') {
@@ -531,18 +553,79 @@ function checkContextWindow(
     `num_ctx ${effective.toLocaleString('en-US')} tokens allocated` +
       (max ? ` (model maximum ${max.toLocaleString('en-US')})` : ''),
   ];
-  if (preset)
-    parts.push(`≈${preset.approxMemoryGiB} GiB resident at 32K (approximate)`);
+  const overMax = numCtx > (max ?? Infinity);
+
+  // Capricorn: size the window for this machine from the model's metadata
+  // (see contextSize.ts). Without it, fall back to the preset estimate.
+  const profile = hw
+    ? await fetchMemoryProfile(client, selection.model.model, signal).catch(
+        () => undefined,
+      )
+    : undefined;
+  if (!profile || !hw) {
+    if (preset)
+      parts.push(
+        `≈${preset.approxMemoryGiB} GiB resident at 32K (approximate)`,
+      );
+    return {
+      id: 'models.context',
+      title: 'Context window',
+      status: overMax ? 'warn' : 'pass',
+      message: parts.join('; '),
+      remediation: overMax
+        ? `ollama.numCtx exceeds the model maximum; ${max} will be used.`
+        : undefined,
+      data: { numCtx, effective, modelMax: max },
+    };
+  }
+
+  const estimate = estimateMemoryBytes(profile, effective);
+  const suggestion = suggestContext(profile, hw, max);
+  const gpuBudget = suggestion.placement === 'gpu' ? suggestion.budgetBytes : 0;
+  parts.push(`≈${formatGiB(estimate)} at this window (approximate)`);
+  const data = {
+    numCtx,
+    effective,
+    modelMax: max,
+    estimateBytes: estimate,
+    suggestion,
+  };
+  const setIt = `capricorn config set ollama.numCtx ${suggestion.numCtx}`;
+
+  // The model would stay on the GPU with a smaller window, but not this one.
+  if (gpuBudget > 0 && estimate > gpuBudget) {
+    return {
+      id: 'models.context',
+      title: 'Context window',
+      status: 'warn',
+      message: parts.join('; '),
+      remediation:
+        `At this window the model needs more than the GPU's ${formatGiB(gpuBudget)} and runs partly on the CPU (slower). ` +
+        `${formatTokens(suggestion.numCtx)} keeps it on the GPU:  ${setIt}`,
+      data,
+    };
+  }
+  if (overMax) {
+    return {
+      id: 'models.context',
+      title: 'Context window',
+      status: 'warn',
+      message: parts.join('; '),
+      remediation: `ollama.numCtx exceeds the model maximum; ${max} will be used.`,
+      data,
+    };
+  }
+  if (suggestion.placement !== 'none' && suggestion.numCtx > effective) {
+    parts.push(
+      `${formatTokens(suggestion.numCtx)} would also fit ${suggestion.placement === 'gpu' ? 'on the GPU' : 'in RAM'} (fewer history compressions; ${setIt})`,
+    );
+  }
   return {
     id: 'models.context',
     title: 'Context window',
-    status: numCtx > (max ?? Infinity) ? 'warn' : 'pass',
+    status: 'pass',
     message: parts.join('; '),
-    remediation:
-      numCtx > (max ?? Infinity)
-        ? `ollama.numCtx exceeds the model maximum; ${max} will be used.`
-        : undefined,
-    data: { numCtx, effective, modelMax: max },
+    data,
   };
 }
 

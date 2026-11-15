@@ -708,8 +708,8 @@
         },
         "numCtx": {
           "title": "Context Window (num_ctx)",
-          "description": "Context window to allocate on the daemon, in tokens (minimum 8192). Larger values need substantially more memory for the KV cache.",
-          "markdownDescription": "Context window to allocate on the daemon, in tokens (minimum 8192). Larger values need substantially more memory for the KV cache.\n\n- Category: `Model`\n- Requires restart: `yes`\n- Default: `32768`",
+          "description": "Context window to allocate on the daemon, in tokens (minimum 8192). Larger values need more memory and make a full re-read of the prompt slower; `capricorn doctor` suggests a size for this machine.",
+          "markdownDescription": "Context window to allocate on the daemon, in tokens (minimum 8192). Larger values need more memory and make a full re-read of the prompt slower; `capricorn doctor` suggests a size for this machine.\n\n- Category: `Model`\n- Requires restart: `yes`\n- Default: `32768`",
           "default": 32768,
           "type": "number"
         },

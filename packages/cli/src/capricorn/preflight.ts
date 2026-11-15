@@ -36,6 +36,13 @@ import {
 import { detectHardware, type HardwareProfile } from './hardware.js';
 import { pullAndVerify, testLoad } from './modelPull.js';
 import { recommendModel } from './recommend.js';
+import { formatGiB } from './runtime.js';
+import {
+  fetchMemoryProfile,
+  formatTokens,
+  suggestContext,
+  type ContextSuggestion,
+} from './contextSize.js';
 
 /** Outcome of the preflight. */
 export type PreflightResult =
@@ -69,6 +76,11 @@ export async function runPreflight(
     client?: OllamaClient;
     detectHardware?: () => Promise<HardwareProfile>;
     log?: (line: string) => void;
+    /**
+     * Whether the user set `ollama.numCtx` themselves; onboarding then never
+     * changes it.
+     */
+    numCtxConfigured?: boolean;
   },
 ): Promise<PreflightResult> {
   // writeToStderr, not process.stderr: startup has already patched stdio
@@ -145,6 +157,7 @@ async function firstRun(
     confirm?: Confirm;
     detectHardware?: () => Promise<HardwareProfile>;
     log: (line: string) => void;
+    numCtxConfigured?: boolean;
   },
 ): Promise<PreflightResult> {
   const hw = await (options.detectHardware ?? detectHardware)();
@@ -206,11 +219,42 @@ async function firstRun(
     };
   }
   const settings = config.getOllamaSettings();
-  const numCtx = verdict.maxContextLength
+  let numCtx = verdict.maxContextLength
     ? Math.min(settings.numCtx, verdict.maxContextLength)
     : settings.numCtx;
-  options.log(`Checking that Ollama can load ${rec.tag}...`);
-  const loadError = await testLoad(client, rec.tag, numCtx);
+
+  // Size the context window for this machine, unless the user chose one.
+  // Only for this session, like the model itself; the log says how to keep
+  // it. Any failure here just keeps the configured window.
+  let loaded = false;
+  if (!options.numCtxConfigured) {
+    const suggestion = await suggestionFor(
+      client,
+      rec.tag,
+      hw,
+      verdict.maxContextLength,
+    );
+    if (suggestion && suggestion.numCtx !== numCtx) {
+      options.log(
+        `Checking that Ollama can load ${rec.tag} with a ${formatTokens(suggestion.numCtx)} context...`,
+      );
+      if ((await testLoad(client, rec.tag, suggestion.numCtx)) === undefined) {
+        options.log(contextNote(suggestion, numCtx));
+        settings.numCtx = suggestion.numCtx;
+        numCtx = suggestion.numCtx;
+        loaded = true;
+      } else {
+        options.log(
+          `It did not load with ${formatTokens(suggestion.numCtx)}; keeping ${formatTokens(numCtx)}.`,
+        );
+      }
+    }
+  }
+
+  if (!loaded) options.log(`Checking that Ollama can load ${rec.tag}...`);
+  const loadError = loaded
+    ? undefined
+    : await testLoad(client, rec.tag, numCtx);
   if (loadError) {
     return {
       ok: false,
@@ -228,6 +272,35 @@ async function firstRun(
     );
   }
   return { ok: true, model: rec.tag, switched: rec.tag !== requested };
+}
+
+/** The window suggestion for a freshly pulled tag; undefined on any error. */
+async function suggestionFor(
+  client: OllamaClient,
+  tag: string,
+  hw: HardwareProfile,
+  maxContextLength: number | undefined,
+): Promise<ContextSuggestion | undefined> {
+  try {
+    const profile = await fetchMemoryProfile(client, tag);
+    const s = profile && suggestContext(profile, hw, maxContextLength);
+    // Nothing fits: a smaller window would not help; keep the configured one.
+    return s && s.placement !== 'none' ? s : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** One line explaining the window chosen for this session. */
+function contextNote(s: ContextSuggestion, previous: number): string {
+  const where =
+    s.placement === 'gpu'
+      ? `keeps the model on the GPU, ≈${formatGiB(s.estimateBytes)} of ${formatGiB(s.budgetBytes)}`
+      : `fits in RAM, ≈${formatGiB(s.estimateBytes)} of ${formatGiB(s.budgetBytes)}`;
+  return (
+    `Context window for this session: ${formatTokens(s.numCtx)} tokens instead of ${formatTokens(previous)} (${where}; approximate).
+` + `Keep it with:  capricorn config set ollama.numCtx ${s.numCtx}`
+  );
 }
 
 function fail(e: unknown, exitCode: number): PreflightResult {

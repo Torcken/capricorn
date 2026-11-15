@@ -11,6 +11,7 @@ import {
   resolveOllamaEndpoint,
 } from '@google/gemini-cli-core';
 import {
+  DEFAULT_MOCK_MODELS,
   startMockOllama,
   type MockOllama,
 } from '@google/gemini-cli-core/dist/src/providers/ollama/testing/mockOllamaServer.js';
@@ -20,6 +21,7 @@ import {
   runDiagnostics,
 } from './diagnostics.js';
 import type { CapricornRuntime } from './runtime.js';
+import type { HardwareProfile } from './hardware.js';
 
 let mock: MockOllama;
 
@@ -126,6 +128,81 @@ describe('runDiagnostics', () => {
       status: 'warn',
       data: { effective: 131072 },
     });
+  });
+});
+
+// Capricorn: the context window is sized from the model's metadata.
+describe('runDiagnostics context window for this machine', () => {
+  const GIB = 1024 ** 3;
+  const gpu = (gib: number) =>
+    ({
+      totalMemoryBytes: 64 * GIB,
+      gpus: [
+        {
+          vendor: 'nvidia',
+          name: 'Test GPU',
+          memoryBytes: gib * GIB,
+          unified: false,
+        },
+      ],
+    }) as HardwareProfile;
+  // gemma4:12b's attention layout (verbose /api/show, Ollama 0.30.11).
+  const verboseModelInfo = {
+    'gemma4.block_count': 48,
+    'gemma4.attention.key_length': 512,
+    'gemma4.attention.value_length': 512,
+    'gemma4.attention.key_length_swa': 256,
+    'gemma4.attention.value_length_swa': 256,
+    'gemma4.attention.sliding_window': 1024,
+    'gemma4.attention.head_count_kv': Array.from({ length: 48 }, (_, i) =>
+      i % 6 === 5 ? 1 : 8,
+    ),
+    'gemma4.attention.sliding_window_pattern': Array.from(
+      { length: 48 },
+      (_, i) => i % 6 !== 5,
+    ),
+  };
+
+  beforeEach(async () => {
+    await mock.close();
+    mock = await startMockOllama({
+      models: DEFAULT_MOCK_MODELS.map((m) =>
+        m.name === 'gemma4:12b' ? { ...m, verboseModelInfo } : m,
+      ),
+    });
+  });
+
+  const run = (hardware: HardwareProfile, numCtx = 32768) =>
+    runDiagnostics({
+      runtime: runtime('gemma4:12b', numCtx),
+      client: new OllamaClient({ endpoint: mock.url }),
+      version: 'test',
+      cwd: process.cwd(),
+      hardware,
+    });
+
+  it('mentions a larger window that still fits on the GPU', async () => {
+    const check = byId(await run(gpu(12)), 'models.context');
+    expect(check.status).toBe('pass');
+    expect(check.message).toContain('≈9.4 GiB at this window');
+    expect(check.message).toContain(
+      '64K would also fit on the GPU (fewer history compressions; capricorn config set ollama.numCtx 65536)',
+    );
+  });
+
+  it('warns when the window pushes the model off a tight GPU', async () => {
+    const check = byId(await run(gpu(9.5)), 'models.context');
+    expect(check.status).toBe('warn');
+    expect(check.remediation).toContain('runs partly on the CPU');
+    expect(check.remediation).toContain(
+      'capricorn config set ollama.numCtx 8192',
+    );
+  });
+
+  it('suggests nothing when the configured window is already larger', async () => {
+    const check = byId(await run(gpu(12), 131072), 'models.context');
+    expect(check.status).toBe('pass');
+    expect(check.message).not.toContain('would also fit');
   });
 });
 

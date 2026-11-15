@@ -877,6 +877,14 @@ export async function main() {
       const preflight = await runPreflight(config, {
         interactive: config.isInteractive() && !!process.stdin.isTTY,
         confirm: readlineConfirm,
+        // Any settings file, not `merged`: merged values include defaults.
+        numCtxConfigured: [
+          settings.system,
+          settings.systemDefaults,
+          settings.user,
+          settings.workspace,
+          // Optional chaining: partially built settings (tests) lack files.
+        ].some((f) => f?.settings?.ollama?.numCtx !== undefined),
       });
       if (!preflight.ok) {
         writeToStderr(`Capricorn: ${preflight.message}\n`);

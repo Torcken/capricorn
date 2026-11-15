@@ -8,6 +8,13 @@ All notable changes to Capricorn are documented here. The format follows
 
 ### Added
 
+- Context window sized for this machine: memory is estimated from the model's
+  own metadata (only Gemma 4's global attention layers cache every token: ≈18
+  KiB per token for 12B, measured on CUDA), and the largest of 8K–64K that fits
+  on the GPU (32K at most on a CPU) is suggested. `capricorn doctor` shows the
+  estimate, warns when the window pushes the model off the GPU and says how to
+  change it; first-run onboarding uses the suggestion for the first session when
+  `ollama.numCtx` is not set.
 - Context management for small local windows: history compression now also works
   inside one long task (it could only split before a user message, so it never
   ran mid-task), upstream limits sized for 1M tokens are scaled to the local

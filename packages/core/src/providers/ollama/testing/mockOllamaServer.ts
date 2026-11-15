@@ -30,6 +30,11 @@ export interface MockModel {
   parameterSize?: string;
   quantization?: string;
   size?: number;
+  /**
+   * Extra `model_info` keys returned only for `"verbose": true`, as Ollama
+   * does for per-layer arrays (used by context-window sizing).
+   */
+  verboseModelInfo?: Record<string, unknown>;
 }
 
 /**
@@ -200,6 +205,9 @@ export async function startMockOllama(
           model_info: {
             'general.architecture': arch,
             [`${arch}.context_length`]: m.contextLength ?? 8192,
+            ...(isRecord(body) && body['verbose'] === true
+              ? m.verboseModelInfo
+              : {}),
           },
           capabilities: m.capabilities,
           ...(m.remoteHost
@@ -398,4 +406,8 @@ export function doneFrame(
     prompt_eval_count: usage.prompt ?? 42,
     eval_count: usage.output ?? 7,
   };
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
 }

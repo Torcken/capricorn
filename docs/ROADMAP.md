@@ -7,9 +7,11 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
 ## Before 1.0
 
 - **Hardware-aware onboarding:** model recommendation and first-run download are
-  done (2026-11-13); still to do: recommend a `num_ctx` per machine, and better
-  memory figures than the presets' approximations (measured: 12B uses ≈9.2 GiB
-  of VRAM at 32K on CUDA vs. the 11 GiB estimate).
+  done (2026-11-13), and so is a `num_ctx` suggestion per machine computed from
+  the model's own metadata (2026-11-15; onboarding and `capricorn doctor`).
+  Still to do: the same metadata-based estimate for the model recommendation
+  before download (it still uses the presets' approximations: 12B measured ≈9.2
+  GiB at 32K vs. the 11 GiB estimate), and measurements of the other presets.
 - **Local web fetch tool:** a `web_fetch` replacement that downloads a page
   locally (opt-in, allowlisted hosts, approval per request) instead of
   upstream's hosted URL-context path.

@@ -149,11 +149,15 @@ export class OllamaClient {
   async showModel(
     model: string,
     signal?: AbortSignal,
+    options: { verbose?: boolean } = {},
   ): Promise<OllamaShowResponse> {
     return this.requestJson(
       'POST',
       '/api/show',
-      { model },
+      // `verbose` adds the per-layer metadata arrays context sizing needs
+      // (and the tokenizer vocabulary: ~12 MB for Gemma 4), so it is only
+      // requested by onboarding and diagnostics, never on session start.
+      options.verbose ? { model, verbose: true } : { model },
       ollamaShowResponseSchema,
       signal,
     );

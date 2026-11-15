@@ -3,36 +3,37 @@
 Legend: **done** = implemented and tested · **unverified** = implemented, not
 fully tested · **deferred** · **blocked**.
 
-| Area                                                                                | Status                                 | Evidence                                                         |
-| ----------------------------------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------- |
-| Fork of Gemini CLI v0.67.0, attribution, ADR                                        | done                                   | docs/UPSTREAM.md, NOTICE, docs/adr/0001-foundation.md            |
-| Ollama provider (stream/non-stream, tools, thinking, errors, retries, cancellation) | done                                   | `providers/ollama/*.test.ts` (105 tests)                         |
-| Gemma 4 verification from metadata; cloud/alias rejection                           | done                                   | `modelPolicy.test.ts`, e2e                                       |
-| Google back-ends removed; credentials ignored                                       | done                                   | `contentGenerator.test.ts`, `auth.test.ts`                       |
-| Egress guard (loopback + user allowlist)                                            | done                                   | `egressGuard.test.ts`, e2e, `verify:offline`                     |
-| Gemma 4 system prompt                                                               | done                                   | `capricornSnippets.test.ts`, real-model smoke                    |
-| CLI commands: doctor, status, models, config, init, run, sessions                   | done                                   | unit tests, e2e, manual runs against real Ollama                 |
-| Startup preflight, no silent model switch                                           | done                                   | `preflight.test.ts`, e2e                                         |
-| `/model` + model dialog restricted to Gemma 4                                       | done (dialog: unit/gradient test only) | `BuiltinCommandLoader.test.ts`                                   |
-| Malformed/unknown tool calls never executed; workspace escape refused               | done                                   | e2e security suite                                               |
-| `.capricorn` self-config protection incl. NTFS/8.3 spellings                        | done                                   | `safety/built-in.test.ts`                                        |
-| Per-prompt time budget                                                              | done                                   | e2e "time budget"                                                |
-| Interactive TUI start → answer → Ctrl+C                                             | done                                   | `e2e/interactive.e2e.test.ts`                                    |
-| Package smoke (bundle, pack, install, launch)                                       | done                                   | `scripts/capricorn/pack-smoke.js` (Linux)                        |
-| Real-model smoke (`gemma4:12b`, read→fix→test→summary + denial)                     | done (Linux, 1 run)                    | `e2e/.results/real-model-smoke.json`                             |
-| macOS                                                                               | done (CI: unit subset, e2e)            | CI `Smoke (macos-latest)`; no real-model run yet                 |
-| Windows                                                                             | not supported                          | dropped from CI (decision 2026-11-12)                            |
-| Container sandbox (`capricorn-sandbox:local`, Ollama bridge, network off)           | done (Linux: rootless Podman, Docker)  | `sandbox*.test.ts`, gated `e2e/sandbox.e2e.test.ts`              |
-| Container sandbox on Docker Desktop (macOS/Windows), runsc, LXC; macOS Seatbelt     | unverified                             | not run; see docs/SECURITY.md#sandbox                            |
-| README quickstart in a fresh clone                                                  | done (Linux)                           | clone → `npm ci` → build → bundle → doctor → `run`               |
-| Behavioural eval suite (15 tasks, outcome-based checkers)                           | done                                   | `evals/capricorn/`, `e2e/evals-*.e2e.test.ts`                    |
-| Prompt tuning from evals (`gemma4:12b`: 74% → 95%)                                  | in progress                            | `evals/capricorn/RESULTS.md`                                     |
-| Settings-reachable Google paths (voice, telemetry, MCP/agent auth) closed           | done                                   | unit tests per path                                              |
-| Hardware-aware onboarding (recommend, offer download, test load)                    | done (Linux/NVIDIA verified)           | `recommend.test.ts`, `preflight.test.ts`, pty e2e                |
-| Context management for small windows (mid-task compression, scaled limits)          | done (8K/32K evals)                    | `evals/capricorn/RESULTS.md`, `chatCompressionService.test.ts`   |
-| Local web fetch                                                                     | deferred                               | docs/ROADMAP.md                                                  |
-| Removal of Google network code (OAuth, Code Assist, Clearcut, GCP export) and deps  | done (see UPSTREAM.md for leftovers)   | docs/UPSTREAM.md                                                 |
-| npm publication                                                                     | blocked                                | name chosen: `capricorn-code` (free); needs maintainer npm login |
+| Area                                                                                | Status                                 | Evidence                                                          |
+| ----------------------------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------- |
+| Fork of Gemini CLI v0.67.0, attribution, ADR                                        | done                                   | docs/UPSTREAM.md, NOTICE, docs/adr/0001-foundation.md             |
+| Ollama provider (stream/non-stream, tools, thinking, errors, retries, cancellation) | done                                   | `providers/ollama/*.test.ts` (105 tests)                          |
+| Gemma 4 verification from metadata; cloud/alias rejection                           | done                                   | `modelPolicy.test.ts`, e2e                                        |
+| Google back-ends removed; credentials ignored                                       | done                                   | `contentGenerator.test.ts`, `auth.test.ts`                        |
+| Egress guard (loopback + user allowlist)                                            | done                                   | `egressGuard.test.ts`, e2e, `verify:offline`                      |
+| Gemma 4 system prompt                                                               | done                                   | `capricornSnippets.test.ts`, real-model smoke                     |
+| CLI commands: doctor, status, models, config, init, run, sessions                   | done                                   | unit tests, e2e, manual runs against real Ollama                  |
+| Startup preflight, no silent model switch                                           | done                                   | `preflight.test.ts`, e2e                                          |
+| `/model` + model dialog restricted to Gemma 4                                       | done (dialog: unit/gradient test only) | `BuiltinCommandLoader.test.ts`                                    |
+| Malformed/unknown tool calls never executed; workspace escape refused               | done                                   | e2e security suite                                                |
+| `.capricorn` self-config protection incl. NTFS/8.3 spellings                        | done                                   | `safety/built-in.test.ts`                                         |
+| Per-prompt time budget                                                              | done                                   | e2e "time budget"                                                 |
+| Interactive TUI start → answer → Ctrl+C                                             | done                                   | `e2e/interactive.e2e.test.ts`                                     |
+| Package smoke (bundle, pack, install, launch)                                       | done                                   | `scripts/capricorn/pack-smoke.js` (Linux)                         |
+| Real-model smoke (`gemma4:12b`, read→fix→test→summary + denial)                     | done (Linux, 1 run)                    | `e2e/.results/real-model-smoke.json`                              |
+| macOS                                                                               | done (CI: unit subset, e2e)            | CI `Smoke (macos-latest)`; no real-model run yet                  |
+| Windows                                                                             | not supported                          | dropped from CI (decision 2026-11-12)                             |
+| Container sandbox (`capricorn-sandbox:local`, Ollama bridge, network off)           | done (Linux: rootless Podman, Docker)  | `sandbox*.test.ts`, gated `e2e/sandbox.e2e.test.ts`               |
+| Container sandbox on Docker Desktop (macOS/Windows), runsc, LXC; macOS Seatbelt     | unverified                             | not run; see docs/SECURITY.md#sandbox                             |
+| README quickstart in a fresh clone                                                  | done (Linux)                           | clone → `npm ci` → build → bundle → doctor → `run`                |
+| Behavioural eval suite (15 tasks, outcome-based checkers)                           | done                                   | `evals/capricorn/`, `e2e/evals-*.e2e.test.ts`                     |
+| Prompt tuning from evals (`gemma4:12b`: 74% → 95%)                                  | in progress                            | `evals/capricorn/RESULTS.md`                                      |
+| Settings-reachable Google paths (voice, telemetry, MCP/agent auth) closed           | done                                   | unit tests per path                                               |
+| Hardware-aware onboarding (recommend, offer download, test load)                    | done (Linux/NVIDIA verified)           | `recommend.test.ts`, `preflight.test.ts`, pty e2e                 |
+| Context management for small windows (mid-task compression, scaled limits)          | done (8K/32K evals)                    | `evals/capricorn/RESULTS.md`, `chatCompressionService.test.ts`    |
+| Context window sized per machine (onboarding, `capricorn doctor`)                   | done (12B measured on CUDA)            | `contextSize.test.ts`, `preflight.test.ts`, `diagnostics.test.ts` |
+| Local web fetch                                                                     | deferred                               | docs/ROADMAP.md                                                   |
+| Removal of Google network code (OAuth, Code Assist, Clearcut, GCP export) and deps  | done (see UPSTREAM.md for leftovers)   | docs/UPSTREAM.md                                                  |
+| npm publication                                                                     | blocked                                | name chosen: `capricorn-code` (free); needs maintainer npm login  |
 
 ## Test results
 

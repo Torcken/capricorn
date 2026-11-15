@@ -25,10 +25,13 @@ function fakeConfig(model: string) {
   const setModel = vi.fn((m: string) => {
     current = m;
   });
+  // One object, as in production: onboarding may adjust numCtx on it.
+  let settings: ReturnType<typeof resolveOllamaSettings> | undefined;
   const config = {
     getModel: () => current,
     setModel,
-    getOllamaSettings: () => resolveOllamaSettings({ endpoint: mock.url }),
+    getOllamaSettings: () =>
+      (settings ??= resolveOllamaSettings({ endpoint: mock.url })),
   } as unknown as Config;
   return { config, setModel };
 }
@@ -239,5 +242,108 @@ describe('runPreflight on first run (no Gemma 4 model installed)', () => {
     });
     expect(confirm).not.toHaveBeenCalled();
     expect(r.ok === false && r.message).toContain('Not enough memory');
+  });
+});
+
+// Capricorn: onboarding sizes the context window for this machine.
+describe('runPreflight on first run: context window', () => {
+  const GIB = 1024 ** 3;
+  // 12 GiB GPU: the default 12B fits, with room for a 64K window.
+  const gpu12 = async (): Promise<HardwareProfile> => ({
+    totalMemoryBytes: 64 * GIB,
+    platform: 'linux',
+    arch: 'x64',
+    cpus: 8,
+    gpus: [
+      {
+        vendor: 'nvidia',
+        name: 'TITAN V',
+        memoryBytes: 12 * GIB,
+        unified: false,
+      },
+    ],
+  });
+  // gemma4:12b's attention layout (verbose /api/show, Ollama 0.30.11).
+  const verboseModelInfo = {
+    'gemma4.block_count': 48,
+    'gemma4.attention.key_length': 512,
+    'gemma4.attention.value_length': 512,
+    'gemma4.attention.key_length_swa': 256,
+    'gemma4.attention.value_length_swa': 256,
+    'gemma4.attention.sliding_window': 1024,
+    'gemma4.attention.head_count_kv': Array.from({ length: 48 }, (_, i) =>
+      i % 6 === 5 ? 1 : 8,
+    ),
+    'gemma4.attention.sliding_window_pattern': Array.from(
+      { length: 48 },
+      (_, i) => i % 6 !== 5,
+    ),
+  };
+  const m12b = {
+    ...DEFAULT_MOCK_MODELS.find((m) => m.name === 'gemma4:12b')!,
+    verboseModelInfo,
+  };
+  const loads = () =>
+    mock
+      .chatRequests()
+      .map((q) => (q.body as { options?: { num_ctx?: number } }).options);
+
+  beforeEach(async () => {
+    await mock.close();
+    mock = await startMockOllama({ models: [], pullable: [m12b] });
+  });
+
+  it('uses the suggested window for the session and says how to keep it', async () => {
+    const { config } = fakeConfig('gemma4:12b');
+    const lines: string[] = [];
+    const r = await runPreflight(config, {
+      interactive: true,
+      confirm: async () => true,
+      detectHardware: gpu12,
+      log: (l) => lines.push(l),
+    });
+    expect(r.ok).toBe(true);
+    expect(config.getOllamaSettings().numCtx).toBe(65536);
+    expect(loads()).toEqual([expect.objectContaining({ num_ctx: 65536 })]);
+    const log = lines.join('\n');
+    expect(log).toContain('Context window for this session: 64K tokens');
+    expect(log).toContain('capricorn config set ollama.numCtx 65536');
+  });
+
+  it('keeps a window the user configured', async () => {
+    const { config } = fakeConfig('gemma4:12b');
+    const r = await runPreflight(config, {
+      interactive: true,
+      confirm: async () => true,
+      detectHardware: gpu12,
+      log: () => {},
+      numCtxConfigured: true,
+    });
+    expect(r.ok).toBe(true);
+    expect(config.getOllamaSettings().numCtx).toBe(32768);
+    expect(loads()).toEqual([expect.objectContaining({ num_ctx: 32768 })]);
+  });
+
+  it('falls back to the configured window when the suggested one does not load', async () => {
+    mock.enqueueChat({
+      frames: [],
+      status: 500,
+      errorBody: { error: 'model requires more system memory' },
+    });
+    const { config } = fakeConfig('gemma4:12b');
+    const lines: string[] = [];
+    const r = await runPreflight(config, {
+      interactive: true,
+      confirm: async () => true,
+      detectHardware: gpu12,
+      log: (l) => lines.push(l),
+    });
+    expect(r.ok).toBe(true);
+    expect(config.getOllamaSettings().numCtx).toBe(32768);
+    expect(loads()).toEqual([
+      expect.objectContaining({ num_ctx: 65536 }),
+      expect.objectContaining({ num_ctx: 32768 }),
+    ]);
+    expect(lines.join('\n')).toContain('did not load with 64K; keeping 32K');
   });
 });

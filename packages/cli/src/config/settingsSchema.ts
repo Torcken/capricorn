@@ -1100,7 +1100,7 @@ const SETTINGS_SCHEMA = {
         requiresRestart: true,
         default: 32768,
         description:
-          'Context window to allocate on the daemon, in tokens (minimum 8192). Larger values need substantially more memory for the KV cache.',
+          'Context window to allocate on the daemon, in tokens (minimum 8192). Larger values need more memory and make a full re-read of the prompt slower; `capricorn doctor` suggests a size for this machine.',
         showInDialog: true,
       },
       think: {
