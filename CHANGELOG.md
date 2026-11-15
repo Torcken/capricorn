@@ -6,6 +6,8 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.2] - 2026-11-15
+
 ### Changed
 
 - Internal packages use the `@capricorn` scope (`@capricorn/cli`,
