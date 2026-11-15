@@ -46,14 +46,10 @@ import { ScrollProvider } from './contexts/ScrollProvider.js';
 import {
   type StartupWarning,
   type Config,
-  type IdeInfo,
-  type IdeContext,
   type UserFeedbackPayload,
   type HookSystemMessagePayload,
   type AgentDefinition,
   type ApprovalMode,
-  IdeClient,
-  ideContextStore,
   getErrorMessage,
   getAllGeminiMdFilenames,
   AuthType,
@@ -112,7 +108,6 @@ import { useGeminiStream } from './hooks/useGeminiStream.js';
 import { useAgentStream } from './hooks/useAgentStream.js';
 import { type BackgroundTask } from './hooks/useExecutionLifecycle.js';
 import { useVim } from './hooks/vim.js';
-import { SettingScope } from '../config/settings.js';
 import { type InitializationResult } from '../core/initializer.js';
 import { startAutoMemoryIfEnabled } from '../utils/autoMemory.js';
 import { useFocus } from './hooks/useFocus.js';
@@ -122,8 +117,6 @@ import { Command } from './key/keyMatchers.js';
 import { useLoadingIndicator } from './hooks/useLoadingIndicator.js';
 import { useShellInactivityStatus } from './hooks/useShellInactivityStatus.js';
 import { useFolderTrust } from './hooks/useFolderTrust.js';
-import { useIdeTrustListener } from './hooks/useIdeTrustListener.js';
-import { type IdeIntegrationNudgeResult } from './IdeIntegrationNudge.js';
 import { appEvents, AppEvent, TransientMessageType } from '../utils/events.js';
 import { type UpdateObject } from './utils/updateCheck.js';
 import { setUpdateHandler } from '../utils/handleAutoUpdate.js';
@@ -603,9 +596,6 @@ export const AppContainer = (props: AppContainerProps) => {
           ShellExecutionService.kill(pid),
         ),
       );
-
-      const ideClient = await IdeClient.getInstance();
-      await ideClient.disconnect();
 
       // Fire SessionEnd hook on cleanup (only if hooks are enabled)
       await config?.getHookSystem()?.fireSessionEndEvent(SessionEndReason.Exit);
@@ -1727,25 +1717,6 @@ export const AppContainer = (props: AppContainerProps) => {
     geminiClient,
   ]);
 
-  const [idePromptAnswered, setIdePromptAnswered] = useState(false);
-  const [currentIDE, setCurrentIDE] = useState<IdeInfo | null>(null);
-
-  useEffect(() => {
-    const getIde = async () => {
-      const ideClient = await IdeClient.getInstance();
-      const currentIde = ideClient.getCurrentIde();
-      setCurrentIDE(currentIde || null);
-    };
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    getIde();
-  }, []);
-  const shouldShowIdePrompt = Boolean(
-    currentIDE &&
-      !config.getIdeMode() &&
-      !settings.merged.ide.hasSeenNudge &&
-      !idePromptAnswered,
-  );
-
   const [showErrorDetails, setShowErrorDetails] = useState<boolean>(false);
   const [showFullTodos, setShowFullTodos] = useState<boolean>(false);
   const [renderMarkdown, setRenderMarkdown] = useState<boolean>(true);
@@ -1777,11 +1748,7 @@ export const AppContainer = (props: AppContainerProps) => {
       onRepeat: handleExitRepeat,
     });
 
-  const [ideContextState, setIdeContextState] = useState<
-    IdeContext | undefined
-  >();
   const [showEscapePrompt, setShowEscapePrompt] = useState(false);
-  const [showIdeRestartPrompt, setShowIdeRestartPrompt] = useState(false);
 
   const [transientMessage, showTransientMessage] = useTimedMessage<{
     text: string;
@@ -1800,10 +1767,6 @@ export const AppContainer = (props: AppContainerProps) => {
   const [isPolicyUpdateDialogOpen, setIsPolicyUpdateDialogOpen] = useState(
     !!policyUpdateConfirmationRequest,
   );
-  const {
-    needsRestart: ideNeedsRestart,
-    restartReason: ideTrustRestartReason,
-  } = useIdeTrustListener();
   const prevWidthRef = useRef<number>(terminalWidth);
 
   useIncludeDirsTrust(config, isTrustedFolder, historyManager, setCustomDialog);
@@ -1860,13 +1823,6 @@ export const AppContainer = (props: AppContainerProps) => {
     setRawMode,
     shouldUseAlternateScreen,
   });
-
-  useEffect(() => {
-    if (ideNeedsRestart) {
-      // IDE trust changed, force a restart.
-      setShowIdeRestartPrompt(true);
-    }
-  }, [ideNeedsRestart]);
 
   useEffect(() => {
     if (
@@ -1941,12 +1897,6 @@ export const AppContainer = (props: AppContainerProps) => {
   ]);
 
   useEffect(() => {
-    const unsubscribe = ideContextStore.subscribe(setIdeContextState);
-    setIdeContextState(ideContextStore.get());
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
     const openDebugConsole = () => {
       setShowErrorDetails(true);
     };
@@ -1961,20 +1911,6 @@ export const AppContainer = (props: AppContainerProps) => {
     setShowEscapePrompt(showPrompt);
   }, []);
 
-  const handleIdePromptComplete = useCallback(
-    (result: IdeIntegrationNudgeResult) => {
-      if (result.userSelection === 'yes') {
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        handleSlashCommand('/ide install');
-        settings.setValue(SettingScope.User, 'ide.hasSeenNudge', true);
-      } else if (result.userSelection === 'dismiss') {
-        settings.setValue(SettingScope.User, 'ide.hasSeenNudge', true);
-      }
-      setIdePromptAnswered(true);
-    },
-    [handleSlashCommand, settings],
-  );
-
   const isAwaitingLoginRestart = authState === AuthState.AwaitingLoginRestart;
   const loginRestartMessage =
     settings.merged.security.auth.selectedType === AuthType.USE_VERTEX_AI
@@ -1982,7 +1918,6 @@ export const AppContainer = (props: AppContainerProps) => {
       : undefined;
 
   const dialogsVisible =
-    shouldShowIdePrompt ||
     isFolderTrustDialogOpen ||
     isPolicyUpdateDialogOpen ||
     adminSettingsChanged ||
@@ -2001,7 +1936,6 @@ export const AppContainer = (props: AppContainerProps) => {
     isAuthenticating ||
     isAuthDialogOpen ||
     isEditorDialogOpen ||
-    showIdeRestartPrompt ||
     isSessionBrowserOpen ||
     authState === AuthState.AwaitingApiKeyInput ||
     isAwaitingLoginRestart ||
@@ -2144,14 +2078,6 @@ export const AppContainer = (props: AppContainerProps) => {
           return newValue;
         });
         return true;
-      } else if (
-        keyMatchers[Command.SHOW_IDE_CONTEXT_DETAIL](key) &&
-        config.getIdeMode() &&
-        ideContextState
-      ) {
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        handleSlashCommand('/ide status');
-        return true;
       } else if (keyMatchers[Command.SHOW_MORE_LINES](key)) {
         setConstrainHeight(false);
         toggleLastTurnTools();
@@ -2240,10 +2166,8 @@ export const AppContainer = (props: AppContainerProps) => {
       setConstrainHeight,
       setShowErrorDetails,
       config,
-      ideContextState,
       handleCtrlCPress,
       handleCtrlDPress,
-      handleSlashCommand,
       cancelOngoingRequest,
       activePtyId,
       handleSuspend,
@@ -2651,7 +2575,6 @@ export const AppContainer = (props: AppContainerProps) => {
       isInputActive,
       isVoiceModeEnabled,
       isResuming,
-      shouldShowIdePrompt,
       isFolderTrustDialogOpen: isFolderTrustDialogOpen ?? false,
       folderDiscoveryResults,
       isPolicyUpdateDialogOpen,
@@ -2660,7 +2583,6 @@ export const AppContainer = (props: AppContainerProps) => {
       constrainHeight,
       showErrorDetails,
       showFullTodos,
-      ideContextState,
       renderMarkdown,
       ctrlCPressedOnce: ctrlCPressCount >= 1,
       ctrlDPressedOnce: ctrlDPressCount >= 1,
@@ -2695,10 +2617,7 @@ export const AppContainer = (props: AppContainerProps) => {
       terminalHeight,
       mainControlsRef,
       rootUiRef,
-      currentIDE,
       updateInfo,
-      showIdeRestartPrompt,
-      ideTrustRestartReason,
       isRestarting,
       extensionsUpdateState,
       activePtyId,
@@ -2764,7 +2683,6 @@ export const AppContainer = (props: AppContainerProps) => {
       isInputActive,
       isVoiceModeEnabled,
       isResuming,
-      shouldShowIdePrompt,
       isFolderTrustDialogOpen,
       folderDiscoveryResults,
       isPolicyUpdateDialogOpen,
@@ -2773,7 +2691,6 @@ export const AppContainer = (props: AppContainerProps) => {
       constrainHeight,
       showErrorDetails,
       showFullTodos,
-      ideContextState,
       renderMarkdown,
       ctrlCPressCount,
       ctrlDPressCount,
@@ -2807,10 +2724,7 @@ export const AppContainer = (props: AppContainerProps) => {
       terminalHeight,
       mainControlsRef,
       rootUiRef,
-      currentIDE,
       updateInfo,
-      showIdeRestartPrompt,
-      ideTrustRestartReason,
       isRestarting,
       currentModel,
       extensionsUpdateState,
@@ -2859,7 +2773,6 @@ export const AppContainer = (props: AppContainerProps) => {
       closePermissionsDialog,
       setShellModeActive,
       vimHandleInput,
-      handleIdePromptComplete,
       handleFolderTrustSelect,
       setIsPolicyUpdateDialogOpen,
       setConstrainHeight,
@@ -2954,7 +2867,6 @@ export const AppContainer = (props: AppContainerProps) => {
       closePermissionsDialog,
       setShellModeActive,
       vimHandleInput,
-      handleIdePromptComplete,
       handleFolderTrustSelect,
       setIsPolicyUpdateDialogOpen,
       setConstrainHeight,

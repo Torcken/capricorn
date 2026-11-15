@@ -638,8 +638,6 @@ export async function loadCliConfig(
 
   const includeDirectoryTree = settings.context?.includeDirectoryTree ?? true;
 
-  const ideMode = settings.ide?.enabled ?? false;
-
   const folderTrust =
     process.env['GEMINI_CLI_INTEGRATION_TEST'] === 'true' ||
     process.env['VITEST'] === 'true'
@@ -1130,7 +1128,6 @@ export async function loadCliConfig(
       settings.experimental?.topicUpdateNarration,
     noBrowser: !!process.env['NO_BROWSER'],
     summarizeToolOutput: settings.model?.summarizeToolOutput,
-    ideMode,
     disableLoopDetection: settings.model?.disableLoopDetection,
     compressionThreshold: settings.model?.compressionThreshold,
     folderTrust,

@@ -34,7 +34,6 @@ describe('ToolConfirmationMessage', () => {
     vi.mocked(useToolActions).mockReturnValue({
       confirm: mockConfirm,
       cancel: vi.fn(),
-      isDiffingEnabled: false,
       isExpanded: vi.fn().mockReturnValue(false),
       toggleExpansion: vi.fn(),
       toggleAllExpansion: vi.fn(),
@@ -555,114 +554,6 @@ describe('ToolConfirmationMessage', () => {
     });
   });
 
-  describe('Modify with external editor option', () => {
-    const editConfirmationDetails: SerializableConfirmationDetails = {
-      type: 'edit',
-      title: 'Confirm Edit',
-      fileName: 'test.txt',
-      filePath: '/test.txt',
-      fileDiff: '...diff...',
-      originalContent: 'a',
-      newContent: 'b',
-    };
-
-    it('should show "Modify with external editor" when NOT in IDE mode', async () => {
-      const mockConfig = {
-        isTrustedFolder: () => true,
-        getIdeMode: () => false,
-        getDisableAlwaysAllow: () => false,
-        getApprovalMode: () => 'default',
-      } as unknown as Config;
-      vi.mocked(useToolActions).mockReturnValue({
-        confirm: vi.fn(),
-        cancel: vi.fn(),
-        isDiffingEnabled: false,
-        isExpanded: vi.fn().mockReturnValue(false),
-        toggleExpansion: vi.fn(),
-        toggleAllExpansion: vi.fn(),
-      });
-
-      const { lastFrame, unmount } = await renderWithProviders(
-        <ToolConfirmationMessage
-          callId="test-call-id"
-          confirmationDetails={editConfirmationDetails}
-          config={mockConfig}
-          getPreferredEditor={vi.fn()}
-          availableTerminalHeight={30}
-          terminalWidth={80}
-          toolName="shell"
-        />,
-      );
-
-      expect(lastFrame()).toContain('Modify with external editor');
-      unmount();
-    });
-
-    it('should show "Modify with external editor" when in IDE mode but diffing is NOT enabled', async () => {
-      const mockConfig = {
-        isTrustedFolder: () => true,
-        getIdeMode: () => true,
-        getDisableAlwaysAllow: () => false,
-        getApprovalMode: () => 'default',
-      } as unknown as Config;
-      vi.mocked(useToolActions).mockReturnValue({
-        confirm: vi.fn(),
-        cancel: vi.fn(),
-        isDiffingEnabled: false,
-        isExpanded: vi.fn().mockReturnValue(false),
-        toggleExpansion: vi.fn(),
-        toggleAllExpansion: vi.fn(),
-      });
-
-      const { lastFrame, unmount } = await renderWithProviders(
-        <ToolConfirmationMessage
-          callId="test-call-id"
-          confirmationDetails={editConfirmationDetails}
-          config={mockConfig}
-          getPreferredEditor={vi.fn()}
-          availableTerminalHeight={30}
-          terminalWidth={80}
-          toolName="shell"
-        />,
-      );
-
-      expect(lastFrame()).toContain('Modify with external editor');
-      unmount();
-    });
-
-    it('should NOT show "Modify with external editor" when in IDE mode AND diffing is enabled', async () => {
-      const mockConfig = {
-        isTrustedFolder: () => true,
-        getIdeMode: () => true,
-        getDisableAlwaysAllow: () => false,
-        getApprovalMode: () => 'default',
-      } as unknown as Config;
-      vi.mocked(useToolActions).mockReturnValue({
-        confirm: vi.fn(),
-        cancel: vi.fn(),
-        isDiffingEnabled: true,
-        isExpanded: vi.fn().mockReturnValue(false),
-        toggleExpansion: vi.fn(),
-        toggleAllExpansion: vi.fn(),
-      });
-
-      const { lastFrame, unmount } = await renderWithProviders(
-        <ToolConfirmationMessage
-          callId="test-call-id"
-          confirmationDetails={editConfirmationDetails}
-          config={mockConfig}
-          getPreferredEditor={vi.fn()}
-          availableTerminalHeight={30}
-          terminalWidth={80}
-          toolName="shell"
-        />,
-      );
-
-      expect(lastFrame()).not.toContain('Modify with external editor');
-      unmount();
-    });
-  });
-
   it('should strip BiDi characters from MCP tool and server names', async () => {
     const confirmationDetails: ToolCallConfirmationDetails = {
       type: 'mcp',
@@ -865,7 +756,6 @@ describe('ToolConfirmationMessage', () => {
       vi.mocked(useToolActions).mockReturnValue({
         confirm: mockConfirm,
         cancel: vi.fn(),
-        isDiffingEnabled: false,
         isExpanded: vi.fn().mockReturnValue(false),
         toggleExpansion: vi.fn(),
         toggleAllExpansion: vi.fn(),

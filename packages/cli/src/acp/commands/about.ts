@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { IdeClient, UserAccountManager, getVersion } from '@capricorn/core';
+import { UserAccountManager, getVersion } from '@capricorn/core';
 import type {
   Command,
   CommandContext,
@@ -34,7 +34,6 @@ export class AboutCommand implements Command {
     const selectedAuthType =
       context.settings.merged?.security?.auth?.selectedType ?? '';
     const gcpProject = process.env['GOOGLE_CLOUD_PROJECT'] || '';
-    const ideClient = await getIdeClientName(context);
 
     const userAccountManager = new UserAccountManager();
     const cachedAccount = userAccountManager.getCachedGoogleAccount();
@@ -49,7 +48,6 @@ export class AboutCommand implements Command {
       `- Model: ${modelVersion}`,
       `- Auth Type: ${selectedAuthType}`,
       `- GCP Project: ${gcpProject}`,
-      `- IDE Client: ${ideClient}`,
       `- User Email: ${userEmail}`,
       `- Tier: ${tier}`,
     ].join('\n');
@@ -59,12 +57,4 @@ export class AboutCommand implements Command {
       data: `Capricorn Info:\n${info}`,
     };
   }
-}
-
-async function getIdeClientName(context: CommandContext) {
-  if (!context.agentContext.config.getIdeMode()) {
-    return '';
-  }
-  const ideClient = await IdeClient.getInstance();
-  return ideClient?.getDetectedIdeDisplayName() ?? '';
 }

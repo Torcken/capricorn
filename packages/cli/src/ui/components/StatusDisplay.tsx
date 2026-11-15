@@ -30,7 +30,6 @@ export const StatusDisplay: React.FC<StatusDisplayProps> = ({
   if (!settings.merged.ui.hideContextSummary && !hideContextSummary) {
     return (
       <ContextSummaryDisplay
-        ideContext={uiState.ideContextState}
         geminiMdFileCount={uiState.geminiMdFileCount}
         contextFileNames={uiState.contextFileNames}
         mcpServers={config.getMcpClientManager()?.getMcpServers() ?? {}}

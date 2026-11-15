@@ -8,11 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import {
-  FatalConfigError,
-  ideContextStore,
-  normalizePath,
-} from '@capricorn/core';
+import { FatalConfigError, normalizePath } from '@capricorn/core';
 import {
   loadTrustedFolders,
   TrustLevel,
@@ -360,38 +356,6 @@ describe('Trusted Folders', () => {
         isTrusted: true,
         source: 'file',
       });
-    });
-
-    it('should prioritize IDE override over file config', () => {
-      const config = { '/projectA': TrustLevel.DO_NOT_TRUST };
-      fs.writeFileSync(trustedFoldersPath, JSON.stringify(config), 'utf-8');
-
-      ideContextStore.set({ workspaceState: { isTrusted: true } });
-
-      try {
-        expect(isWorkspaceTrusted(mockSettings, '/projectA')).toEqual({
-          isTrusted: true,
-          source: 'ide',
-        });
-      } finally {
-        ideContextStore.clear();
-      }
-    });
-
-    it('should return false when IDE override is false', () => {
-      const config = { '/projectA': TrustLevel.TRUST_FOLDER };
-      fs.writeFileSync(trustedFoldersPath, JSON.stringify(config), 'utf-8');
-
-      ideContextStore.set({ workspaceState: { isTrusted: false } });
-
-      try {
-        expect(isWorkspaceTrusted(mockSettings, '/projectA')).toEqual({
-          isTrusted: false,
-          source: 'ide',
-        });
-      } finally {
-        ideContextStore.clear();
-      }
     });
 
     it('should throw FatalConfigError when the config file is invalid', () => {

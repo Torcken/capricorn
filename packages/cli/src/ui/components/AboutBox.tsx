@@ -18,7 +18,6 @@ interface AboutBoxProps {
   modelVersion: string;
   selectedAuthType: string;
   gcpProject: string;
-  ideClient: string;
   userEmail?: string;
   tier?: string;
 }
@@ -30,7 +29,6 @@ export const AboutBox: React.FC<AboutBoxProps> = ({
   modelVersion,
   selectedAuthType,
   gcpProject,
-  ideClient,
   userEmail,
   tier,
 }) => {
@@ -144,18 +142,6 @@ export const AboutBox: React.FC<AboutBoxProps> = ({
           </Box>
           <Box>
             <Text color={theme.text.primary}>{gcpProject}</Text>
-          </Box>
-        </Box>
-      )}
-      {ideClient && (
-        <Box flexDirection="row">
-          <Box width="35%">
-            <Text bold color={theme.text.link}>
-              IDE Client
-            </Text>
-          </Box>
-          <Box>
-            <Text color={theme.text.primary}>{ideClient}</Text>
           </Box>
         </Box>
       )}

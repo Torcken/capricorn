@@ -21,7 +21,6 @@ describe('AboutBox', () => {
     modelVersion: 'gemini-pro',
     selectedAuthType: 'oauth',
     gcpProject: '',
-    ideClient: '',
   };
 
   it('renders with required props', async () => {
@@ -41,7 +40,6 @@ describe('AboutBox', () => {
 
   it.each([
     ['gcpProject', 'my-project', 'GCP Project'],
-    ['ideClient', 'vscode', 'IDE Client'],
     ['tier', 'Enterprise', 'Tier'],
   ])('renders optional prop %s', async (prop, value, label) => {
     const props = { ...defaultProps, [prop]: value };

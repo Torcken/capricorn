@@ -5,7 +5,6 @@
  */
 
 import { Box, Text } from 'ink';
-import { IdeIntegrationNudge } from '../IdeIntegrationNudge.js';
 import { LoopDetectionConfirmation } from './LoopDetectionConfirmation.js';
 import { FolderTrustDialog } from './FolderTrustDialog.js';
 import { ConsentPrompt } from './ConsentPrompt.js';
@@ -28,7 +27,6 @@ import { useSettings } from '../contexts/SettingsContext.js';
 import process from 'node:process';
 import { type UseHistoryManagerReturn } from '../hooks/useHistoryManager.js';
 import { AdminSettingsChangedDialog } from './AdminSettingsChangedDialog.js';
-import { IdeTrustChangeDialog } from './IdeTrustChangeDialog.js';
 import { NewAgentsNotification } from './NewAgentsNotification.js';
 import { AgentConfigDialog } from './AgentConfigDialog.js';
 import { PolicyUpdateDialog } from './PolicyUpdateDialog.js';
@@ -62,22 +60,11 @@ export const DialogManager = ({
   if (uiState.adminSettingsChanged) {
     return <AdminSettingsChangedDialog />;
   }
-  if (uiState.showIdeRestartPrompt) {
-    return <IdeTrustChangeDialog reason={uiState.ideTrustRestartReason} />;
-  }
   if (uiState.newAgents) {
     return (
       <NewAgentsNotification
         agents={uiState.newAgents}
         onSelect={uiActions.handleNewAgentsSelect}
-      />
-    );
-  }
-  if (uiState.shouldShowIdePrompt) {
-    return (
-      <IdeIntegrationNudge
-        ide={uiState.currentIDE!}
-        onComplete={uiActions.handleIdePromptComplete}
       />
     );
   }

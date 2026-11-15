@@ -931,36 +931,6 @@ const SETTINGS_SCHEMA = {
     },
   },
 
-  ide: {
-    type: 'object',
-    label: 'IDE',
-    category: 'IDE',
-    requiresRestart: true,
-    default: {},
-    description: 'IDE integration settings.',
-    showInDialog: false,
-    properties: {
-      enabled: {
-        type: 'boolean',
-        label: 'IDE Mode',
-        category: 'IDE',
-        requiresRestart: true,
-        default: false,
-        description: 'Enable IDE integration mode.',
-        showInDialog: true,
-      },
-      hasSeenNudge: {
-        type: 'boolean',
-        label: 'Has Seen IDE Integration Nudge',
-        category: 'IDE',
-        requiresRestart: false,
-        default: false,
-        description: 'Whether the user has seen the IDE integration nudge.',
-        showInDialog: false,
-      },
-    },
-  },
-
   privacy: {
     type: 'object',
     label: 'Privacy',

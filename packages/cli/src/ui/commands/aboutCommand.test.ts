@@ -9,17 +9,12 @@ import { aboutCommand } from './aboutCommand.js';
 import { type CommandContext } from './types.js';
 import { createMockCommandContext } from '../../test-utils/mockCommandContext.js';
 import { MessageType } from '../types.js';
-import { IdeClient, getVersion } from '@capricorn/core';
+import { getVersion } from '@capricorn/core';
 
 vi.mock('@capricorn/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@capricorn/core')>();
   return {
     ...actual,
-    IdeClient: {
-      getInstance: vi.fn().mockResolvedValue({
-        getDetectedIdeDisplayName: vi.fn().mockReturnValue('test-ide'),
-      }),
-    },
     UserAccountManager: vi.fn().mockImplementation(() => ({
       getCachedGoogleAccount: vi.fn().mockReturnValue('test-email@example.com'),
     })),
@@ -98,7 +93,6 @@ describe('aboutCommand', () => {
       modelVersion: 'test-model',
       selectedAuthType: 'test-auth',
       gcpProject: 'test-gcp-project',
-      ideClient: 'test-ide',
       userEmail: 'test-email@example.com',
       tier: undefined,
     });
@@ -131,32 +125,6 @@ describe('aboutCommand', () => {
     expect(mockContext.ui.addItem).toHaveBeenCalledWith(
       expect.objectContaining({
         sandboxEnv: 'sandbox-exec (test-profile)',
-      }),
-    );
-  });
-
-  it('should not show ide client when it is not detected', async () => {
-    vi.mocked(IdeClient.getInstance).mockResolvedValue({
-      getDetectedIdeDisplayName: vi.fn().mockReturnValue(undefined),
-    } as unknown as IdeClient);
-
-    process.env['SANDBOX'] = '';
-    if (!aboutCommand.action) {
-      throw new Error('The about command must have an action.');
-    }
-
-    await aboutCommand.action(mockContext, '');
-
-    expect(mockContext.ui.addItem).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: MessageType.ABOUT,
-        cliVersion: 'test-version',
-        osVersion: 'test-os',
-        sandboxEnv: 'no sandbox',
-        modelVersion: 'test-model',
-        selectedAuthType: 'test-auth',
-        gcpProject: 'test-gcp-project',
-        ideClient: '',
       }),
     );
   });

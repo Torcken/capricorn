@@ -16,7 +16,6 @@ import {
 } from './trust.js';
 import { Storage } from '../config/storage.js';
 import { lock } from 'proper-lockfile';
-import { ideContextStore } from '../ide/ideContext.js';
 import * as headless from './headless.js';
 import { coreEvents } from './events.js';
 
@@ -43,7 +42,6 @@ describe('Trust Utility (Core)', () => {
     );
     vi.mocked(lock).mockResolvedValue(vi.fn().mockResolvedValue(undefined));
     vi.mocked(headless.isHeadlessMode).mockReturnValue(false);
-    ideContextStore.clear();
     resetTrustedFoldersForTesting();
     delete process.env['GEMINI_CLI_TRUST_WORKSPACE'];
   });
@@ -167,17 +165,6 @@ describe('Trust Utility (Core)', () => {
         isFolderTrustEnabled: false,
       });
       expect(result).toEqual({ isTrusted: true, source: 'env' });
-    });
-
-    it('should return IDE trust if available', () => {
-      ideContextStore.set({
-        workspaceState: { isTrusted: true },
-      });
-      const result = checkPathTrust({
-        path: '/any',
-        isFolderTrustEnabled: true,
-      });
-      expect(result).toEqual({ isTrusted: true, source: 'ide' });
     });
 
     it('should fall back to file trust', () => {

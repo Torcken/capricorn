@@ -35,11 +35,6 @@ describe('<ContextSummaryDisplay />', () => {
     geminiMdFileCount: 0,
     contextFileNames: [],
     mcpServers: {},
-    ideContext: {
-      workspaceState: {
-        openFiles: [],
-      },
-    },
     skillCount: 1,
   };
 
@@ -49,11 +44,6 @@ describe('<ContextSummaryDisplay />', () => {
       geminiMdFileCount: 1,
       contextFileNames: ['GEMINI.md'],
       mcpServers: { 'test-server': { command: 'test' } },
-      ideContext: {
-        workspaceState: {
-          openFiles: [{ path: '/a/b/c', timestamp: Date.now() }],
-        },
-      },
     };
     const { lastFrame, unmount } = await renderWithWidth(120, props);
     expect(lastFrame()).toMatchSnapshot();
@@ -66,11 +56,6 @@ describe('<ContextSummaryDisplay />', () => {
       geminiMdFileCount: 1,
       contextFileNames: ['GEMINI.md'],
       mcpServers: { 'test-server': { command: 'test' } },
-      ideContext: {
-        workspaceState: {
-          openFiles: [{ path: '/a/b/c', timestamp: Date.now() }],
-        },
-      },
     };
     const { lastFrame, unmount } = await renderWithWidth(60, props);
     expect(lastFrame()).toMatchSnapshot();
@@ -80,15 +65,11 @@ describe('<ContextSummaryDisplay />', () => {
   it('should not render empty parts', async () => {
     const props = {
       ...baseProps,
-      geminiMdFileCount: 0,
-      contextFileNames: [],
+      // Capricorn: one non-empty part (IDE open files were removed).
+      geminiMdFileCount: 1,
+      contextFileNames: ['CAPRICORN.md'],
       mcpServers: {},
       skillCount: 0,
-      ideContext: {
-        workspaceState: {
-          openFiles: [{ path: '/a/b/c', timestamp: Date.now() }],
-        },
-      },
     };
     const { lastFrame, unmount } = await renderWithWidth(60, props);
     expect(lastFrame()).toMatchSnapshot();

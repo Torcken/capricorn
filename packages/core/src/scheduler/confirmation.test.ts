@@ -396,35 +396,6 @@ describe('confirmation.ts', () => {
       );
     });
 
-    it('should resolve immediately if IDE confirmation resolves first', async () => {
-      const idePromise = Promise.resolve({
-        status: 'accepted' as const,
-        content: 'ide-content',
-      });
-
-      const details = {
-        type: 'info' as const,
-        prompt: 'Confirm?',
-        title: 'Title',
-        onConfirm: vi.fn(),
-        ideConfirmation: idePromise,
-      };
-      invocationMock.shouldConfirmExecute.mockResolvedValue(details);
-
-      // We don't strictly need to wait for the listener because the race might finish instantly
-      const promise = resolveConfirmation(toolCall, signal, {
-        config: mockConfig,
-        messageBus: mockMessageBus,
-        state: mockState,
-        modifier: mockModifier,
-        getPreferredEditor,
-        schedulerId: ROOT_SCHEDULER_ID,
-      });
-
-      const result = await promise;
-      expect(result.outcome).toBe(ToolConfirmationOutcome.ProceedOnce);
-    });
-
     it('should throw if tool call is lost from state during loop', async () => {
       invocationMock.shouldConfirmExecute.mockResolvedValue({
         type: 'info' as const,

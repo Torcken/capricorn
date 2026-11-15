@@ -152,24 +152,13 @@ export * from './services/keychainTypes.js';
 export * from './skills/skillManager.js';
 export * from './skills/skillLoader.js';
 
-// Export IDE specific logic
-export * from './ide/ide-client.js';
-export * from './ide/ideContext.js';
-export * from './ide/ide-installer.js';
+// Capricorn: the IDE companion connection was removed; only terminal/editor
+// detection remains.
 export {
   IDE_DEFINITIONS,
   type IdeInfo,
   isCloudShell,
 } from './ide/detect-ide.js';
-export * from './ide/constants.js';
-export * from './ide/types.js';
-export {
-  createProxyAwareFetch,
-  getConnectionConfigFromFile,
-  getPortFromEnv,
-  type ConnectionConfig,
-} from './ide/ide-connection-utils.js';
-export { getIdeProcessInfo } from './ide/process-utils.js';
 
 // Export Shell Execution Service
 export * from './services/shellExecutionService.js';

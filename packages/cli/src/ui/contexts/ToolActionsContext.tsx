@@ -5,15 +5,8 @@
  */
 
 import type React from 'react';
+import { createContext, useContext, useCallback } from 'react';
 import {
-  createContext,
-  useContext,
-  useCallback,
-  useState,
-  useEffect,
-} from 'react';
-import {
-  IdeClient,
   ToolConfirmationOutcome,
   MessageBusType,
   type Config,
@@ -47,7 +40,6 @@ interface ToolActionsContextValue {
     payload?: ToolConfirmationPayload,
   ) => Promise<void>;
   cancel: (callId: string) => Promise<void>;
-  isDiffingEnabled: boolean;
   isExpanded: (callId: string) => boolean;
   toggleExpansion: (callId: string) => void;
   toggleAllExpansion: (callIds: string[]) => void;
@@ -84,42 +76,6 @@ export const ToolActionsProvider: React.FC<ToolActionsProviderProps> = (
     toggleAllExpansion,
   } = props;
 
-  // Hoist IdeClient logic here to keep UI pure
-  const [ideClient, setIdeClient] = useState<IdeClient | null>(null);
-  const [isDiffingEnabled, setIsDiffingEnabled] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-    let activeClient: IdeClient | null = null;
-
-    const handleStatusChange = () => {
-      if (isMounted && activeClient) {
-        setIsDiffingEnabled(activeClient.isDiffingEnabled());
-      }
-    };
-
-    if (config.getIdeMode()) {
-      IdeClient.getInstance()
-        .then((client) => {
-          if (!isMounted) return;
-          activeClient = client;
-          setIdeClient(client);
-          setIsDiffingEnabled(client.isDiffingEnabled());
-
-          client.addStatusChangeListener(handleStatusChange);
-        })
-        .catch((error) => {
-          debugLogger.error('Failed to get IdeClient instance:', error);
-        });
-    }
-    return () => {
-      isMounted = false;
-      if (activeClient) {
-        activeClient.removeStatusChangeListener(handleStatusChange);
-      }
-    };
-  }, [config]);
-
   const confirm = useCallback(
     async (
       callId: string,
@@ -133,26 +89,6 @@ export const ToolActionsProvider: React.FC<ToolActionsProviderProps> = (
       }
 
       const details = tool.confirmationDetails;
-
-      // 1. Handle Side Effects (IDE Diff)
-      if (
-        details?.type === 'edit' &&
-        isDiffingEnabled &&
-        'filePath' in details // Check for safety
-      ) {
-        const cliOutcome =
-          outcome === ToolConfirmationOutcome.Cancel ? 'rejected' : 'accepted';
-        if (ideClient) {
-          void ideClient
-            .resolveDiffFromCli(details.filePath, cliOutcome)
-            ?.catch((error: unknown) => {
-              debugLogger.error(
-                `Failed to resolve diff from CLI for ${details.filePath}:`,
-                error,
-              );
-            });
-        }
-      }
 
       // 2. Dispatch via Event Bus
       if (tool.correlationId) {
@@ -177,7 +113,7 @@ export const ToolActionsProvider: React.FC<ToolActionsProviderProps> = (
         `ToolActions: No correlationId or callback for ${callId}`,
       );
     },
-    [config, ideClient, toolCalls, isDiffingEnabled],
+    [config, toolCalls],
   );
 
   const cancel = useCallback(
@@ -192,7 +128,6 @@ export const ToolActionsProvider: React.FC<ToolActionsProviderProps> = (
       value={{
         confirm,
         cancel,
-        isDiffingEnabled,
         isExpanded,
         toggleExpansion,
         toggleAllExpansion,

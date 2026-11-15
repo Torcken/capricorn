@@ -30,7 +30,6 @@ import {
   SlashCommandStatus,
   ToolConfirmationOutcome,
   Storage,
-  IdeClient,
   coreEvents,
   addMCPStatusChangeListener,
   removeMCPStatusChangeListener,
@@ -168,7 +167,6 @@ export const useSlashCommandProcessor = (
           modelVersion: message.modelVersion,
           selectedAuthType: message.selectedAuthType,
           gcpProject: message.gcpProject,
-          ideClient: message.ideClient,
         };
       } else if (message.type === MessageType.HELP) {
         historyItemContent = {
@@ -284,19 +282,6 @@ export const useSlashCommandProcessor = (
     const listener = () => {
       reloadCommands();
     };
-    let isActive = true;
-    let activeIdeClient: IdeClient | undefined;
-
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    (async () => {
-      const ideClient = await IdeClient.getInstance();
-      if (!isActive) {
-        return;
-      }
-      activeIdeClient = ideClient;
-      ideClient.addStatusChangeListener(listener);
-    })();
-
     // Listen for MCP server status changes (e.g. connection, discovery completion)
     // to reload slash commands (since they may include MCP prompts).
     addMCPStatusChangeListener(listener);
@@ -316,8 +301,6 @@ export const useSlashCommandProcessor = (
     coreEvents.on('extensionsStopping', extensionEventListener);
 
     return () => {
-      isActive = false;
-      activeIdeClient?.removeStatusChangeListener(listener);
       removeMCPStatusChangeListener(listener);
       coreEvents.off('extensionsStarting', extensionEventListener);
       coreEvents.off('extensionsStopping', extensionEventListener);

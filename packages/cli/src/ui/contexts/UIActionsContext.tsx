@@ -6,7 +6,6 @@
 
 import { createContext, useContext } from 'react';
 import { type Key } from '../hooks/useKeypress.js';
-import { type IdeIntegrationNudgeResult } from '../IdeIntegrationNudge.js';
 import { type FolderTrustChoice } from '../components/FolderTrustDialog.js';
 import { type EditorType, type AgentDefinition } from '@capricorn/core';
 import { type LoadableSettingScope } from '../../config/settings.js';
@@ -43,7 +42,6 @@ export interface UIActions {
   closePermissionsDialog: () => void;
   setShellModeActive: (value: boolean) => void;
   vimHandleInput: (key: Key) => boolean;
-  handleIdePromptComplete: (result: IdeIntegrationNudgeResult) => void;
   handleFolderTrustSelect: (choice: FolderTrustChoice) => void;
   setIsPolicyUpdateDialogOpen: (value: boolean) => void;
   setConstrainHeight: (value: boolean) => void;

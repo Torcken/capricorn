@@ -7,16 +7,13 @@
 import type React from 'react';
 import { Box, Text } from 'ink';
 import { theme } from '../semantic-colors.js';
-import { type IdeContext, type MCPServerConfig } from '@capricorn/core';
-import { Command } from '../key/keyMatchers.js';
-import { formatCommand } from '../key/keybindingUtils.js';
+import { type MCPServerConfig } from '@capricorn/core';
 
 interface ContextSummaryDisplayProps {
   geminiMdFileCount: number;
   contextFileNames: string[];
   mcpServers?: Record<string, MCPServerConfig>;
   blockedMcpServers?: Array<{ name: string; extensionName: string }>;
-  ideContext?: IdeContext;
   skillCount: number;
   backgroundProcessCount?: number;
 }
@@ -26,33 +23,21 @@ export const ContextSummaryDisplay: React.FC<ContextSummaryDisplayProps> = ({
   contextFileNames,
   mcpServers,
   blockedMcpServers,
-  ideContext,
   skillCount,
   backgroundProcessCount = 0,
 }) => {
   const mcpServerCount = Object.keys(mcpServers || {}).length;
   const blockedMcpServerCount = blockedMcpServers?.length || 0;
-  const openFileCount = ideContext?.workspaceState?.openFiles?.length ?? 0;
 
   if (
     geminiMdFileCount === 0 &&
     mcpServerCount === 0 &&
     blockedMcpServerCount === 0 &&
-    openFileCount === 0 &&
     skillCount === 0 &&
     backgroundProcessCount === 0
   ) {
     return null;
   }
-
-  const openFilesText = (() => {
-    if (openFileCount === 0) {
-      return '';
-    }
-    return `${openFileCount} open file${
-      openFileCount > 1 ? 's' : ''
-    } (${formatCommand(Command.SHOW_IDE_CONTEXT_DETAIL)} to view)`;
-  })();
 
   const geminiMdText = (() => {
     if (geminiMdFileCount === 0) {
@@ -104,7 +89,6 @@ export const ContextSummaryDisplay: React.FC<ContextSummaryDisplayProps> = ({
   })();
 
   const summaryParts = [
-    openFilesText,
     geminiMdText,
     mcpText,
     skillText,

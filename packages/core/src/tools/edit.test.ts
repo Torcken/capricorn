@@ -10,14 +10,6 @@ const mockFixLLMEditWithInstruction = vi.hoisted(() => vi.fn());
 const mockGenerateJson = vi.hoisted(() => vi.fn());
 const mockOpenDiff = vi.hoisted(() => vi.fn());
 
-import { IdeClient } from '../ide/ide-client.js';
-
-vi.mock('../ide/ide-client.js', () => ({
-  IdeClient: {
-    getInstance: vi.fn(),
-  },
-}));
-
 vi.mock('../utils/llm-edit-fixer.js', () => ({
   FixLLMEditWithInstruction: mockFixLLMEditWithInstruction,
 }));
@@ -56,7 +48,7 @@ import {
   applyReplacement,
   calculateReplacement,
 } from './edit.js';
-import { type FileDiff, ToolConfirmationOutcome } from './tools.js';
+import { type FileDiff } from './tools.js';
 import { ToolErrorType } from './tool-error.js';
 import {
   createMockMessageBus,
@@ -72,7 +64,6 @@ import { type Content, type Part, type SchemaUnion } from '@google/genai';
 import { createMockWorkspaceContext } from '../test-utils/mockWorkspaceContext.js';
 import { StandardFileSystemService } from '../services/fileSystemService.js';
 import type { BaseLlmClient } from '../core/baseLlmClient.js';
-import { ideContextStore } from '../ide/ideContext.js';
 
 describe('EditTool', () => {
   let tool: EditTool;
@@ -1145,54 +1136,6 @@ function doIt() {
     );
   });
 
-  describe('IDE mode', () => {
-    const testFile = 'edit_me.txt';
-    let filePath: string;
-    let ideClient: any;
-
-    beforeEach(() => {
-      filePath = path.join(rootDir, testFile);
-      ideClient = {
-        openDiff: vi.fn(),
-        isDiffingEnabled: vi.fn().mockReturnValue(true),
-      };
-      vi.mocked(IdeClient.getInstance).mockResolvedValue(ideClient);
-      (mockConfig as any).getIdeMode = () => true;
-    });
-
-    it('should call ideClient.openDiff and update params on confirmation', async () => {
-      const initialContent = 'some old content here';
-      const newContent = 'some new content here';
-      const modifiedContent = 'some modified content here';
-      fs.writeFileSync(filePath, initialContent);
-      const params: EditToolParams = {
-        file_path: filePath,
-        instruction: 'test',
-        old_string: 'old',
-        new_string: 'new',
-      };
-
-      ideClient.openDiff.mockResolvedValueOnce({
-        status: 'accepted',
-        content: modifiedContent,
-      });
-
-      const invocation = tool.build(params);
-      const confirmation = await invocation.shouldConfirmExecute(
-        new AbortController().signal,
-      );
-
-      expect(ideClient.openDiff).toHaveBeenCalledWith(filePath, newContent);
-
-      if (confirmation && 'onConfirm' in confirmation) {
-        await confirmation.onConfirm(ToolConfirmationOutcome.ProceedOnce);
-      }
-
-      expect(params.old_string).toBe(initialContent);
-      expect(params.new_string).toBe(modifiedContent);
-    });
-  });
-
   describe('shouldConfirmExecute', () => {
     it('should rethrow calculateEdit errors when the abort signal is triggered', async () => {
       const filePath = path.join(rootDir, 'abort-confirmation.txt');
@@ -1617,78 +1560,6 @@ function doIt() {
 
       await expect(p2).rejects.toThrow('Edit aborted');
       await p1;
-    });
-  });
-
-  describe('multi-root IDE workspace relative path resolution (b/503364786 / #25527)', () => {
-    afterEach(() => {
-      ideContextStore.clear();
-    });
-
-    it('should create a new file in the active IDE workspace directory (mmm-tools/FLUX) rather than targetDir (data-model-core/mmm)', async () => {
-      const mmmRepoDir = path.join(
-        tempDir,
-        'repogit',
-        'data-model-core',
-        'mmm',
-      );
-      const fluxRepoDir = path.join(tempDir, 'repogit', 'mmm-tools', 'FLUX');
-      fs.mkdirSync(path.join(mmmRepoDir, 'tests'), { recursive: true });
-      fs.mkdirSync(path.join(fluxRepoDir, 'src'), { recursive: true });
-
-      // Even if a file with the same relative path already exists in data-model-core/mmm,
-      // creating a new file while active in mmm-tools/FLUX should target mmm-tools/FLUX
-      const existingMmmFile = path.join(
-        mmmRepoDir,
-        'tests',
-        'gemini_test_repo_parent.txt',
-      );
-      fs.writeFileSync(existingMmmFile, 'existing mmm content', 'utf8');
-
-      vi.spyOn(mockConfig, 'getTargetDir').mockReturnValue(mmmRepoDir);
-      vi.spyOn(mockConfig, 'getWorkspaceContext').mockReturnValue(
-        createMockWorkspaceContext(mmmRepoDir, [fluxRepoDir]),
-      );
-      vi.spyOn(mockConfig, 'getIdeMode').mockReturnValue(true);
-
-      const activeFluxFile = path.join(fluxRepoDir, 'src', 'index.ts');
-      fs.writeFileSync(activeFluxFile, '// active file in FLUX\n', 'utf8');
-      ideContextStore.set({
-        workspaceState: {
-          openFiles: [
-            {
-              path: activeFluxFile,
-              timestamp: Date.now(),
-              isActive: true,
-            },
-          ],
-        },
-      });
-
-      const invocation = tool.build({
-        file_path: 'tests/gemini_test_repo_parent.txt',
-        instruction: 'Create test file in FLUX',
-        old_string: '',
-        new_string: 'new flux content',
-      });
-
-      const result = await invocation.execute({
-        abortSignal: new AbortController().signal,
-      });
-
-      expect(result.error).toBeUndefined();
-      const expectedFluxFile = path.join(
-        fluxRepoDir,
-        'tests',
-        'gemini_test_repo_parent.txt',
-      );
-      expect(fs.existsSync(expectedFluxFile)).toBe(true);
-      expect(fs.readFileSync(expectedFluxFile, 'utf8')).toBe(
-        'new flux content',
-      );
-      expect(fs.readFileSync(existingMmmFile, 'utf8')).toBe(
-        'existing mmm content',
-      );
     });
   });
 });

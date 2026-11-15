@@ -6,6 +6,13 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Removed
+
+- The VS Code companion extension and the IDE integration: IDE client and
+  installer, IDE context in prompts, IDE diff views for edits, IDE workspace
+  trust, the sandbox IDE bridge, `/ide`, the IDE nudge and trust dialogs, the F4
+  "IDE context" key, the "IDE Client" line in `/about` and the `ide` settings.
+
 ### Security
 
 - zod 3.25.76 → 4.6.7 (memory exhaustion on oversized constrained collections)

@@ -83,7 +83,6 @@ export enum Command {
   // App Controls
   SHOW_ERROR_DETAILS = 'app.showErrorDetails',
   SHOW_FULL_TODOS = 'app.showFullTodos',
-  SHOW_IDE_CONTEXT_DETAIL = 'app.showIdeContextDetail',
   TOGGLE_MARKDOWN = 'app.toggleMarkdown',
   TOGGLE_COPY_MODE = 'app.toggleCopyMode',
   TOGGLE_MOUSE_MODE = 'app.toggleMouseMode',
@@ -387,7 +386,6 @@ export const defaultKeyBindingConfig: KeyBindingConfig = new Map([
   // App Controls
   [Command.SHOW_ERROR_DETAILS, [new KeyBinding('f12')]],
   [Command.SHOW_FULL_TODOS, [new KeyBinding('ctrl+t')]],
-  [Command.SHOW_IDE_CONTEXT_DETAIL, [new KeyBinding('f4')]],
   [Command.TOGGLE_MARKDOWN, [new KeyBinding('alt+m')]],
   [Command.TOGGLE_COPY_MODE, [new KeyBinding('f9')]],
   [Command.TOGGLE_MOUSE_MODE, [new KeyBinding('ctrl+s')]],
@@ -520,7 +518,6 @@ export const commandCategories: readonly CommandCategory[] = [
     commands: [
       Command.SHOW_ERROR_DETAILS,
       Command.SHOW_FULL_TODOS,
-      Command.SHOW_IDE_CONTEXT_DETAIL,
       Command.TOGGLE_MARKDOWN,
       Command.TOGGLE_COPY_MODE,
       Command.TOGGLE_MOUSE_MODE,
@@ -637,7 +634,6 @@ export const commandDescriptions: Readonly<Record<Command, string>> = {
   [Command.SHOW_ERROR_DETAILS]:
     'Toggle the debug console for detailed error information.',
   [Command.SHOW_FULL_TODOS]: 'Toggle the full TODO list.',
-  [Command.SHOW_IDE_CONTEXT_DETAIL]: 'Show IDE context details.',
   [Command.TOGGLE_MARKDOWN]: 'Toggle Markdown rendering.',
   [Command.TOGGLE_COPY_MODE]: 'Toggle copy mode when in alternate buffer mode.',
   [Command.TOGGLE_MOUSE_MODE]: 'Toggle mouse mode (scrolling and clicking).',

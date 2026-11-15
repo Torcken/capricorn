@@ -66,7 +66,6 @@ describe('<ToolGroupMessage />', () => {
     targetDir: os.tmpdir(),
     debugMode: false,
     folderTrust: false,
-    ideMode: false,
     enableInteractiveShell: true,
   });
   const fullVerbositySettings = createMockSettings({

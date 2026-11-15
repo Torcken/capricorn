@@ -7,7 +7,6 @@
 import type { FunctionDeclaration, PartListUnion } from '@google/genai';
 import { ToolErrorType } from './tool-error.js';
 import type { GrepMatch } from './grep-utils.js';
-import type { DiffUpdateResult } from '../ide/ide-client.js';
 import type { ShellExecutionConfig } from '../services/shellExecutionService.js';
 import { SchemaValidator } from '../utils/schemaValidator.js';
 import type { AnsiOutput } from '../utils/terminalSerializer.js';
@@ -998,7 +997,6 @@ export interface ToolEditConfirmationDetails {
   newContent: string;
   isModifying?: boolean;
   diffStat?: DiffStat;
-  ideConfirmation?: Promise<DiffUpdateResult>;
   isBuildFile?: boolean;
 }
 

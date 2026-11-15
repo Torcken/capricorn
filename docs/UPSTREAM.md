@@ -94,12 +94,15 @@ The repository history starts with the unmodified upstream commit, so
 **Package names**
 
 - Internal workspaces use the `@capricorn` scope: `@capricorn/cli`,
-  `@capricorn/core`, `@capricorn/devtools`, `@capricorn/sdk`,
-  `@capricorn/test-utils` and `capricorn-vscode-ide-companion` (upstream:
-  `@google/gemini-cli*`). They stay private and bundled; only `capricorn-code`
-  is published. VS Code Marketplace IDs
-  (`google.gemini-cli-vscode-ide-companion`) and links to upstream issues are
+  `@capricorn/core`, `@capricorn/devtools`, `@capricorn/sdk` and
+  `@capricorn/test-utils` (upstream: `@google/gemini-cli*`). They stay private
+  and bundled; only `capricorn-code` is published. Links to upstream issues are
   unchanged, because they name external things.
+- The VS Code companion extension (`packages/vscode-ide-companion`) and the IDE
+  integration it served are removed: the IDE client and installer, IDE context
+  in prompts, IDE diff views for edits, IDE workspace trust, the sandbox IDE
+  bridge, the `/ide` command, the IDE nudge and trust dialogs, the F4 "IDE
+  context" key and the `ide` settings.
 - Extension manifests are `capricorn-extension.json`; `gemini-extension.json` is
   read as a fallback (`findExtensionConfigFile` in
   `cli/src/config/extensions/variables.ts`). The CLI entry file

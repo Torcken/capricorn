@@ -49,7 +49,6 @@ packages/core/src/generated/
 packages/devtools/src/_client-assets.ts
 .integration-tests/
 .perf-tests/
-packages/vscode-ide-companion/*.vsix
 packages/cli/download-ripgrep*/
 
 # GHA credentials

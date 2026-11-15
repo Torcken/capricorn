@@ -559,7 +559,6 @@ const mockUIActions: UIActions = {
   closePermissionsDialog: vi.fn(),
   setShellModeActive: vi.fn(),
   vimHandleInput: vi.fn(),
-  handleIdePromptComplete: vi.fn(),
   handleFolderTrustSelect: vi.fn(),
   setIsPolicyUpdateDialogOpen: vi.fn(),
   setConstrainHeight: vi.fn(),

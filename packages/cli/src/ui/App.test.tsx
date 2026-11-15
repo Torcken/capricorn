@@ -242,7 +242,6 @@ describe('App', () => {
 
     const configWithExperiment = makeFakeConfig({ useAlternateBuffer: true });
     vi.spyOn(configWithExperiment, 'isTrustedFolder').mockReturnValue(true);
-    vi.spyOn(configWithExperiment, 'getIdeMode').mockReturnValue(false);
 
     const { lastFrame, unmount } = await renderWithProviders(<App />, {
       uiState: stateWithConfirmingTool,

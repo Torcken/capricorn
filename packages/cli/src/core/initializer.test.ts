@@ -6,12 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { initializeApp } from './initializer.js';
-import {
-  IdeClient,
-  logIdeConnection,
-  logCliConfiguration,
-  type Config,
-} from '@capricorn/core';
+import { logCliConfiguration, type Config } from '@capricorn/core';
 import { performInitialAuth } from './auth.js';
 import { validateTheme } from './theme.js';
 import { type LoadedSettings } from '../config/settings.js';
@@ -20,13 +15,8 @@ vi.mock('@capricorn/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@capricorn/core')>();
   return {
     ...actual,
-    IdeClient: {
-      getInstance: vi.fn(),
-    },
-    logIdeConnection: vi.fn(),
     logCliConfiguration: vi.fn(),
     StartSessionEvent: vi.fn(),
-    IdeConnectionEvent: vi.fn(),
   };
 });
 
@@ -41,19 +31,14 @@ vi.mock('./theme.js', () => ({
 describe('initializer', () => {
   let mockConfig: {
     getToolRegistry: ReturnType<typeof vi.fn>;
-    getIdeMode: ReturnType<typeof vi.fn>;
     getGeminiMdFileCount: ReturnType<typeof vi.fn>;
   };
   let mockSettings: LoadedSettings;
-  let mockIdeClient: {
-    connect: ReturnType<typeof vi.fn>;
-  };
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockConfig = {
       getToolRegistry: vi.fn(),
-      getIdeMode: vi.fn().mockReturnValue(false),
       getGeminiMdFileCount: vi.fn().mockReturnValue(5),
     };
     mockSettings = {
@@ -65,12 +50,6 @@ describe('initializer', () => {
         },
       },
     } as unknown as LoadedSettings;
-    mockIdeClient = {
-      connect: vi.fn(),
-    };
-    vi.mocked(IdeClient.getInstance).mockResolvedValue(
-      mockIdeClient as unknown as IdeClient,
-    );
     vi.mocked(performInitialAuth).mockResolvedValue({
       authError: null,
       accountSuspensionInfo: null,
@@ -78,7 +57,7 @@ describe('initializer', () => {
     vi.mocked(validateTheme).mockReturnValue(null);
   });
 
-  it('should initialize correctly in non-IDE mode', async () => {
+  it('should initialize correctly', async () => {
     const result = await initializeApp(
       mockConfig as unknown as Config,
       mockSettings,
@@ -94,32 +73,6 @@ describe('initializer', () => {
     expect(performInitialAuth).toHaveBeenCalledWith(mockConfig, 'oauth');
     expect(validateTheme).toHaveBeenCalledWith(mockSettings);
     expect(logCliConfiguration).toHaveBeenCalled();
-    expect(IdeClient.getInstance).not.toHaveBeenCalled();
-  });
-
-  it('should initialize correctly in IDE mode', async () => {
-    mockConfig.getIdeMode.mockReturnValue(true);
-    const result = await initializeApp(
-      mockConfig as unknown as Config,
-      mockSettings,
-    );
-
-    // Wait for the background promise to resolve
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(result).toEqual({
-      authError: null,
-      accountSuspensionInfo: null,
-      themeError: null,
-      shouldOpenAuthDialog: false,
-      geminiMdFileCount: 5,
-    });
-    expect(IdeClient.getInstance).toHaveBeenCalled();
-    expect(mockIdeClient.connect).toHaveBeenCalled();
-    expect(logIdeConnection).toHaveBeenCalledWith(
-      mockConfig as unknown as Config,
-      expect.any(Object),
-    );
   });
 
   it('should handle auth error', async () => {

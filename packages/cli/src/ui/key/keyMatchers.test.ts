@@ -361,11 +361,6 @@ describe('keyMatchers', () => {
       negative: [createKey('t'), createKey('e', { ctrl: true })],
     },
     {
-      command: Command.SHOW_IDE_CONTEXT_DETAIL,
-      positive: [createKey('f4')],
-      negative: [createKey('f5'), createKey('t', { ctrl: true })],
-    },
-    {
       command: Command.TOGGLE_MARKDOWN,
       positive: [createKey('m', { alt: true })],
       negative: [createKey('m'), createKey('m', { shift: true })],

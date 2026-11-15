@@ -45,16 +45,10 @@ import {
   sanitizeSettingsForSandbox,
 } from './sandboxUtils.js';
 import { BUILTIN_SEATBELT_PROFILE_CONTENTS } from './sandboxBuiltinProfiles.js';
-import { IdeBridge, resolveIdeBridgeUpstream } from './ideBridge.js';
 import {
   startOllamaBridge,
   type OllamaBridge,
 } from '../capricorn/sandboxOllamaBridge.js';
-import {
-  IDE_BRIDGE_HELPER_FILENAME,
-  IDE_BRIDGE_HELPER_SOURCE,
-  IDE_BRIDGE_SOCKET_PATH,
-} from './ideBridgeHelper.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -95,7 +89,6 @@ export async function start_sandbox(
   patcher.patch();
 
   let stopProxy: (() => void) | undefined = undefined;
-  let stopIdeBridge: (() => void) | undefined = undefined;
   let tempProfileFile: string | null = null;
   let sandboxTmpDir: string | null = null;
   let ollamaBridge: OllamaBridge | null = null;
@@ -109,15 +102,6 @@ export async function start_sandbox(
       void bridge.close().catch(() => {
         // ignore: the socket lives in the temp dir removed below
       });
-    }
-    if (stopIdeBridge) {
-      const stop = stopIdeBridge;
-      stopIdeBridge = undefined;
-      try {
-        stop();
-      } catch {
-        // ignore
-      }
     }
     if (sandboxTmpDir) {
       const dirToDelete = sandboxTmpDir;
@@ -852,61 +836,9 @@ export async function start_sandbox(
       args.push('--env', `COLORTERM=${process.env['COLORTERM']}`);
     }
 
-    // IDE integration. The companion extension listens on the host loopback
-    // interface and requires a per-window token, neither of which is reachable
-    // or appropriate from inside the container (under gVisor the loopback
-    // interface is private to the sandbox). Instead, this host process bridges
-    // the MCP connection over `<command> exec` (see ./ideBridge.ts): the token
-    // stays on the host, and the CLI inside the container talks to the bridge
-    // through its stdio transport. `TERM_PROGRAM` still lets the CLI detect
-    // the IDE, and the workspace path drives its directory check.
-    let ideBridge: IdeBridge | undefined;
-    const ideBridgeUpstream = await resolveIdeBridgeUpstream();
-    if (ideBridgeUpstream) {
-      const bridge = new IdeBridge({
-        upstream: ideBridgeUpstream,
-        helperPathInContainer: `${userSettingsDirInSandbox}/${IDE_BRIDGE_HELPER_FILENAME}`,
-        socketPathInContainer: IDE_BRIDGE_SOCKET_PATH,
-      });
-      try {
-        await bridge.connectUpstream();
-        ideBridge = bridge;
-        // Registered now, not after spawn, so a failure anywhere between here
-        // and the container start still closes the companion connection.
-        stopIdeBridge = () => {
-          void bridge.stop();
-        };
-      } catch (err) {
-        debugLogger.debug(
-          'IDE companion is not reachable from the host; IDE integration will be unavailable inside the sandbox:',
-          err,
-        );
-      }
-    }
+    // Capricorn: the IDE companion bridge was removed with the companion.
     if (process.env['TERM_PROGRAM']) {
       args.push('--env', `TERM_PROGRAM=${process.env['TERM_PROGRAM']}`);
-    }
-    const ideWorkspacePath =
-      process.env['GEMINI_CLI_IDE_WORKSPACE_PATH'] ??
-      ideBridgeUpstream?.workspacePaths.join(path.delimiter);
-    if (ideWorkspacePath) {
-      args.push('--env', `GEMINI_CLI_IDE_WORKSPACE_PATH=${ideWorkspacePath}`);
-    }
-    if (ideBridge) {
-      fs.writeFileSync(
-        path.join(sandboxTmpDir, IDE_BRIDGE_HELPER_FILENAME),
-        IDE_BRIDGE_HELPER_SOURCE,
-        { mode: 0o600 },
-      );
-      args.push('--env', 'GEMINI_CLI_IDE_SERVER_STDIO_COMMAND=node');
-      args.push(
-        '--env',
-        `GEMINI_CLI_IDE_SERVER_STDIO_ARGS=${JSON.stringify([
-          `${userSettingsDirInSandbox}/${IDE_BRIDGE_HELPER_FILENAME}`,
-          'connect',
-          IDE_BRIDGE_SOCKET_PATH,
-        ])}`,
-      );
     }
 
     // copy VIRTUAL_ENV if under working directory
@@ -1138,21 +1070,6 @@ export async function start_sandbox(
       stdio: 'inherit',
     });
 
-    if (ideBridge) {
-      const container = sandboxProcess;
-      void ideBridge.attach({
-        execCommand: [
-          command,
-          'exec',
-          '-i',
-          ...(userFlag ? userFlag.split(' ') : []),
-          containerName,
-        ],
-        isSandboxAlive: () =>
-          container.exitCode === null && container.signalCode === null,
-      });
-    }
-
     return await new Promise<number>((resolve, reject) => {
       sandboxProcess?.on('error', (err) => {
         coreEvents.emitFeedback('error', 'Sandbox process error', err);
@@ -1161,7 +1078,6 @@ export async function start_sandbox(
 
       sandboxProcess?.on('close', (code, signal) => {
         process.stdin.resume();
-        void ideBridge?.stop();
         if (code !== 0 && code !== null) {
           debugLogger.log(
             `Sandbox process exited with code: ${code}, signal: ${signal}`,

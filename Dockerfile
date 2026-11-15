@@ -12,8 +12,6 @@ WORKDIR /build
 COPY package*.json ./
 COPY packages/cli/package*.json ./packages/cli/
 COPY packages/core/package*.json ./packages/core/
-COPY packages/vscode-ide-companion/package*.json ./packages/vscode-ide-companion/
-COPY packages/vscode-ide-companion/scripts/ ./packages/vscode-ide-companion/scripts/
 COPY packages/devtools/package*.json ./packages/devtools/
 COPY packages/sdk/package*.json ./packages/sdk/
 COPY packages/test-utils/package*.json ./packages/test-utils/

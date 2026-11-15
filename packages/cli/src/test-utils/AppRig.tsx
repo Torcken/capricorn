@@ -29,9 +29,7 @@ import {
   MessageBusType,
   type ToolCallsUpdateMessage,
   coreEvents,
-  ideContextStore,
   createContentGenerator,
-  IdeClient,
   debugLogger,
   CoreToolCallStatus,
   IntegrityDataStatus,
@@ -275,10 +273,6 @@ export class AppRig {
               enabled: true,
             },
           },
-          ide: {
-            enabled: false,
-            hasSeenNudge: true,
-          },
         },
         originalSettings: {},
       },
@@ -291,10 +285,6 @@ export class AppRig {
           folderTrust: {
             enabled: true,
           },
-        },
-        ide: {
-          enabled: false,
-          hasSeenNudge: true,
         },
         ui: {
           useAlternateBuffer: false,
@@ -758,10 +748,6 @@ export class AppRig {
     coreEvents.removeAllListeners();
     coreEvents.drainBacklogs();
     MockShellExecutionService.reset();
-    ideContextStore.clear();
-    // Forcefully clear IdeClient singleton promise
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (IdeClient as any).instancePromise = null;
     vi.clearAllMocks();
 
     this.config = undefined;

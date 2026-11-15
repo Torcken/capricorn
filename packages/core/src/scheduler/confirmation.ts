@@ -31,8 +31,6 @@ import {
   type EditorType,
   NO_EDITOR_AVAILABLE_ERROR,
 } from '../utils/editor.js';
-import type { DiffUpdateResult } from '../ide/ide-client.js';
-import { debugLogger } from '../utils/debugLogger.js';
 import { coreEvents } from '../utils/events.js';
 
 export interface ConfirmationResult {
@@ -156,9 +154,6 @@ export async function resolveConfirmation(
     const serializableDetails = details as SerializableConfirmationDetails;
     lastDetails = serializableDetails;
 
-    const ideConfirmation =
-      'ideConfirmation' in details ? details.ideConfirmation : undefined;
-
     state.updateStatus(callId, CoreToolCallStatus.AwaitingApproval, {
       confirmationDetails: serializableDetails,
       correlationId,
@@ -169,7 +164,6 @@ export async function resolveConfirmation(
       deps.messageBus,
       correlationId,
       signal,
-      ideConfirmation,
     );
     onWaitingForConfirmation?.(false);
     outcome = response.outcome;
@@ -291,59 +285,15 @@ async function handleInlineModification(
 }
 
 /**
- * Waits for user confirmation, allowing either the MessageBus (TUI) or IDE to
- * resolve it.
+ * Waits for user confirmation on the MessageBus (TUI).
+ *
+ * Capricorn: upstream also raced an IDE diff view here; the IDE companion was
+ * removed, so the bus is the only source.
  */
 async function waitForConfirmation(
   messageBus: MessageBus,
   correlationId: string,
   signal: AbortSignal,
-  ideConfirmation?: Promise<DiffUpdateResult>,
 ): Promise<ConfirmationResult> {
-  // Create a controller to abort the bus listener if the IDE wins (or vice versa)
-  const raceController = new AbortController();
-  const raceSignal = raceController.signal;
-
-  // Propagate the parent signal's abort to our race controller
-  const onParentAbort = () => raceController.abort();
-  if (signal.aborted) {
-    raceController.abort();
-  } else {
-    signal.addEventListener('abort', onParentAbort);
-  }
-
-  try {
-    const busPromise = awaitConfirmation(messageBus, correlationId, raceSignal);
-
-    if (!ideConfirmation) {
-      return await busPromise;
-    }
-
-    // Wrap IDE promise to match ConfirmationResult signature
-    const idePromise = ideConfirmation
-      .then(
-        (resolution) =>
-          ({
-            outcome:
-              resolution.status === 'accepted'
-                ? ToolConfirmationOutcome.ProceedOnce
-                : ToolConfirmationOutcome.Cancel,
-            payload: resolution.content
-              ? { newContent: resolution.content }
-              : undefined,
-          }) as ConfirmationResult,
-      )
-      .catch((error) => {
-        debugLogger.warn('Error waiting for confirmation via IDE', error);
-        // Return a never-resolving promise so the race continues with the bus
-        return new Promise<ConfirmationResult>(() => {});
-      });
-
-    return await Promise.race([busPromise, idePromise]);
-  } finally {
-    // Cleanup: remove parent listener and abort the race signal to ensure
-    // the losing listener (e.g. bus iterator) is closed.
-    signal.removeEventListener('abort', onParentAbort);
-    raceController.abort();
-  }
+  return awaitConfirmation(messageBus, correlationId, signal);
 }

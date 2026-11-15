@@ -9,13 +9,8 @@ import { DialogManager } from './DialogManager.js';
 import { describe, it, expect, vi } from 'vitest';
 import { Text } from 'ink';
 import { type UIState } from '../contexts/UIStateContext.js';
-import { type RestartReason } from '../hooks/useIdeTrustListener.js';
-import { type IdeInfo } from '@capricorn/core';
 
 // Mock child components
-vi.mock('../IdeIntegrationNudge.js', () => ({
-  IdeIntegrationNudge: () => <Text>IdeIntegrationNudge</Text>,
-}));
 vi.mock('./LoopDetectionConfirmation.js', () => ({
   LoopDetectionConfirmation: () => <Text>LoopDetectionConfirmation</Text>,
 }));
@@ -47,9 +42,6 @@ vi.mock('./PermissionsModifyTrustDialog.js', () => ({
 vi.mock('./CapricornModelDialog.js', () => ({
   CapricornModelDialog: () => <Text>ModelDialog</Text>,
 }));
-vi.mock('./IdeTrustChangeDialog.js', () => ({
-  IdeTrustChangeDialog: () => <Text>IdeTrustChangeDialog</Text>,
-}));
 vi.mock('./AgentConfigDialog.js', () => ({
   AgentConfigDialog: () => <Text>AgentConfigDialog</Text>,
 }));
@@ -66,8 +58,6 @@ describe('DialogManager', () => {
     staticExtraHeight: 0,
     terminalWidth: 80,
     confirmUpdateExtensionRequests: [],
-    showIdeRestartPrompt: false,
-    shouldShowIdePrompt: false,
     isFolderTrustDialogOpen: false,
     loopDetectionConfirmationRequest: null,
     confirmationRequest: null,
@@ -96,20 +86,6 @@ describe('DialogManager', () => {
   });
 
   const testCases: Array<[Partial<UIState>, string]> = [
-    [
-      {
-        showIdeRestartPrompt: true,
-        ideTrustRestartReason: 'update' as RestartReason,
-      },
-      'IdeTrustChangeDialog',
-    ],
-    [
-      {
-        shouldShowIdePrompt: true,
-        currentIDE: { name: 'vscode', version: '1.0' } as unknown as IdeInfo,
-      },
-      'IdeIntegrationNudge',
-    ],
     [{ isFolderTrustDialogOpen: true }, 'FolderTrustDialog'],
     [
       { loopDetectionConfirmationRequest: { onComplete: vi.fn() } },

@@ -41,11 +41,6 @@ const mockCoreEvents = vi.hoisted(() => ({
   emit: vi.fn(),
 }));
 
-// Mock IdeClient
-const mockIdeClient = vi.hoisted(() => ({
-  getInstance: vi.fn().mockReturnValue(new Promise(() => {})),
-}));
-
 // Mock stdout and ink app
 const mocks = vi.hoisted(() => ({
   mockStdout: { write: vi.fn() },
@@ -67,7 +62,6 @@ vi.mock('@capricorn/core', async (importOriginal) => {
   return {
     ...actual,
     coreEvents: mockCoreEvents,
-    IdeClient: mockIdeClient,
     writeToStdout: vi.fn((...args) =>
       process.stdout.write(
         ...(args as Parameters<typeof process.stdout.write>),
@@ -167,7 +161,6 @@ vi.mock('./hooks/useBracketedPaste.js');
 vi.mock('./hooks/useLoadingIndicator.js');
 vi.mock('./hooks/useSuspend.js');
 vi.mock('./hooks/useFolderTrust.js');
-vi.mock('./hooks/useIdeTrustListener.js');
 vi.mock('./hooks/useMessageQueue.js');
 vi.mock('./hooks/useApprovalModeIndicator.js');
 vi.mock('./hooks/useGitBranchName.js');
@@ -230,7 +223,6 @@ import { useErrorCount } from './hooks/useConsoleMessages.js';
 import { useGeminiStream } from './hooks/useGeminiStream.js';
 import { useVim } from './hooks/vim.js';
 import { useFolderTrust } from './hooks/useFolderTrust.js';
-import { useIdeTrustListener } from './hooks/useIdeTrustListener.js';
 import { useMessageQueue } from './hooks/useMessageQueue.js';
 import { useApprovalModeIndicator } from './hooks/useApprovalModeIndicator.js';
 import { useGitBranchName } from './hooks/useGitBranchName.js';
@@ -327,7 +319,6 @@ describe('AppContainer State Management', () => {
   const mockedUseGeminiStream = useGeminiStream as Mock;
   const mockedUseVim = useVim as Mock;
   const mockedUseFolderTrust = useFolderTrust as Mock;
-  const mockedUseIdeTrustListener = useIdeTrustListener as Mock;
   const mockedUseMessageQueue = useMessageQueue as Mock;
   const mockedUseApprovalModeIndicator = useApprovalModeIndicator as Mock;
   const mockedUseGitBranchName = useGitBranchName as Mock;
@@ -368,8 +359,6 @@ describe('AppContainer State Management', () => {
   beforeEach(() => {
     persistentStateMock.reset();
     vi.clearAllMocks();
-
-    mockIdeClient.getInstance.mockReturnValue(new Promise(() => {}));
 
     // Initialize mock stdout for terminal title tests
 
@@ -433,10 +422,6 @@ describe('AppContainer State Management', () => {
       isFolderTrustDialogOpen: false,
       handleFolderTrustSelect: vi.fn(),
       isRestarting: false,
-    });
-    mockedUseIdeTrustListener.mockReturnValue({
-      needsRestart: false,
-      restartReason: 'NONE',
     });
     mockedUseMessageQueue.mockReturnValue({
       messageQueue: [],

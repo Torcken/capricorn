@@ -675,7 +675,6 @@ export interface ConfigParameters {
   noBrowser?: boolean;
   summarizeToolOutput?: Record<string, SummarizeToolOutputSettings>;
   folderTrust?: boolean;
-  ideMode?: boolean;
   loadMemoryFromIncludeDirectories?: boolean;
   includeDirectoryTree?: boolean;
   importFormat?: 'tree' | 'flat';
@@ -856,7 +855,6 @@ export class Config implements McpContext, AgentLoopContext {
   private hasAccessToPreviewModel: boolean | null = null;
   private readonly noBrowser: boolean;
   private readonly folderTrust: boolean;
-  private ideMode: boolean;
 
   private _activeModel: string;
   private fallbackOverrides = new Map<string, string>();
@@ -1250,7 +1248,6 @@ export class Config implements McpContext, AgentLoopContext {
     this.noBrowser = params.noBrowser ?? false;
     this.summarizeToolOutput = params.summarizeToolOutput;
     this.folderTrust = params.folderTrust ?? false;
-    this.ideMode = params.ideMode ?? false;
     this.includeDirectoryTree = params.includeDirectoryTree ?? true;
     this.loadMemoryFromIncludeDirectories =
       params.loadMemoryFromIncludeDirectories ?? false;
@@ -2865,10 +2862,6 @@ export class Config implements McpContext, AgentLoopContext {
     return this.summarizeToolOutput;
   }
 
-  getIdeMode(): boolean {
-    return this.ideMode;
-  }
-
   /**
    * Returns 'true' if the folder trust feature is enabled.
    */
@@ -2899,10 +2892,6 @@ export class Config implements McpContext, AgentLoopContext {
     }
 
     return isTrusted ?? false;
-  }
-
-  setIdeMode(value: boolean): void {
-    this.ideMode = value;
   }
 
   private isScopedMemoryInboxPatchPathAllowed(

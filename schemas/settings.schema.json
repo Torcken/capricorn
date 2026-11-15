@@ -597,30 +597,6 @@
       },
       "additionalProperties": false
     },
-    "ide": {
-      "title": "IDE",
-      "description": "IDE integration settings.",
-      "markdownDescription": "IDE integration settings.\n\n- Category: `IDE`\n- Requires restart: `yes`\n- Default: `{}`",
-      "default": {},
-      "type": "object",
-      "properties": {
-        "enabled": {
-          "title": "IDE Mode",
-          "description": "Enable IDE integration mode.",
-          "markdownDescription": "Enable IDE integration mode.\n\n- Category: `IDE`\n- Requires restart: `yes`\n- Default: `false`",
-          "default": false,
-          "type": "boolean"
-        },
-        "hasSeenNudge": {
-          "title": "Has Seen IDE Integration Nudge",
-          "description": "Whether the user has seen the IDE integration nudge.",
-          "markdownDescription": "Whether the user has seen the IDE integration nudge.\n\n- Category: `IDE`\n- Requires restart: `no`\n- Default: `false`",
-          "default": false,
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false
-    },
     "privacy": {
       "title": "Privacy",
       "description": "Privacy-related settings.",

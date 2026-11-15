@@ -5,15 +5,10 @@
  */
 
 import {
-  IdeClient,
-  IdeConnectionEvent,
-  IdeConnectionType,
-  logIdeConnection,
   type Config,
   StartSessionEvent,
   logCliConfiguration,
   startupProfiler,
-  debugLogger,
 } from '@capricorn/core';
 import { type LoadedSettings } from '../config/settings.js';
 import { performInitialAuth } from './auth.js';
@@ -54,21 +49,6 @@ export async function initializeApp(
     config,
     new StartSessionEvent(config, config.getToolRegistry()),
   );
-
-  if (config.getIdeMode()) {
-    IdeClient.getInstance()
-      .then(async (ideClient) => {
-        await ideClient.connect();
-        logIdeConnection(
-          config,
-          new IdeConnectionEvent(IdeConnectionType.START),
-        );
-      })
-      .catch((e) => {
-        // We log locally if IDE connection setup fails in the background.
-        debugLogger.error('Failed to initialize IDE client:', e);
-      });
-  }
 
   return {
     authError,

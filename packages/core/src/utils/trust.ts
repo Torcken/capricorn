@@ -13,7 +13,6 @@ import { Storage } from '../config/storage.js';
 import { normalizePath, isSubpath } from './paths.js';
 import { FatalConfigError, getErrorMessage } from './errors.js';
 import { coreEvents } from './events.js';
-import { ideContextStore } from '../ide/ideContext.js';
 
 export enum TrustLevel {
   TRUST_FOLDER = 'TRUST_FOLDER',
@@ -57,11 +56,6 @@ export function checkPathTrust(options: TrustOptions): TrustResult {
 
   if (!options.isFolderTrustEnabled) {
     return { isTrusted: true, source: undefined };
-  }
-
-  const ideTrust = ideContextStore.get()?.workspaceState?.isTrusted;
-  if (ideTrust !== undefined) {
-    return { isTrusted: ideTrust, source: 'ide' };
   }
 
   const folders = loadTrustedFolders();

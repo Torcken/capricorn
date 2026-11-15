@@ -7,10 +7,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { Config } from '../config/config.js';
-import { ideContextStore } from '../ide/ideContext.js';
 import { bfsFileSearchSync } from './bfsFileSearch.js';
 import {
-  isSubpath,
   resolveDefensiveToolPath,
   resolveToRealPath,
   toPathKey,
@@ -35,113 +33,16 @@ type FailedPathCorrection = {
 };
 
 /**
- * Resolves the effective workspace target directory for relative tool paths.
+ * Returns the directory relative file paths resolve against.
  *
- * When IDE mode is active and the user has an open/active file in `ideContextStore`,
- * this selects the workspace directory (or nested Git repository root within a
- * parent workspace directory) containing that active file so relative paths are
- * resolved against the project the user is actively working on in the IDE.
+ * Capricorn: upstream picked the workspace of the file open in the IDE
+ * companion; without the companion this is always the target directory.
  */
 export function resolveActiveWorkspaceDir(
   config: Config,
-  relativeFilePath?: string,
+  _relativeFilePath?: string,
 ): string {
-  const defaultTargetDir = config.getTargetDir();
-  if (typeof config.getIdeMode !== 'function' || !config.getIdeMode()) {
-    return defaultTargetDir;
-  }
-
-  const ideContext = ideContextStore.get();
-  const openFiles = ideContext?.workspaceState?.openFiles;
-  const activeFile = openFiles?.find((file) => file.isActive) ?? openFiles?.[0];
-  if (!activeFile?.path) {
-    return defaultTargetDir;
-  }
-
-  const workspaceContext =
-    typeof config.getWorkspaceContext === 'function'
-      ? config.getWorkspaceContext()
-      : undefined;
-  if (!workspaceContext) {
-    return defaultTargetDir;
-  }
-
-  try {
-    const resolvedActiveFilePath = resolveToRealPath(activeFile.path);
-    const matchingWorkspaceDirs = workspaceContext
-      .getDirectories()
-      .map((dir) => {
-        try {
-          return resolveToRealPath(dir);
-        } catch {
-          return '';
-        }
-      })
-      .filter((dir) => dir !== '' && isSubpath(dir, resolvedActiveFilePath))
-      .sort((a, b) => b.length - a.length);
-
-    if (matchingWorkspaceDirs.length === 0) {
-      return defaultTargetDir;
-    }
-
-    let activeWorkspaceDir = matchingWorkspaceDirs[0];
-
-    // If the matching workspace root is a parent folder containing multiple nested
-    // Git repositories, narrow to the nested repository root containing activeFile.
-    let currentDir = path.dirname(resolvedActiveFilePath);
-    while (
-      toPathKey(currentDir) !== toPathKey(activeWorkspaceDir) &&
-      isSubpath(activeWorkspaceDir, currentDir)
-    ) {
-      try {
-        if (fs.existsSync(path.join(currentDir, '.git'))) {
-          activeWorkspaceDir = currentDir;
-          break;
-        }
-      } catch {
-        // Ignore filesystem errors while probing for nested .git boundaries
-      }
-      const parentDir = path.dirname(currentDir);
-      if (parentDir === currentDir) {
-        break;
-      }
-      currentDir = parentDir;
-    }
-
-    const resolvedDefaultTargetDir = resolveToRealPath(defaultTargetDir);
-    if (
-      relativeFilePath &&
-      !path.isAbsolute(relativeFilePath) &&
-      toPathKey(activeWorkspaceDir) !== toPathKey(resolvedDefaultTargetDir) &&
-      isSubpath(resolvedDefaultTargetDir, activeWorkspaceDir)
-    ) {
-      const relToDefault = path
-        .relative(resolvedDefaultTargetDir, activeWorkspaceDir)
-        .replace(/\\/g, '/');
-      const normalizedInput = relativeFilePath
-        .replace(/^@[/\\]?/, '')
-        .replace(/\\/g, '/');
-      const isCaseInsensitive =
-        process.platform === 'win32' || process.platform === 'darwin';
-      const relCompare = isCaseInsensitive
-        ? relToDefault.toLowerCase()
-        : relToDefault;
-      const inputCompare = isCaseInsensitive
-        ? normalizedInput.toLowerCase()
-        : normalizedInput;
-      if (
-        relCompare &&
-        (inputCompare === relCompare ||
-          inputCompare.startsWith(`${relCompare}/`))
-      ) {
-        return resolvedDefaultTargetDir;
-      }
-    }
-
-    return activeWorkspaceDir;
-  } catch {
-    return defaultTargetDir;
-  }
+  return config.getTargetDir();
 }
 
 /**

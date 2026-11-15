@@ -18,9 +18,7 @@ import type {
 import type { CommandContext, SlashCommand } from '../commands/types.js';
 
 import type {
-  IdeContext,
   ApprovalMode,
-  IdeInfo,
   AgentDefinition,
   FolderDiscoveryResults,
   PolicyUpdateConfirmationRequest,
@@ -32,7 +30,6 @@ import type { ExtensionUpdateState } from '../state/extensions.js';
 import type { UpdateObject } from '../utils/updateCheck.js';
 
 import { type UseHistoryManagerReturn } from '../hooks/useHistoryManager.js';
-import { type RestartReason } from '../hooks/useIdeTrustListener.js';
 import type { TerminalBackgroundColor } from '../utils/terminalCapabilityManager.js';
 import type { BackgroundTask } from '../hooks/useExecutionLifecycle.js';
 
@@ -88,7 +85,6 @@ export interface UIState {
   isInputActive: boolean;
   isVoiceModeEnabled: boolean;
   isResuming: boolean;
-  shouldShowIdePrompt: boolean;
   isFolderTrustDialogOpen: boolean;
   folderDiscoveryResults: FolderDiscoveryResults | null;
   isPolicyUpdateDialogOpen: boolean;
@@ -96,7 +92,6 @@ export interface UIState {
   isTrustedFolder: boolean | undefined;
   constrainHeight: boolean;
   showErrorDetails: boolean;
-  ideContextState: IdeContext | undefined;
   renderMarkdown: boolean;
   ctrlCPressedOnce: boolean;
   ctrlDPressedOnce: boolean;
@@ -131,10 +126,7 @@ export interface UIState {
   mainControlsRef: (node: DOMElement | null) => void;
   // NOTE: This is for performance profiling only.
   rootUiRef: React.MutableRefObject<DOMElement | null>;
-  currentIDE: IdeInfo | null;
   updateInfo: UpdateObject | null;
-  showIdeRestartPrompt: boolean;
-  ideTrustRestartReason: RestartReason;
   isRestarting: boolean;
   extensionsUpdateState: Map<string, ExtensionUpdateState>;
   activePtyId: number | undefined;

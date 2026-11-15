@@ -26,16 +26,6 @@ vi.mock('../ui/commands/aboutCommand.js', async () => {
   };
 });
 
-vi.mock('../ui/commands/ideCommand.js', async () => {
-  const { CommandKind } = await import('../ui/commands/types.js');
-  return {
-    ideCommand: vi.fn().mockResolvedValue({
-      name: 'ide',
-      description: 'IDE command',
-      kind: CommandKind.BUILT_IN,
-    }),
-  };
-});
 vi.mock('../ui/commands/restoreCommand.js', () => ({
   restoreCommand: vi.fn(),
 }));
@@ -234,9 +224,8 @@ describe('BuiltinCommandLoader', () => {
     const loader = new BuiltinCommandLoader(mockConfig);
     const commands = await loader.loadCommands(new AbortController().signal);
 
-    // The 'ide' command should be present.
-    const ideCmd = commands.find((c) => c.name === 'ide');
-    expect(ideCmd).toBeDefined();
+    // Capricorn: /ide was removed with the IDE integration.
+    expect(commands.find((c) => c.name === 'ide')).toBeUndefined();
 
     // Other commands should still be present.
     const aboutCmd = commands.find((c) => c.name === 'about');
@@ -258,9 +247,6 @@ describe('BuiltinCommandLoader', () => {
     const aboutCmd = commands.find((c) => c.name === 'about');
     expect(aboutCmd).toBeDefined();
     expect(aboutCmd?.kind).toBe(CommandKind.BUILT_IN);
-
-    const ideCmd = commands.find((c) => c.name === 'ide');
-    expect(ideCmd).toBeDefined();
 
     const mcpCmd = commands.find((c) => c.name === 'mcp');
     expect(mcpCmd).toBeDefined();

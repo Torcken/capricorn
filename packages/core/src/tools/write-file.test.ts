@@ -37,8 +37,6 @@ import { GeminiClient } from '../core/client.js';
 import type { BaseLlmClient } from '../core/baseLlmClient.js';
 import { ensureCorrectFileContent } from '../utils/editCorrector.js';
 import { StandardFileSystemService } from '../services/fileSystemService.js';
-import { IdeClient, type DiffUpdateResult } from '../ide/ide-client.js';
-import { ideContextStore } from '../ide/ideContext.js';
 import { WorkspaceContext } from '../utils/workspaceContext.js';
 import {
   createMockMessageBus,
@@ -51,26 +49,14 @@ let plansDir: string;
 // --- MOCKS ---
 vi.mock('../core/client.js');
 vi.mock('../utils/editCorrector.js');
-vi.mock('../ide/ide-client.js', () => ({
-  IdeClient: {
-    getInstance: vi.fn(),
-  },
-}));
 let mockGeminiClientInstance: Mocked<GeminiClient>;
 let mockBaseLlmClientInstance: Mocked<BaseLlmClient>;
 let mockConfig: Config;
 const mockEnsureCorrectFileContent = vi.fn<typeof ensureCorrectFileContent>();
-const mockIdeClient = {
-  openDiff: vi.fn(),
-  isDiffingEnabled: vi.fn(),
-};
 
 // Wire up the mocked functions to be used by the actual module imports
 vi.mocked(ensureCorrectFileContent).mockImplementation(
   mockEnsureCorrectFileContent,
-);
-vi.mocked(IdeClient.getInstance).mockResolvedValue(
-  mockIdeClient as unknown as IdeClient,
 );
 
 // Mock Config
@@ -659,108 +645,6 @@ describe('WriteFileTool', () => {
         originalContent.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&'),
       );
     });
-
-    describe('with IDE integration', () => {
-      beforeEach(() => {
-        // Enable IDE mode and set connection status for these tests
-        mockConfigInternal.getIdeMode.mockReturnValue(true);
-        mockIdeClient.isDiffingEnabled.mockReturnValue(true);
-        mockIdeClient.openDiff.mockResolvedValue({
-          status: 'accepted',
-          content: 'ide-modified-content',
-        });
-      });
-
-      it('should call openDiff and await it when in IDE mode and connected', async () => {
-        const filePath = path.join(rootDir, 'ide_confirm_file.txt');
-        const params = { file_path: filePath, content: 'test' };
-        const invocation = tool.build(params);
-
-        const confirmation = (await invocation.shouldConfirmExecute(
-          abortSignal,
-        )) as ToolEditConfirmationDetails;
-
-        expect(mockIdeClient.openDiff).toHaveBeenCalledWith(
-          filePath,
-          'test', // The corrected content
-        );
-        // Ensure the promise is awaited by checking the result
-        expect(confirmation.ideConfirmation).toBeDefined();
-        await confirmation.ideConfirmation; // Should resolve
-      });
-
-      it('should not call openDiff if not in IDE mode', async () => {
-        mockConfigInternal.getIdeMode.mockReturnValue(false);
-        const filePath = path.join(rootDir, 'ide_disabled_file.txt');
-        const params = { file_path: filePath, content: 'test' };
-        const invocation = tool.build(params);
-
-        await invocation.shouldConfirmExecute(abortSignal);
-
-        expect(mockIdeClient.openDiff).not.toHaveBeenCalled();
-      });
-
-      it('should not call openDiff if IDE is not connected', async () => {
-        mockIdeClient.isDiffingEnabled.mockReturnValue(false);
-        const filePath = path.join(rootDir, 'ide_disconnected_file.txt');
-        const params = { file_path: filePath, content: 'test' };
-        const invocation = tool.build(params);
-
-        await invocation.shouldConfirmExecute(abortSignal);
-
-        expect(mockIdeClient.openDiff).not.toHaveBeenCalled();
-      });
-
-      it('should update params.content with IDE content when onConfirm is called', async () => {
-        const filePath = path.join(rootDir, 'ide_onconfirm_file.txt');
-        const params = { file_path: filePath, content: 'original-content' };
-        const invocation = tool.build(params);
-
-        // This is the key part: get the confirmation details
-        const confirmation = (await invocation.shouldConfirmExecute(
-          abortSignal,
-        )) as ToolEditConfirmationDetails;
-
-        // The `onConfirm` function should exist on the details object
-        expect(confirmation.onConfirm).toBeDefined();
-
-        // Call `onConfirm` to trigger the logic that updates the content
-        await confirmation.onConfirm(ToolConfirmationOutcome.ProceedOnce);
-
-        // Now, check if the original `params` object (captured by the invocation) was modified
-        expect(invocation.params.content).toBe('ide-modified-content');
-      });
-
-      it('should not await ideConfirmation promise', async () => {
-        const IDE_DIFF_DELAY_MS = 50;
-        const filePath = path.join(rootDir, 'ide_no_await_file.txt');
-        const params = { file_path: filePath, content: 'test' };
-        const invocation = tool.build(params);
-
-        let diffPromiseResolved = false;
-        const diffPromise = new Promise<DiffUpdateResult>((resolve) => {
-          setTimeout(() => {
-            diffPromiseResolved = true;
-            resolve({ status: 'accepted', content: 'ide-modified-content' });
-          }, IDE_DIFF_DELAY_MS);
-        });
-        mockIdeClient.openDiff.mockReturnValue(diffPromise);
-
-        const confirmation = (await invocation.shouldConfirmExecute(
-          abortSignal,
-        )) as ToolEditConfirmationDetails;
-
-        // This is the key check: the confirmation details should be returned
-        // *before* the diffPromise is resolved.
-        expect(diffPromiseResolved).toBe(false);
-        expect(confirmation).toBeDefined();
-        expect(confirmation.ideConfirmation).toBe(diffPromise);
-
-        // Now, we can await the promise to let the test finish cleanly.
-        await diffPromise;
-        expect(diffPromiseResolved).toBe(true);
-      });
-    });
   });
 
   describe('execute', () => {
@@ -1343,151 +1227,6 @@ describe('WriteFileTool', () => {
 
       await expect(p2).rejects.toThrow('Write aborted');
       await p1;
-    });
-  });
-
-  describe('multi-root IDE workspace relative path resolution (b/503364786 / #25527)', () => {
-    const abortSignal = new AbortController().signal;
-
-    afterEach(() => {
-      ideContextStore.clear();
-    });
-
-    it('should resolve a relative file_path against the active IDE workspace project (mmm-tools/FLUX) instead of the fallback targetDir (data-model-core/mmm)', async () => {
-      // Simulate the multi-repo layout from GitHub issue #25527:
-      //   <repogit>/data-model-core/mmm  (initial CLI targetDir)
-      //   <repogit>/mmm-tools/FLUX       (active project in VS Code IDE workspace)
-      const mmmRepoDir = path.join(
-        tempDir,
-        'repogit',
-        'data-model-core',
-        'mmm',
-      );
-      const fluxRepoDir = path.join(tempDir, 'repogit', 'mmm-tools', 'FLUX');
-      fs.mkdirSync(mmmRepoDir, { recursive: true });
-      fs.mkdirSync(path.join(fluxRepoDir, 'src'), { recursive: true });
-
-      // Both workspace folders are registered in WorkspaceContext (via GEMINI_CLI_IDE_WORKSPACE_PATH),
-      // while getTargetDir() remains anchored to the initial startup directory (data-model-core/mmm).
-      const multiRootWorkspace = new WorkspaceContext(mmmRepoDir, [
-        fluxRepoDir,
-      ]);
-      vi.spyOn(mockConfig, 'getTargetDir').mockReturnValue(mmmRepoDir);
-      vi.spyOn(mockConfig, 'getWorkspaceContext').mockReturnValue(
-        multiRootWorkspace,
-      );
-      mockConfigInternal.isPlanMode.mockReturnValue(false);
-      mockConfigInternal.getIdeMode.mockReturnValue(true);
-
-      // The user is actively working inside mmm-tools/FLUX in VS Code
-      const activeFluxFile = path.join(fluxRepoDir, 'src', 'index.ts');
-      fs.writeFileSync(activeFluxFile, '// active file in FLUX\n', 'utf8');
-      ideContextStore.set({
-        workspaceState: {
-          openFiles: [
-            {
-              path: activeFluxFile,
-              timestamp: Date.now(),
-              isActive: true,
-            },
-          ],
-        },
-      });
-
-      const relativeFilePath = 'tests/gemini_test_repo_parent.txt';
-      const content = 'Verification test for issue #25527';
-      mockEnsureCorrectFileContent.mockResolvedValue(content);
-
-      const invocation = tool.build({
-        file_path: relativeFilePath,
-        content,
-      });
-
-      // The UI description displays only the relative path ("Writing to tests/gemini_test_repo_parent.txt"),
-      // hiding that it resolved against data-model-core/mmm instead of mmm-tools/FLUX
-      expect(invocation.getDescription()).toBe(
-        `Writing to ${path.join('tests', 'gemini_test_repo_parent.txt')}`,
-      );
-
-      await invocation.execute({ abortSignal });
-
-      const expectedFluxFilePath = path.join(fluxRepoDir, relativeFilePath);
-      const wrongMmmFilePath = path.join(mmmRepoDir, relativeFilePath);
-      const actualWrittenPath = [expectedFluxFilePath, wrongMmmFilePath].find(
-        (filePath) => fs.existsSync(filePath),
-      );
-
-      // Expected: file is written to the active IDE project (mmm-tools/FLUX) and NOT to data-model-core/mmm
-      expect(actualWrittenPath).toBe(expectedFluxFilePath);
-      expect(fs.existsSync(wrongMmmFilePath)).toBe(false);
-      expect(fs.existsSync(expectedFluxFilePath)).toBe(true);
-    });
-
-    it('should resolve a relative file_path against a nested Git repository (mmm-tools/FLUX) when a parent folder (repogit) is opened as the workspace root', async () => {
-      const repogitDir = path.join(tempDir, 'repogit');
-      const mmmRepoDir = path.join(repogitDir, 'data-model-core', 'mmm');
-      const fluxRepoDir = path.join(repogitDir, 'mmm-tools', 'FLUX');
-      fs.mkdirSync(path.join(mmmRepoDir, '.git'), { recursive: true });
-      fs.mkdirSync(path.join(fluxRepoDir, '.git'), { recursive: true });
-      fs.mkdirSync(path.join(fluxRepoDir, 'src'), { recursive: true });
-
-      const parentWorkspace = new WorkspaceContext(repogitDir);
-      vi.spyOn(mockConfig, 'getTargetDir').mockReturnValue(repogitDir);
-      vi.spyOn(mockConfig, 'getWorkspaceContext').mockReturnValue(
-        parentWorkspace,
-      );
-      mockConfigInternal.isPlanMode.mockReturnValue(false);
-      mockConfigInternal.getIdeMode.mockReturnValue(true);
-
-      const activeFluxFile = path.join(fluxRepoDir, 'src', 'index.ts');
-      fs.writeFileSync(activeFluxFile, '// active file in FLUX\n', 'utf8');
-      ideContextStore.set({
-        workspaceState: {
-          openFiles: [
-            {
-              path: activeFluxFile,
-              timestamp: Date.now(),
-              isActive: true,
-            },
-          ],
-        },
-      });
-
-      const relativeFilePath = 'tests/gemini_test_repo_parent.txt';
-      const content = 'Nested repo content';
-      mockEnsureCorrectFileContent.mockResolvedValue(content);
-
-      const invocation = tool.build({
-        file_path: relativeFilePath,
-        content,
-      });
-
-      await invocation.execute({ abortSignal });
-
-      const expectedFluxFilePath = path.join(fluxRepoDir, relativeFilePath);
-      expect(fs.existsSync(expectedFluxFilePath)).toBe(true);
-      expect(fs.readFileSync(expectedFluxFilePath, 'utf8')).toBe(content);
-
-      // Also verify that if the relative path already starts with "mmm-tools/FLUX/", it is not duplicated
-      const prefixedInvocation = tool.build({
-        file_path: 'mmm-tools/FLUX/tests/prefixed_file.txt',
-        content,
-      });
-      await prefixedInvocation.execute({ abortSignal });
-      expect(
-        fs.existsSync(path.join(fluxRepoDir, 'tests', 'prefixed_file.txt')),
-      ).toBe(true);
-      expect(
-        fs.existsSync(
-          path.join(
-            fluxRepoDir,
-            'mmm-tools',
-            'FLUX',
-            'tests',
-            'prefixed_file.txt',
-          ),
-        ),
-      ).toBe(false);
     });
   });
 });

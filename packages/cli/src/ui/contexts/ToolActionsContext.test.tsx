@@ -12,22 +12,10 @@ import {
   type Config,
   ToolConfirmationOutcome,
   MessageBusType,
-  IdeClient,
   CoreToolCallStatus,
   type SerializableConfirmationDetails,
 } from '@capricorn/core';
 import { type IndividualToolCallDisplay } from '../types.js';
-
-// Mock IdeClient
-vi.mock('@capricorn/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@capricorn/core')>();
-  return {
-    ...actual,
-    IdeClient: {
-      getInstance: vi.fn(),
-    },
-  };
-});
 
 describe('ToolActionsContext', () => {
   const mockMessageBus = {
@@ -35,7 +23,6 @@ describe('ToolActionsContext', () => {
   };
 
   const mockConfig = {
-    getIdeMode: vi.fn().mockReturnValue(false),
     getMessageBus: vi.fn().mockReturnValue(mockMessageBus),
   } as unknown as Config;
 
@@ -70,9 +57,6 @@ describe('ToolActionsContext', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default to a pending promise to avoid unwanted async state updates in tests
-    // that don't specifically test the IdeClient initialization.
-    vi.mocked(IdeClient.getInstance).mockReturnValue(new Promise(() => {}));
   });
 
   const WrapperReactComp = ({ children }: { children: React.ReactNode }) => {
@@ -154,178 +138,6 @@ describe('ToolActionsContext', () => {
         confirmed: false,
       }),
     );
-  });
-
-  it('resolves IDE diffs for edit tools when in IDE mode', async () => {
-    let deferredIdeClient: { resolve: (c: IdeClient) => void };
-    const mockIdeClient = {
-      isDiffingEnabled: vi.fn().mockReturnValue(true),
-      resolveDiffFromCli: vi.fn().mockResolvedValue(undefined),
-      addStatusChangeListener: vi.fn(),
-      removeStatusChangeListener: vi.fn(),
-    } as unknown as IdeClient;
-
-    vi.mocked(IdeClient.getInstance).mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          deferredIdeClient = { resolve };
-        }),
-    );
-    vi.mocked(mockConfig.getIdeMode).mockReturnValue(true);
-
-    const { result } = await renderHook(() => useToolActions(), {
-      wrapper: WrapperReactComp,
-    });
-
-    await act(async () => {
-      deferredIdeClient.resolve(mockIdeClient);
-    });
-
-    await result.current.confirm(
-      'edit-call',
-      ToolConfirmationOutcome.ProceedOnce,
-    );
-
-    expect(mockIdeClient.resolveDiffFromCli).toHaveBeenCalledWith(
-      '/f.txt',
-      'accepted',
-    );
-    expect(mockMessageBus.publish).toHaveBeenCalledWith(
-      expect.objectContaining({
-        correlationId: 'corr-edit',
-      }),
-    );
-  });
-
-  it('does not block MessageBus publication when resolveDiffFromCli hangs or takes time', async () => {
-    let deferredIdeClient: { resolve: (c: IdeClient) => void };
-    const hangingDiffPromise = new Promise<void>(() => {});
-
-    const mockIdeClient = {
-      isDiffingEnabled: vi.fn().mockReturnValue(true),
-      resolveDiffFromCli: vi.fn().mockReturnValue(hangingDiffPromise),
-      addStatusChangeListener: vi.fn(),
-      removeStatusChangeListener: vi.fn(),
-    } as unknown as IdeClient;
-
-    vi.mocked(IdeClient.getInstance).mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          deferredIdeClient = { resolve };
-        }),
-    );
-    vi.mocked(mockConfig.getIdeMode).mockReturnValue(true);
-
-    const { result } = await renderHook(() => useToolActions(), {
-      wrapper: WrapperReactComp,
-    });
-
-    await act(async () => {
-      deferredIdeClient.resolve(mockIdeClient);
-    });
-
-    await result.current.confirm(
-      'edit-call',
-      ToolConfirmationOutcome.ProceedOnce,
-    );
-
-    expect(mockMessageBus.publish).toHaveBeenCalledWith(
-      expect.objectContaining({
-        correlationId: 'corr-edit',
-        confirmed: true,
-        outcome: ToolConfirmationOutcome.ProceedOnce,
-      }),
-    );
-  });
-
-  it('does not fail MessageBus publication when resolveDiffFromCli rejects with an error', async () => {
-    let deferredIdeClient: { resolve: (c: IdeClient) => void };
-    const mockIdeClient = {
-      isDiffingEnabled: vi.fn().mockReturnValue(true),
-      resolveDiffFromCli: vi
-        .fn()
-        .mockRejectedValue(
-          new Error('TypeError: fetch failed (UND_ERR_HEADERS_TIMEOUT)'),
-        ),
-      addStatusChangeListener: vi.fn(),
-      removeStatusChangeListener: vi.fn(),
-    } as unknown as IdeClient;
-
-    vi.mocked(IdeClient.getInstance).mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          deferredIdeClient = { resolve };
-        }),
-    );
-    vi.mocked(mockConfig.getIdeMode).mockReturnValue(true);
-
-    const { result } = await renderHook(() => useToolActions(), {
-      wrapper: WrapperReactComp,
-    });
-
-    await act(async () => {
-      deferredIdeClient.resolve(mockIdeClient);
-    });
-
-    await result.current.confirm(
-      'edit-call',
-      ToolConfirmationOutcome.ProceedOnce,
-    );
-
-    expect(mockMessageBus.publish).toHaveBeenCalledWith(
-      expect.objectContaining({
-        correlationId: 'corr-edit',
-        confirmed: true,
-        outcome: ToolConfirmationOutcome.ProceedOnce,
-      }),
-    );
-  });
-
-  it('updates isDiffingEnabled when IdeClient status changes', async () => {
-    let statusListener: () => void = () => {};
-    let deferredIdeClient: { resolve: (c: IdeClient) => void };
-
-    const mockIdeClient = {
-      isDiffingEnabled: vi.fn().mockReturnValue(false),
-      addStatusChangeListener: vi.fn().mockImplementation((listener) => {
-        statusListener = listener;
-      }),
-      removeStatusChangeListener: vi.fn(),
-    } as unknown as IdeClient;
-
-    vi.mocked(IdeClient.getInstance).mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          deferredIdeClient = { resolve };
-        }),
-    );
-    vi.mocked(mockConfig.getIdeMode).mockReturnValue(true);
-
-    const { result } = await renderHook(() => useToolActions(), {
-      wrapper: WrapperReactComp,
-    });
-
-    await act(async () => {
-      deferredIdeClient.resolve(mockIdeClient);
-    });
-
-    expect(result.current.isDiffingEnabled).toBe(false);
-
-    // Simulate connection change
-    vi.mocked(mockIdeClient.isDiffingEnabled).mockReturnValue(true);
-    await act(async () => {
-      statusListener();
-    });
-
-    expect(result.current.isDiffingEnabled).toBe(true);
-
-    // Simulate disconnection
-    vi.mocked(mockIdeClient.isDiffingEnabled).mockReturnValue(false);
-    await act(async () => {
-      statusListener();
-    });
-
-    expect(result.current.isDiffingEnabled).toBe(false);
   });
 
   it('calls local onConfirm for tools without correlationId', async () => {

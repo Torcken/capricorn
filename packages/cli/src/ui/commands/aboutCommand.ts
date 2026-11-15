@@ -4,19 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {
-  CommandKind,
-  type CommandContext,
-  type SlashCommand,
-} from './types.js';
+import { CommandKind, type SlashCommand } from './types.js';
 import process from 'node:process';
 import { MessageType, type HistoryItemAbout } from '../types.js';
-import {
-  IdeClient,
-  UserAccountManager,
-  debugLogger,
-  getVersion,
-} from '@capricorn/core';
+import { UserAccountManager, debugLogger, getVersion } from '@capricorn/core';
 
 export const aboutCommand: SlashCommand = {
   name: 'about',
@@ -40,7 +31,6 @@ export const aboutCommand: SlashCommand = {
     const selectedAuthType =
       context.services.settings.merged.security.auth.selectedType || '';
     const gcpProject = process.env['GOOGLE_CLOUD_PROJECT'] || '';
-    const ideClient = await getIdeClientName(context);
 
     const userAccountManager = new UserAccountManager();
     const cachedAccount = userAccountManager.getCachedGoogleAccount();
@@ -59,7 +49,6 @@ export const aboutCommand: SlashCommand = {
       modelVersion,
       selectedAuthType,
       gcpProject,
-      ideClient,
       userEmail,
       tier,
     };
@@ -67,11 +56,3 @@ export const aboutCommand: SlashCommand = {
     context.ui.addItem(aboutItem);
   },
 };
-
-async function getIdeClientName(context: CommandContext) {
-  if (!context.services.agentContext?.config.getIdeMode()) {
-    return '';
-  }
-  const ideClient = await IdeClient.getInstance();
-  return ideClient?.getDetectedIdeDisplayName() ?? '';
-}
