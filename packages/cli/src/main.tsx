@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+// Capricorn: renamed from gemini.tsx (upstream) so the bundle has no
+// gemini-named chunk.
+
 import {
   type StartupWarning,
   WarningPriority,

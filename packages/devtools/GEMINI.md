@@ -28,7 +28,7 @@ No environment variables needed for normal use.
 ## Architecture
 
 ```
-gemini.tsx / nonInteractiveCli.ts
+main.tsx / nonInteractiveCli.ts
          │  (dynamic import)
          ▼
   devtoolsService.ts          ← orchestration + DevTools lifecycle

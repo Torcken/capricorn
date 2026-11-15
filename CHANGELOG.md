@@ -6,6 +6,16 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Extensions are described by `capricorn-extension.json`;
+  `capricorn extensions new` and the bundled examples use it. The upstream
+  `gemini-extension.json` is still read when `capricorn-extension.json` is
+  absent.
+- The CLI entry file is `cli/src/main.tsx` (was `gemini.tsx`), so the bundle has
+  no `gemini-*.js` chunk. The single-binary build expects `bundle/capricorn.js`
+  (it still looked for `gemini.js`).
+
 ## [0.1.0-alpha.2] - 2026-11-15
 
 ### Changed

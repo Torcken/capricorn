@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { setupUnhandledRejectionHandler } from './gemini.js';
+import { setupUnhandledRejectionHandler } from './main.js';
 import { debugLogger } from '@capricorn/core';
 
 vi.mock('./utils/cleanup.js', async (importOriginal) => {

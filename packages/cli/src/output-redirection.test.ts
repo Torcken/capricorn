@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { initializeOutputListenersAndFlush } from './gemini.js';
+import { initializeOutputListenersAndFlush } from './main.js';
 import { coreEvents, CoreEvent, type Config } from '@capricorn/core';
 
 // Mock core dependencies

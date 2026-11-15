@@ -16,7 +16,7 @@ esbuild bundle, `bundle/capricorn.js`.
 
 | Concern                 | Location                                                                                                                                      |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| CLI / TUI               | `cli/src/gemini.tsx`, `cli/src/ui/`, `cli/src/commands/capricorn.ts`                                                                          |
+| CLI / TUI               | `cli/src/main.tsx`, `cli/src/ui/`, `cli/src/commands/capricorn.ts`                                                                            |
 | Startup preflight       | `cli/src/capricorn/preflight.ts`                                                                                                              |
 | Diagnostics (`doctor`)  | `cli/src/capricorn/diagnostics.ts`                                                                                                            |
 | Agent orchestrator      | `core/src/core/client.ts` (`GeminiClient`), `geminiChat.ts`, `turn.ts`; cited-files follow-up `citedFiles.ts`                                 |

@@ -1,8 +1,8 @@
 # MCP Server Example
 
 This is a basic example of an MCP (Model Context Protocol) server used as a
-Gemini CLI extension. It demonstrates how to expose tools and prompts to the
-Gemini CLI.
+Capricorn extension. It demonstrates how to expose tools and prompts to the
+Capricorn.
 
 ## Description
 
@@ -15,7 +15,7 @@ The contents of this directory are a valid MCP server implementation using the
 ## Structure
 
 - `example.js`: The main server entry point.
-- `gemini-extension.json`: The configuration file that tells Gemini CLI how to
+- `capricorn-extension.json`: The configuration file that tells Capricorn how to
   use this extension.
 - `package.json`: Helper for dependencies.
 
@@ -32,4 +32,4 @@ The contents of this directory are a valid MCP server implementation using the
     npm install
     ```
 
-This example is typically used by `gemini extensions new`.
+This example is typically used by `capricorn extensions new`.

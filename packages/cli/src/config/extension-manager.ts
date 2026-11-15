@@ -66,6 +66,7 @@ import { resolveEnvVarsInObject } from '../utils/envVarResolver.js';
 import { ExtensionStorage } from './extensions/storage.js';
 import {
   EXTENSIONS_CONFIG_FILENAME,
+  findExtensionConfigFile,
   INSTALL_METADATA_FILENAME,
   recursivelyHydrateStrings,
   type JsonObject,
@@ -1033,9 +1034,12 @@ Would you like to attempt to install via "git clone" instead?`,
   }
 
   async loadExtensionConfig(extensionDir: string): Promise<ExtensionConfig> {
-    const configFilePath = path.join(extensionDir, EXTENSIONS_CONFIG_FILENAME);
-    if (!fs.existsSync(configFilePath)) {
-      throw new Error(`Configuration file not found at ${configFilePath}`);
+    // Capricorn: capricorn-extension.json, or the upstream gemini-extension.json.
+    const configFilePath = findExtensionConfigFile(extensionDir);
+    if (!configFilePath) {
+      throw new Error(
+        `Configuration file not found at ${path.join(extensionDir, EXTENSIONS_CONFIG_FILENAME)}`,
+      );
     }
     try {
       const configContent = await fs.promises.readFile(configFilePath, 'utf-8');

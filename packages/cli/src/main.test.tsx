@@ -21,7 +21,7 @@ import {
   startInteractiveUI,
   getNodeMemoryArgs,
   resolveSessionId,
-} from './gemini.js';
+} from './main.js';
 import {
   loadCliConfig,
   parseArguments,
@@ -296,7 +296,7 @@ vi.mock('./config/auth.js', () => ({
   validateAuthMethod: vi.fn().mockResolvedValue(null),
 }));
 
-describe('gemini.tsx main function', () => {
+describe('main.tsx main function', () => {
   let originalIsTTY: boolean | undefined;
   let initialUnhandledRejectionListeners: NodeJS.UnhandledRejectionListener[] =
     [];
@@ -408,7 +408,7 @@ describe('initializeOutputListenersAndFlush', () => {
 
   it('should flush backlogs and setup listeners if no listeners exist', async () => {
     const { coreEvents } = await import('@capricorn/core');
-    const { initializeOutputListenersAndFlush } = await import('./gemini.js');
+    const { initializeOutputListenersAndFlush } = await import('./main.js');
 
     // Mock listenerCount to return 0
     vi.spyOn(coreEvents, 'listenerCount').mockReturnValue(0);
@@ -495,7 +495,7 @@ describe('getNodeMemoryArgs', () => {
   });
 });
 
-describe('gemini.tsx main function kitty protocol', () => {
+describe('main.tsx main function kitty protocol', () => {
   let originalEnvNoRelaunch: string | undefined;
   let originalIsTTY: boolean | undefined;
   let originalIsRaw: boolean | undefined;
@@ -1248,7 +1248,7 @@ describe('resolveSessionId', () => {
   });
 });
 
-describe('gemini.tsx main function exit codes', () => {
+describe('main.tsx main function exit codes', () => {
   let originalEnvNoRelaunch: string | undefined;
   let originalIsTTY: boolean | undefined;
 

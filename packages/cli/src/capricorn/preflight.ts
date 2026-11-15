@@ -84,7 +84,7 @@ export async function runPreflight(
   },
 ): Promise<PreflightResult> {
   // writeToStderr, not process.stderr: startup has already patched stdio
-  // (patchStdio in gemini.tsx), and patched writes never reach the terminal.
+  // (patchStdio in main.tsx), and patched writes never reach the terminal.
   const log = options.log ?? ((line: string) => writeToStderr(`${line}\n`));
   const s = config.getOllamaSettings();
   let client: OllamaClient;

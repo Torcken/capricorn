@@ -56,7 +56,7 @@ CI uses Node 20 (`.nvmrc`, the minimum in `engines`): avoid Node 21+ features
   `core/src/core/genaiRuntime.ts` (core re-exports them for the CLI), so no SDK
   code is bundled.
 - Security: process-wide egress guard (`core/src/security/egressGuard.ts`,
-  installed in `cli/src/gemini.tsx` via `cli/src/capricorn/networkPolicy.ts`);
+  installed in `cli/src/main.tsx` via `cli/src/capricorn/networkPolicy.ts`);
   malformed tool args rejected in `scheduler.ts` (`MALFORMED_ARGS_MARKER`);
   `.capricorn` self-config protection in `core/src/safety/built-in.ts`; settings
   invariants (`applyCapricornInvariants` in `cli/src/config/settings.ts`).

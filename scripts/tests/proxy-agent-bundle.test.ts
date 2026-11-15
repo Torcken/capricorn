@@ -21,7 +21,7 @@ describe('proxy-agent bundle shape and interop', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(path.join(tmpdir(), 'gemini-proxy-test-'));
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'capricorn-proxy-test-'));
   });
 
   afterEach(() => {
@@ -60,7 +60,7 @@ describe('proxy-agent bundle shape and interop', () => {
 
     // Bundle with the exact same splitting config and aliases as cliConfig
     await esbuild.build({
-      entryPoints: { gemini: entryFile },
+      entryPoints: { capricorn: entryFile },
       outdir: path.join(tmpDir, 'bundle'),
       bundle: true,
       splitting: true,
@@ -81,7 +81,7 @@ describe('proxy-agent bundle shape and interop', () => {
 
     // Import the bundled chunk
     const bundledEntryUrl = pathToFileURL(
-      path.join(tmpDir, 'bundle/gemini.mjs'),
+      path.join(tmpDir, 'bundle/capricorn.mjs'),
     ).href;
     const { getAgents } = await import(bundledEntryUrl);
 
@@ -157,7 +157,7 @@ describe('proxy-agent bundle shape and interop', () => {
     );
 
     await esbuild.build({
-      entryPoints: { gemini: entryFile },
+      entryPoints: { capricorn: entryFile },
       outdir: path.join(tmpDir, 'bundle'),
       bundle: true,
       splitting: true,
@@ -177,7 +177,7 @@ describe('proxy-agent bundle shape and interop', () => {
     });
 
     const bundledEntryUrl = pathToFileURL(
-      path.join(tmpDir, 'bundle/gemini.mjs'),
+      path.join(tmpDir, 'bundle/capricorn.mjs'),
     ).href;
     const { testEnvProxy } = await import(bundledEntryUrl);
 

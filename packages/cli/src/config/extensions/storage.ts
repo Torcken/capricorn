@@ -10,6 +10,7 @@ import * as os from 'node:os';
 import {
   EXTENSION_SETTINGS_FILENAME,
   EXTENSIONS_CONFIG_FILENAME,
+  findExtensionConfigFile,
 } from './variables.js';
 import { Storage, homedir } from '@capricorn/core';
 
@@ -28,7 +29,12 @@ export class ExtensionStorage {
   }
 
   getConfigPath(): string {
-    return path.join(this.getExtensionDir(), EXTENSIONS_CONFIG_FILENAME);
+    // Capricorn: the manifest that exists (new or upstream name), else the
+    // new name.
+    return (
+      findExtensionConfigFile(this.getExtensionDir()) ??
+      path.join(this.getExtensionDir(), EXTENSIONS_CONFIG_FILENAME)
+    );
   }
 
   getEnvFilePath(): string {

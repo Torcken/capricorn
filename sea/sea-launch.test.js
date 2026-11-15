@@ -149,7 +149,7 @@ describe('sea-launch', () => {
 
       const mockFs = {
         openSync: vi.fn((p) => {
-          if (p.endsWith('gemini.mjs')) return 10;
+          if (p.endsWith('capricorn.mjs')) return 10;
           if (p.endsWith('file.txt')) return 20;
           throw new Error('Not found');
         }),
@@ -289,7 +289,7 @@ describe('sea-launch', () => {
       deps.fs.readFileSync.mockReturnValue('content');
 
       const runtime = prepareRuntime(mockManifest, mockGetAsset, deps);
-      expect(runtime).toContain('gemini-runtime-1.0.0-user');
+      expect(runtime).toContain('capricorn-runtime-1.0.0-user');
       expect(deps.fs.rmSync).not.toHaveBeenCalled();
     });
 
@@ -341,11 +341,11 @@ describe('sea-launch', () => {
       prepareRuntime(mockManifest, mockGetAsset, deps);
 
       expect(deps.fs.rmSync).toHaveBeenCalledWith(
-        expect.stringContaining('gemini-runtime'),
+        expect.stringContaining('capricorn-runtime'),
         expect.anything(),
       );
       expect(deps.fs.mkdirSync).toHaveBeenCalledWith(
-        expect.stringContaining('gemini-setup'),
+        expect.stringContaining('capricorn-setup'),
         expect.anything(),
       );
     });
@@ -398,7 +398,7 @@ describe('sea-launch', () => {
       prepareRuntime(mockManifest, mockGetAsset, deps);
 
       expect(deps.fs.rmSync).toHaveBeenCalledWith(
-        expect.stringContaining('gemini-runtime'),
+        expect.stringContaining('capricorn-runtime'),
         expect.anything(),
       );
     });
@@ -451,11 +451,11 @@ describe('sea-launch', () => {
       prepareRuntime(mockManifest, mockGetAsset, deps);
 
       expect(deps.fs.rmSync).toHaveBeenCalledWith(
-        expect.stringContaining('gemini-runtime'),
+        expect.stringContaining('capricorn-runtime'),
         expect.anything(),
       );
       expect(deps.fs.mkdirSync).toHaveBeenCalledWith(
-        expect.stringContaining('gemini-setup'),
+        expect.stringContaining('capricorn-setup'),
         expect.anything(),
       );
     });
@@ -519,9 +519,9 @@ describe('sea-launch', () => {
       const runtime = prepareRuntime(mockManifest, mockGetAsset, deps);
 
       expect(deps.fs.renameSync).toHaveBeenCalled();
-      expect(runtime).toContain('gemini-runtime');
+      expect(runtime).toContain('capricorn-runtime');
       expect(deps.fs.rmSync).toHaveBeenCalledWith(
-        expect.stringContaining('gemini-setup'),
+        expect.stringContaining('capricorn-setup'),
         expect.anything(),
       );
     });

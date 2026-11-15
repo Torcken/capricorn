@@ -4,8 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { expect, describe, it } from 'vitest';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { expect, describe, it, beforeEach, afterEach } from 'vitest';
 import {
+  findExtensionConfigFile,
   hydrateString,
   recursivelyHydrateStrings,
   validateVariables,
@@ -149,5 +153,42 @@ describe('recursivelyHydrateStrings', () => {
     const result = recursivelyHydrateStrings(payload, context);
 
     expect(result.polluted).toBeUndefined();
+  });
+});
+
+// Capricorn: manifest file name (capricorn-extension.json, upstream fallback).
+describe('findExtensionConfigFile', () => {
+  let dir: string;
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'capricorn-manifest-'));
+  });
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('returns undefined when there is no manifest', () => {
+    expect(findExtensionConfigFile(dir)).toBeUndefined();
+  });
+
+  it('finds capricorn-extension.json', () => {
+    fs.writeFileSync(path.join(dir, 'capricorn-extension.json'), '{}');
+    expect(findExtensionConfigFile(dir)).toBe(
+      path.join(dir, 'capricorn-extension.json'),
+    );
+  });
+
+  it('accepts the upstream gemini-extension.json', () => {
+    fs.writeFileSync(path.join(dir, 'gemini-extension.json'), '{}');
+    expect(findExtensionConfigFile(dir)).toBe(
+      path.join(dir, 'gemini-extension.json'),
+    );
+  });
+
+  it('prefers capricorn-extension.json when both exist', () => {
+    fs.writeFileSync(path.join(dir, 'gemini-extension.json'), '{}');
+    fs.writeFileSync(path.join(dir, 'capricorn-extension.json'), '{}');
+    expect(findExtensionConfigFile(dir)).toBe(
+      path.join(dir, 'capricorn-extension.json'),
+    );
   });
 });

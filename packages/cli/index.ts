@@ -126,7 +126,7 @@ async function run() {
   } else {
     // --- Heavy Child Process ---
     // Now we can safely import everything.
-    const { main } = await import('./src/gemini.js');
+    const { main } = await import('./src/main.js');
     const { FatalError, writeToStderr } = await import('@capricorn/core');
     const { runExitCleanup } = await import('./src/utils/cleanup.js');
 

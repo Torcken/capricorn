@@ -100,6 +100,10 @@ The repository history starts with the unmodified upstream commit, so
   is published. VS Code Marketplace IDs
   (`google.gemini-cli-vscode-ide-companion`) and links to upstream issues are
   unchanged, because they name external things.
+- Extension manifests are `capricorn-extension.json`; `gemini-extension.json` is
+  read as a fallback (`findExtensionConfigFile` in
+  `cli/src/config/extensions/variables.ts`). The CLI entry file
+  `cli/src/gemini.tsx` is now `cli/src/main.tsx`.
 
 ## Intentionally retained (and why)
 

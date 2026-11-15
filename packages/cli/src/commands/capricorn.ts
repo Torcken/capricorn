@@ -32,7 +32,7 @@ import {
   type OllamaClient,
   type OllamaPsResponse,
 } from '@capricorn/core';
-import { initializeOutputListenersAndFlush } from '../gemini.js';
+import { initializeOutputListenersAndFlush } from '../main.js';
 import {
   loadSettings,
   SettingScope,

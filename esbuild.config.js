@@ -157,7 +157,7 @@ Promise.allSettled([
 ]).then((results) => {
   const [cliResult, workerResult] = results;
   if (cliResult.status === 'rejected') {
-    console.error('gemini.js build failed:', cliResult.reason);
+    console.error('capricorn.js build failed:', cliResult.reason);
     process.exit(1);
   }
   if (workerResult.status === 'rejected') {
