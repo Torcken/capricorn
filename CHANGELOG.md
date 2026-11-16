@@ -6,6 +6,8 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.7] - 2026-11-16
+
 ### Changed
 
 - Faster headless runs. `-p`/`--prompt`, `capricorn run`, `doctor`, `status` and

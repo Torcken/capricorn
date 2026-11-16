@@ -136,7 +136,7 @@ isolation boundary.
   group/world-writable.
 - **Sandbox coverage varies by platform**; see above. No universal OS isolation
   is claimed.
-- **Known dependency advisories (0.1.0-alpha.6).** zod 4.6.7 and OpenTelemetry
+- **Known dependency advisories (0.1.0-alpha.7).** zod 4.6.7 and OpenTelemetry
   0.223.0 / 2.12.0 fix the earlier zod and Jaeger-propagator advisories. The
   only high-severity advisory left in bundled code is `extract-zip` (no fixed
   release); Capricorn's pre-check above covers both of its symlink advisories.
