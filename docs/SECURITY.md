@@ -162,6 +162,10 @@ add that host to `security.network.allowedHosts`. `capricorn models pull` asks
 _Ollama_ to download a model from its registry; that is the only command that
 intentionally causes internet traffic, and only when you run it.
 
+Capricorn stores a V8 compile cache (bytecode of its own bundled code, no user
+data) in `~/.capricorn/cache/compile` (mode 0700) to start faster; deleting it
+is safe, and `NODE_DISABLE_COMPILE_CACHE=1` turns it off.
+
 Local data: settings and trust decisions in `~/.capricorn/`, session transcripts
 under `~/.capricorn/tmp/<project>/chats/` (they contain your prompts, model
 replies and tool results). Delete a session with

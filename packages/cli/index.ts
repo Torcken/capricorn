@@ -15,7 +15,7 @@ import {
   getScriptArgs,
   setupSignalForwarding,
   handleChildProcessClose,
-} from './src/utils/processUtils.js';
+} from './src/utils/relaunchSupervisor.js';
 
 // --- Global Entry Point ---
 
@@ -24,10 +24,15 @@ async function getMemoryNodeArgs(): Promise<string[]> {
   try {
     const { readFileSync } = await import('node:fs');
     const { join } = await import('node:path');
-    // Respect GEMINI_CLI_HOME environment variable, falling back to os.homedir()
-    const baseDir =
-      process.env['GEMINI_CLI_HOME'] || join(os.homedir(), '.gemini');
-    const settingsPath = join(baseDir, 'settings.json');
+    // Capricorn: user settings live in ~/.capricorn (CAPRICORN_HOME, or the
+    // upstream GEMINI_CLI_HOME, overrides the home directory as in
+    // core/src/utils/paths.ts). Upstream read ~/.gemini here, so the
+    // advanced.autoConfigureMemory setting was silently ignored.
+    const home =
+      process.env['CAPRICORN_HOME'] ||
+      process.env['GEMINI_CLI_HOME'] ||
+      os.homedir();
+    const settingsPath = join(home, '.capricorn', 'settings.json');
     const rawSettings = readFileSync(settingsPath, 'utf8');
     const settings = JSON.parse(rawSettings);
     if (settings?.advanced?.autoConfigureMemory === false) {
@@ -53,7 +58,60 @@ async function getMemoryNodeArgs(): Promise<string[]> {
   return [];
 }
 
+/**
+ * Capricorn: answers a bare `--version` / `-v` without relaunching or loading
+ * the app (it took ~1.9 s, as the parent and child each loaded the bundle).
+ * Only in the bundle, where the build inlines CLI_VERSION; source runs fall
+ * through to yargs.
+ */
+function printVersionFastPath(): boolean {
+  const version = process.env['CLI_VERSION'];
+  const args = getScriptArgs();
+  if (
+    version &&
+    args.length === 1 &&
+    (args[0] === '--version' || args[0] === '-v')
+  ) {
+    process.stdout.write(`${version}\n`);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Capricorn: caches V8's compiled code on disk (Node >= 22.1; skipped on
+ * older Node). Compiling the ~16 MB bundle took ~0.4 s of every start.
+ *
+ * The cache holds only bytecode for Capricorn's own code, never user data.
+ * It lives in a private (0700) directory under ~/.capricorn rather than
+ * Node's default shared `/tmp/node-compile-cache`, so another local account
+ * cannot plant cache entries this process would load.
+ * NODE_DISABLE_COMPILE_CACHE=1 turns it off.
+ */
+async function enableCompileCache(): Promise<void> {
+  try {
+    const nodeModule = (await import('node:module')) as {
+      enableCompileCache?: (directory?: string) => unknown;
+    };
+    if (typeof nodeModule.enableCompileCache !== 'function') return;
+    const { mkdirSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const home =
+      process.env['CAPRICORN_HOME'] ||
+      process.env['GEMINI_CLI_HOME'] ||
+      os.homedir();
+    const directory = join(home, '.capricorn', 'cache', 'compile');
+    mkdirSync(directory, { recursive: true, mode: 0o700 });
+    nodeModule.enableCompileCache(directory);
+  } catch {
+    // A missing cache only costs startup time.
+  }
+}
+
 async function run() {
+  if (printVersionFastPath()) {
+    return;
+  }
   if (!process.env['GEMINI_CLI_NO_RELAUNCH'] && !process.env['SANDBOX']) {
     // --- Lightweight Parent Process / Daemon ---
     // We avoid importing heavy dependencies here to save ~1.5s of startup time.
@@ -125,6 +183,7 @@ async function run() {
     }
   } else {
     // --- Heavy Child Process ---
+    await enableCompileCache();
     // Now we can safely import everything.
     const { main } = await import('./src/main.js');
     const { FatalError, writeToStderr } = await import('@capricorn/core');

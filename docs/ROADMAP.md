@@ -32,7 +32,11 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
   8K-window eval and cheaper summaries (no thinking on utility calls, short
   capped snapshots; 2026-11-14) are done (`evals/capricorn/RESULTS.md`). Still
   to do: smarter selection of repository context.
-- **Startup time:** profile and trim inherited initialization.
+- **Startup time:** the relaunch parent no longer loads the bundle, `--version`
+  answers without starting the app, and a private V8 compile cache is used
+  (2026-11-16: `-p` 2.2 s → 1.3 s against the mock daemon). Still to do: lazy
+  loading inside the app itself (most of the remaining time is loading ~16 MB of
+  bundled code).
 
 ## After 1.0
 

@@ -6,6 +6,19 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Faster startup. The relaunch parent no longer loads the app bundle (its
+  helpers moved to `cli/src/utils/relaunchSupervisor.ts`), `--version` / `-v`
+  answer without starting the app, and the app uses a V8 compile cache in
+  `~/.capricorn/cache/compile` (Node >= 22.1). Measured against the mock daemon:
+  `--version` 1.9 s → 0.05 s, `-p` 2.2 s → 1.3 s, `doctor` 2.7 s → 1.7 s.
+
+### Fixed
+
+- `advanced.autoConfigureMemory` is read from `~/.capricorn/settings.json` (the
+  relaunch parent looked in `~/.gemini`).
+
 ## [0.1.0-alpha.5] - 2026-11-16
 
 ### Removed
