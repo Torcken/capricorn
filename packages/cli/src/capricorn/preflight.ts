@@ -34,10 +34,11 @@ import {
   type Config,
 } from '@capricorn/core';
 import { detectHardware, type HardwareProfile } from './hardware.js';
-import { pullAndVerify, testLoad } from './modelPull.js';
+import { findLoadableContext, pullAndVerify, testLoad } from './modelPull.js';
 import { recommendModel } from './recommend.js';
 import { formatGiB } from './runtime.js';
 import {
+  CONTEXT_CANDIDATES,
   fetchMemoryProfile,
   formatTokens,
   suggestContext,
@@ -251,19 +252,46 @@ async function firstRun(
     }
   }
 
-  if (!loaded) options.log(`Checking that Ollama can load ${rec.tag}...`);
-  const loadError = loaded
-    ? undefined
-    : await testLoad(client, rec.tag, numCtx);
-  if (loadError) {
-    return {
-      ok: false,
-      exitCode: 1,
-      message:
-        `Downloaded ${rec.tag}, but Ollama could not load it (num_ctx ${numCtx}): ${loadError}\n` +
-        '→ Update Ollama (newer Gemma 4 builds may need a newer daemon), lower `ollama.numCtx`, ' +
-        'or try another model: `capricorn models list` shows the presets.',
-    };
+  if (!loaded) {
+    options.log(`Checking that Ollama can load ${rec.tag}...`);
+    // Capricorn: on a memory error, try smaller windows: the daemon's
+    // answer beats the estimate (an 8 GiB Mac failed e2b at the default
+    // 32K, and no estimate-based suggestion was made for it).
+    const found = await findLoadableContext(
+      client,
+      rec.tag,
+      numCtx,
+      CONTEXT_CANDIDATES,
+      options.log,
+    );
+    if (found.numCtx === undefined) {
+      return {
+        ok: false,
+        exitCode: 1,
+        message:
+          `Downloaded ${rec.tag}, but Ollama could not load it (num_ctx ${numCtx}): ${found.error}\n` +
+          '→ Update Ollama (newer Gemma 4 builds may need a newer daemon), lower `ollama.numCtx`, ' +
+          'or try another model: `capricorn models list` shows the presets.',
+      };
+    }
+    if (found.numCtx !== numCtx) {
+      if (options.numCtxConfigured) {
+        // The user chose the window: say what loads, change nothing.
+        return {
+          ok: false,
+          exitCode: 1,
+          message:
+            `Downloaded ${rec.tag}, but it does not fit in memory with your ollama.numCtx ${numCtx}: ${found.error}\n` +
+            `→ It loads with ${formatTokens(found.numCtx)}:  capricorn config set ollama.numCtx ${found.numCtx}`,
+        };
+      }
+      options.log(
+        `Context window for this session: ${formatTokens(found.numCtx)} tokens instead of ${formatTokens(numCtx)} (the largest window that loaded).\n` +
+          `Keep it with:  capricorn config set ollama.numCtx ${found.numCtx}`,
+      );
+      settings.numCtx = found.numCtx;
+      numCtx = found.numCtx;
+    }
   }
   config.setModel(rec.tag, true);
   if (rec.tag !== requested) {

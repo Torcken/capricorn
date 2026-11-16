@@ -19,7 +19,8 @@
  *
  * Rules, in order:
  * 1. The first of gemma4:12b → e4b → e2b that fits in GPU memory (largest
- *    single dedicated GPU, or ~75% of RAM for Apple's unified memory).
+ *    single dedicated GPU, or Metal's working-set limit (2/3 of RAM up to
+ *    36 GiB, 3/4 above, minus Ollama's 512 MiB) for Apple's unified memory).
  * 2. Otherwise CPU inference: e4b, then e2b, if it fits in RAM minus a
  *    reserve for the OS and Capricorn. 12B on a CPU is usually too slow for
  *    agent work, so it is mentioned but not recommended.
@@ -47,10 +48,20 @@ const GIB = 1024 ** 3;
 export const RAM_RESERVE_GIB = 2;
 
 /**
- * Share of unified memory a model may use on Apple Silicon (Metal's working
- * set limit is roughly two thirds to three quarters of RAM).
+ * Share of unified memory a model may use on Apple Silicon: Metal's
+ * recommended working set is about two thirds of RAM up to 36 GiB and
+ * three quarters above. Using 3/4 everywhere overestimated small Macs: on
+ * an 8 GiB MacBook Air M1, Ollama 0.40.16 refused gemma4:e2b at 32K with
+ * "only 4.8 GiB are available (after 512.0 MiB overhead)", which is exactly
+ * 2/3 × 8 GiB − 512 MiB, while this budget said 6 GiB.
  */
 export const UNIFIED_GPU_SHARE = 0.75;
+/** Share used at or below {@link UNIFIED_LARGE_RAM_GIB}. */
+export const UNIFIED_GPU_SHARE_SMALL = 2 / 3;
+/** RAM above which Metal allows {@link UNIFIED_GPU_SHARE}. */
+export const UNIFIED_LARGE_RAM_GIB = 36;
+/** Memory Ollama keeps back on the GPU for itself (its own log says so). */
+export const OLLAMA_GPU_OVERHEAD_GIB = 0.5;
 
 /** Where a model would run. */
 export type Placement = 'gpu' | 'cpu' | 'none';
@@ -96,12 +107,18 @@ function round(n: number): string {
 export function gpuBudgetGiB(hw: HardwareProfile): number {
   let best = 0;
   for (const g of hw.gpus) {
+    const ram = gib(g.memoryBytes);
+    const share =
+      ram > UNIFIED_LARGE_RAM_GIB ? UNIFIED_GPU_SHARE : UNIFIED_GPU_SHARE_SMALL;
     const budget = g.unified
-      ? Math.min(
-          gib(g.memoryBytes) * UNIFIED_GPU_SHARE,
-          gib(g.memoryBytes) - RAM_RESERVE_GIB,
+      ? Math.max(
+          0,
+          Math.min(
+            ram * share - OLLAMA_GPU_OVERHEAD_GIB,
+            ram - RAM_RESERVE_GIB,
+          ),
         )
-      : gib(g.memoryBytes);
+      : ram;
     best = Math.max(best, budget);
   }
   return best;

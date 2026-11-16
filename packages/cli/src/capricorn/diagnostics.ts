@@ -43,11 +43,13 @@ import {
 import { describeFit, placementFor, recommendModel } from './recommend.js';
 import { formatGiB } from './runtime.js';
 import {
+  CONTEXT_CANDIDATES,
   estimateMemoryBytes,
   fetchMemoryProfile,
   formatTokens,
   suggestContext,
 } from './contextSize.js';
+import { findLoadableContext, isMemoryError } from './modelPull.js';
 
 /** Outcome severity. `fail` makes `doctor` exit non-zero. */
 export type CheckStatus = 'pass' | 'warn' | 'fail' | 'skip';
@@ -503,20 +505,38 @@ async function checkModelLoad(
       signal,
     );
   } catch (e) {
+    const error =
+      e instanceof OllamaError
+        ? e.message
+        : e instanceof Error
+          ? e.message
+          : String(e);
+    // Capricorn: when the window does not fit in memory, find one that
+    // does, so the advice is a command rather than "lower ollama.numCtx".
+    let fits: number | undefined;
+    if (isMemoryError(error) && !signal?.aborted) {
+      fits = (
+        await findLoadableContext(
+          client,
+          tag,
+          numCtx,
+          CONTEXT_CANDIDATES.filter((c) => c < numCtx),
+        ).catch(() => ({ numCtx: undefined }))
+      ).numCtx;
+      if (fits === numCtx) fits = undefined;
+    }
     return {
       id: 'models.load',
       title: 'Model load',
       status: 'fail',
-      message: `Ollama could not load ${tag} with num_ctx ${numCtx}: ${
-        e instanceof OllamaError
-          ? e.message
-          : e instanceof Error
-            ? e.message
-            : String(e)
-      }`,
+      message: `Ollama could not load ${tag} with num_ctx ${numCtx}: ${error}`,
       remediation:
-        'Update Ollama (newer Gemma 4 builds may need a newer daemon), lower `ollama.numCtx`, or choose a smaller model with `capricorn models use <tag>`.',
-      data: { model: tag, numCtx },
+        fits !== undefined
+          ? `It loads with a window of ${formatTokens(fits)} tokens: \`capricorn config set ollama.numCtx ${fits}\`.`
+          : isMemoryError(error)
+            ? 'Not enough memory even at an 8K window: close other apps or choose a smaller model with `capricorn models use <tag>`.'
+            : 'Update Ollama (newer Gemma 4 builds may need a newer daemon), lower `ollama.numCtx`, or choose a smaller model with `capricorn models use <tag>`.',
+      data: { model: tag, numCtx, ...(fits !== undefined ? { fits } : {}) },
     };
   }
   const seconds = (Date.now() - started) / 1000;

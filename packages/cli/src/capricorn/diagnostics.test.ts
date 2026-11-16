@@ -320,6 +320,29 @@ describe('runDiagnostics with loadModel (doctor --load)', () => {
     expect(report.ok).toBe(false);
   });
 
+  // Seen on an 8 GiB MacBook Air M1 (Ollama 0.40.16) with the default 32K.
+  it('names a window that loads when the configured one does not fit', async () => {
+    const error =
+      'model requires 6.9 GiB but only 4.8 GiB are available (after 512.0 MiB overhead)';
+    for (let i = 0; i < 3; i++) {
+      mock.enqueueChat({ frames: [], status: 500, errorBody: { error } });
+    }
+    const report = await runDiagnostics({
+      runtime: runtime(),
+      client: new OllamaClient({ endpoint: mock.url }),
+      version: 'test',
+      cwd: process.cwd(),
+      loadModel: true,
+    });
+    const load = byId(report, 'models.load');
+    expect(load.status).toBe('fail');
+    expect(load.message).toContain('only 4.8 GiB are available');
+    expect(load.remediation).toBe(
+      'It loads with a window of 8K tokens: `capricorn config set ollama.numCtx 8192`.',
+    );
+    expect(load.data).toMatchObject({ numCtx: 32768, fits: 8192 });
+  });
+
   it('skips the load when the selected model is unusable', async () => {
     const report = await runDiagnostics({
       runtime: runtime('gemma4:fake'),

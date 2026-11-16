@@ -211,6 +211,81 @@ describe('runPreflight on first run (no Gemma 4 model installed)', () => {
     expect(setModel).not.toHaveBeenCalled();
   });
 
+  // Seen with gemma4:e2b on an 8 GiB MacBook Air M1 (Ollama 0.40.16): the
+  // default 32K window did not fit, and onboarding stopped there.
+  const MEMORY_ERROR =
+    'model requires 6.9 GiB but only 4.8 GiB are available (after 512.0 MiB overhead)';
+  const loadWindows = () =>
+    mock
+      .chatRequests()
+      .map(
+        (q) => (q.body as { options?: { num_ctx?: number } }).options?.num_ctx,
+      );
+
+  it('tries smaller windows when the model does not fit in memory', async () => {
+    for (let i = 0; i < 2; i++) {
+      mock.enqueueChat({
+        frames: [],
+        status: 500,
+        errorBody: { error: MEMORY_ERROR },
+      });
+    }
+    const { config, setModel } = fakeConfig('gemma4:12b');
+    const lines: string[] = [];
+    const r = await runPreflight(config, {
+      interactive: true,
+      confirm: async () => true,
+      detectHardware: smallGpu,
+      log: (l) => lines.push(l),
+    });
+    expect(r).toEqual({ ok: true, model: 'gemma4:e4b', switched: true });
+    expect(setModel).toHaveBeenCalledWith('gemma4:e4b', true);
+    expect(loadWindows()).toEqual([32768, 16384, 8192]);
+    expect(config.getOllamaSettings().numCtx).toBe(8192);
+    const log = lines.join('\n');
+    expect(log).toContain('Context window for this session: 8K tokens');
+    expect(log).toContain('capricorn config set ollama.numCtx 8192');
+  });
+
+  it('does not change a configured window that does not fit; says what loads', async () => {
+    mock.enqueueChat({
+      frames: [],
+      status: 500,
+      errorBody: { error: MEMORY_ERROR },
+    });
+    const { config, setModel } = fakeConfig('gemma4:12b');
+    const r = await runPreflight(config, {
+      interactive: true,
+      confirm: async () => true,
+      detectHardware: smallGpu,
+      log: () => {},
+      numCtxConfigured: true,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.ok === false && r.message).toContain(
+      'capricorn config set ollama.numCtx 16384',
+    );
+    expect(config.getOllamaSettings().numCtx).toBe(32768);
+    expect(setModel).not.toHaveBeenCalled();
+  });
+
+  it('does not retry smaller windows for errors a window cannot fix', async () => {
+    mock.enqueueChat({
+      frames: [],
+      status: 500,
+      errorBody: { error: 'Gemma4Assistant requires ctx_other to be set' },
+    });
+    const { config } = fakeConfig('gemma4:12b');
+    const r = await runPreflight(config, {
+      interactive: true,
+      confirm: async () => true,
+      detectHardware: smallGpu,
+      log: () => {},
+    });
+    expect(r.ok).toBe(false);
+    expect(loadWindows()).toEqual([32768]);
+  });
+
   it('refuses to use a pulled model that fails verification', async () => {
     await mock.close();
     mock = await startMockOllama({

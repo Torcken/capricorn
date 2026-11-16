@@ -80,7 +80,7 @@ const REMEDIATION: Record<OllamaErrorKind, string> = {
   [OllamaErrorKind.MODEL_LOAD_FAILED]:
     'Ollama could not load the model. Re-pull it, check the Ollama server log, or try another Gemma 4 variant.',
   [OllamaErrorKind.RESOURCE_EXHAUSTED]:
-    'Not enough memory. Choose a smaller Gemma 4 model (e.g. gemma4:e4b) or reduce `ollama.numCtx`.',
+    'Not enough memory. `capricorn doctor --load` finds a context window that loads (then `capricorn config set ollama.numCtx <n>`), or choose a smaller Gemma 4 model.',
   [OllamaErrorKind.VERSION_UNSUPPORTED]:
     'Update Ollama to a release that supports Gemma 4 and tool calling.',
   [OllamaErrorKind.ENDPOINT_NOT_ALLOWED]:
@@ -155,7 +155,10 @@ export function classifyOllamaMessage(
     m.includes('requires more system memory') ||
     m.includes('insufficient memory') ||
     m.includes('cudamalloc failed') ||
-    m.includes('failed to allocate')
+    m.includes('failed to allocate') ||
+    // Capricorn: Ollama 0.40 wording, e.g. "model requires 6.9 GiB but only
+    // 4.8 GiB are available (after 512.0 MiB overhead)".
+    /requires .* but only .* available/.test(m)
   ) {
     return OllamaErrorKind.RESOURCE_EXHAUSTED;
   }

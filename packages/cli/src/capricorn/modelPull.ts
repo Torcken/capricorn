@@ -108,3 +108,60 @@ export async function testLoad(
       : String(e);
   }
 }
+
+/**
+ * Whether an Ollama load error means "not enough memory for this window",
+ * the one load failure a smaller `num_ctx` can fix. Matches the wording of
+ * Ollama 0.40 ("model requires 6.9 GiB but only 4.8 GiB are available") and
+ * the older runner errors.
+ */
+export function isMemoryError(message: string): boolean {
+  return /requires .* but only .* available|requires more (?:system )?memory|out of memory|insufficient memory|not enough memory|cudaMalloc failed|unable to allocate/i.test(
+    message,
+  );
+}
+
+/** Result of {@link findLoadableContext}. */
+export interface LoadableContext {
+  /** The window that loaded, or undefined when none did. */
+  numCtx?: number;
+  /** Ollama's error for `requested` (the first attempt), if it failed. */
+  error?: string;
+}
+
+/**
+ * Loads `tag` at `requested`; on a memory error, retries each smaller
+ * window in `candidates` (largest first) and returns the first that loads.
+ *
+ * Why: Capricorn's memory estimate is a model, while the daemon's answer
+ * is the truth for this machine. On an 8 GiB Mac the default 32K window
+ * failed although 8K or 16K would load; trying them costs a few seconds and
+ * saves the user a dead end. Other errors (e.g. a daemon too old for the
+ * model) are returned at once, since a smaller window would not help.
+ *
+ * @param candidates Windows to try, any order; only those below `requested`
+ *   are used.
+ */
+export async function findLoadableContext(
+  client: OllamaClient,
+  tag: string,
+  requested: number,
+  candidates: readonly number[],
+  log?: (line: string) => void,
+): Promise<LoadableContext> {
+  const error = await testLoad(client, tag, requested);
+  if (error === undefined) return { numCtx: requested };
+  if (!isMemoryError(error)) return { error };
+  const smaller = [...candidates]
+    .filter((c) => c < requested)
+    .sort((a, b) => b - a);
+  let previous = requested;
+  for (const c of smaller) {
+    log?.(`Not enough memory for num_ctx ${previous}; trying ${c}...`);
+    if ((await testLoad(client, tag, c)) === undefined) {
+      return { numCtx: c, error };
+    }
+    previous = c;
+  }
+  return { error };
+}

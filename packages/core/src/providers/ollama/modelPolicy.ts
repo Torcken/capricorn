@@ -185,7 +185,10 @@ export function prefilterTagModel(
     };
   }
   const families = [tag.details?.family, ...(tag.details?.families ?? [])]
-    .filter((f): f is string => typeof f === 'string')
+    // Capricorn: Ollama 0.40 reports `family: ""` in /api/tags for some
+    // Gemma 4 builds; an empty string is "unknown", not a family, so it
+    // must fall through to the /api/show architecture check.
+    .filter((f): f is string => typeof f === 'string' && f.trim() !== '')
     .map((f) => f.toLowerCase());
   if (families.length > 0 && !families.includes(GEMMA4_ARCHITECTURE)) {
     return {
@@ -256,7 +259,7 @@ export function verifyGemma4Model(
   } else {
     // Older daemons: fall back to the family fields, still metadata-derived.
     const families = [show.details?.family, ...(show.details?.families ?? [])]
-      .filter((f): f is string => typeof f === 'string')
+      .filter((f): f is string => typeof f === 'string' && f.trim() !== '')
       .map((f) => f.toLowerCase());
     if (families.length === 0) {
       return {

@@ -75,6 +75,21 @@ describe('verifyGemma4Model', () => {
     });
   });
 
+  it('treats an empty family as no metadata, not as a family', () => {
+    expect(
+      verifyGemma4Model('mystery', { details: { family: '' } }),
+    ).toMatchObject({ allowed: false, reason: 'unverifiable' });
+  });
+
+  it('accepts by architecture even when the family field is empty', () => {
+    expect(
+      verifyGemma4Model('gemma4:e2b', {
+        ...GEMMA4_SHOW,
+        details: { ...GEMMA4_SHOW.details, family: '', families: [''] },
+      }),
+    ).toMatchObject({ allowed: true, reason: 'verified-architecture' });
+  });
+
   it('rejects cloud-backed models even if their architecture is gemma4', () => {
     expect(verifyGemma4Model('gemma4:31b-cloud', GEMMA4_SHOW).reason).toBe(
       'cloud-model',
@@ -105,6 +120,17 @@ describe('prefilterTagModel', () => {
         details: { family: 'qwen3', families: ['qwen3'] },
       }),
     ).toMatchObject({ allowed: false, reason: 'wrong-architecture' });
+  });
+
+  it('leaves an empty family to /api/show (Ollama 0.40 gemma4:e2b)', () => {
+    // Seen on macOS with Ollama 0.40.16: /api/tags reports family "" for a
+    // genuine Gemma 4 build; rejecting it here hid the installed model.
+    expect(
+      prefilterTagModel({
+        name: 'gemma4:e2b',
+        details: { family: '', families: [''] },
+      }),
+    ).toBeUndefined();
   });
 
   it('never accepts on its own', () => {

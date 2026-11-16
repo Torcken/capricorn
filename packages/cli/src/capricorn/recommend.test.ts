@@ -9,6 +9,7 @@ import type { GpuInfo, HardwareProfile } from './hardware.js';
 import {
   describeFit,
   describeHardware,
+  gpuBudgetGiB,
   placementFor,
   recommendModel,
 } from './recommend.js';
@@ -68,12 +69,17 @@ describe('recommendModel', () => {
   });
 
   it('counts only part of unified memory on Apple Silicon', () => {
-    // 16 GiB Mac: 12 GiB usable by the GPU, enough for 12B (≈11 GiB).
+    // 16 GiB Mac: 2/3 × 16 − 0.5 ≈ 10.2 GiB usable by the GPU, enough for
+    // 12B at an 8K window (≈8.9 GiB from its measured profile).
     expect(recommendModel(machine(16, [apple(16)])).tag).toBe('gemma4:12b');
-    // 8 GiB Mac: 6 GiB usable by the GPU, so only E2B (≈4 GiB) fits.
+    // 8 GiB Mac: 2/3 × 8 − 0.5 ≈ 4.8 GiB, the figure Ollama 0.40.16 itself
+    // reported on a MacBook Air M1, so only E2B (≈4 GiB) fits.
+    expect(gpuBudgetGiB(machine(8, [apple(8)]))).toBeCloseTo(4.83, 2);
     const small = recommendModel(machine(8, [apple(8)]));
     expect(small).toMatchObject({ tag: 'gemma4:e2b', placement: 'gpu' });
     expect(small.reason).toContain('experimental');
+    // Above 36 GiB Metal allows 3/4 of RAM.
+    expect(gpuBudgetGiB(machine(64, [apple(64)]))).toBeCloseTo(47.5, 2);
   });
 
   it('prefers E4B on CPU-only machines and says it will be slow', () => {

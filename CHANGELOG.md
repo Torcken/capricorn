@@ -15,6 +15,18 @@ All notable changes to Capricorn are documented here. The format follows
   is selected and missing, `doctor` now suggests the model recommended for the
   machine (e.g. `gemma4:e2b` on an 8 GiB Mac) instead of fixed tags that may not
   fit.
+- Installed Gemma 4 models were hidden on Ollama 0.40, which reports an empty
+  `family` in `/api/tags` for some builds (`gemma4:e2b`): the list prefilter
+  rejected them as "not Gemma 4" even though `models pull` had verified them. An
+  empty family now falls through to the `/api/show` architecture check.
+- The GPU budget for Apple Silicon now follows Metal's working-set limit (⅔ of
+  RAM up to 36 GiB, ¾ above) minus Ollama's 512 MiB, matching the 4.8 GiB that
+  Ollama reports on an 8 GiB Mac (it was 6 GiB).
+- When a model does not fit in memory at the configured window, first-run
+  onboarding tries smaller windows (16K, then 8K) and uses the first that loads;
+  `doctor --load` names it (`capricorn config set ollama.numCtx <n>`). Ollama
+  0.40's "requires … but only … available" error is now classified as out of
+  memory.
 
 ## [0.1.0-alpha.8] - 2026-11-16
 

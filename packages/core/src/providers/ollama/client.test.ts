@@ -125,6 +125,21 @@ describe('OllamaClient.chatStream', () => {
     });
   });
 
+  // Ollama 0.40.16 wording, seen on an 8 GiB MacBook Air M1.
+  it('maps the Ollama 0.40 "requires … but only … available" error to RESOURCE_EXHAUSTED', async () => {
+    mock.enqueueChat({
+      frames: [],
+      status: 500,
+      errorBody: {
+        error:
+          'model requires 6.9 GiB but only 4.8 GiB are available (after 512.0 MiB overhead)',
+      },
+    });
+    await expect(drain(client.chatStream(req))).rejects.toMatchObject({
+      kind: OllamaErrorKind.RESOURCE_EXHAUSTED,
+    });
+  });
+
   it('maps HTTP 500 out-of-memory bodies to RESOURCE_EXHAUSTED', async () => {
     mock.enqueueChat({
       frames: [],
