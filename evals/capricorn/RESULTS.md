@@ -34,8 +34,17 @@ every run either way: `npm test` is the convention it already knows, and it read
 `package.json`. Every lint-task failure on both sides was the same: the model
 ran `npm test`, saw it pass and stopped, without running `npm run lint`. The
 hint stays (it costs a few dozen tokens, and the unit tests cover it), but it
-does not make 12B run the other checks; a stronger instruction is the next thing
-to try against this task.
+does not make 12B run the other checks.
+
+Follow-up, same day: a stronger hint, with "After changing code, run every one
+of these that applies, not only the tests, and fix what they report" placed
+directly above the command list, scored **4/8** on `edit-project-checks` (3/3 on
+`testfix-project-script`), no better than the plain list, so it was reverted.
+The failures were again `npm test` and stop (3 runs) plus one 300 s timeout
+after `npm test`; the system prompt's own "run the relevant tests, linter or
+type checker" does not change this either. 12B treats a passing `npm test` as
+done; making the full set of checks one step (e.g. a single suggested command)
+is a possible next experiment.
 
 ## 2026-11-16 — repository context; first `gemma4:26b` runs
 
