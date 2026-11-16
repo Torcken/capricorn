@@ -8,6 +8,11 @@ All notable changes to Capricorn are documented here. The format follows
 
 ### Added
 
+- The session context lists the project's own test, build, lint and typecheck
+  commands, read from `package.json` scripts (with the lockfile's package
+  manager), pytest config, `go.mod`, `Cargo.toml` or Makefile targets, as a hint
+  for the model to verify. Nothing is run. The folder tree in the context is
+  smaller in small windows (60 entries at 8K, 120 at 16K).
 - `web_fetch` downloads one web page or file on this machine and returns its
   text. Off by default: enable it in your user settings with
   `"tools": { "webFetch": { "enabled": true, "allowedHosts": ["docs.python.org"] } }`.

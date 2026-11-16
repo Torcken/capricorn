@@ -9,8 +9,24 @@ import type { Config } from '../config/config.js';
 import { getFolderStructure } from './getFolderStructure.js';
 import type { HistoryTurn } from '../core/agentChatHistory.js';
 import { deriveStableId } from './cryptoUtils.js';
+import { getActiveContextWindow } from '../core/tokenLimits.js';
+import { formatProjectCommands } from './projectCommands.js';
 
 export const INITIAL_HISTORY_LENGTH = 1;
+
+/**
+ * Capricorn: directory-tree entries for the session context, by window.
+ * Upstream always listed up to 200 entries (~2K tokens in a real
+ * repository), a quarter of an 8K window before any work starts; the model
+ * can list directories itself when it needs more.
+ */
+export function folderStructureMaxItems(
+  window: number | undefined = getActiveContextWindow(),
+): number {
+  if (window === undefined || window > 16_384) return 200;
+  if (window > 8_192) return 120;
+  return 60;
+}
 
 /**
  * Generates a string describing the current workspace directories and their structures.
@@ -27,6 +43,7 @@ export async function getDirectoryContextString(
     workspaceDirectories.map((dir) =>
       getFolderStructure(dir, {
         fileService: config.getFileService(),
+        maxItems: folderStructureMaxItems(),
       }),
     ),
   );
@@ -34,8 +51,11 @@ export async function getDirectoryContextString(
   const folderStructure = folderStructures.join('\n');
   const dirList = workspaceDirectories.map((dir) => `  - ${dir}`).join('\n');
 
+  // Capricorn: the project's own test/build commands, when detectable.
+  const commands = formatProjectCommands(workspaceDirectories);
+
   return `- **Workspace Directories:**\n${dirList}
-- **Directory Structure:**
+${commands ? `${commands}\n` : ''}- **Directory Structure:**
 
 ${folderStructure}`;
 }
@@ -67,7 +87,7 @@ export async function getEnvironmentContext(config: Config): Promise<Part[]> {
 
   const context = `
 <session_context>
-This is the Capricorn. We are setting up the context for our chat.
+This is Capricorn. We are setting up the context for our chat.
 Today's date is ${today} (formatted according to the user's locale).
 My operating system is: ${platform}
 The project's temporary directory is: ${tempDir}

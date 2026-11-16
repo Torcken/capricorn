@@ -119,8 +119,10 @@ describe('getEnvironmentContext', () => {
     );
     expect(context).toContain('Mock Session Memory');
     expect(context).toContain('</session_context>');
+    // Capricorn: the tree is sized to the context window (200 by default).
     expect(getFolderStructure).toHaveBeenCalledWith('/test/dir', {
       fileService: undefined,
+      maxItems: 200,
     });
   });
 

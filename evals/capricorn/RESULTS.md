@@ -7,6 +7,33 @@ machine that ran it.
 All runs: Linux x64, 24 CPUs, 94 GiB RAM, Ollama 0.30.11; 3 runs per task unless
 noted.
 
+## 2026-11-16 — repository context; first `gemma4:26b` runs
+
+Change under test: the session context now lists the project's own test, build,
+lint and typecheck commands (`package.json` scripts with the lockfile's package
+manager, pytest, Go, Cargo, Makefile targets; read-only, size-capped, presented
+as a hint to verify), and the folder tree shrinks in small windows (60 items at
+≤8K, 120 at ≤16K, else 200). Same build otherwise (`ff1e68f15`); `gemma4:12b` 2
+runs per task, `gemma4:26b` (25.2B, Q4_K_M) 1 run per task.
+
+| Model                 | Before      | After        | Wall time (suite) |
+| --------------------- | ----------- | ------------ | ----------------- |
+| `gemma4:12b` (2 × 15) | 97% (29/30) | 100% (30/30) | 17.1 → 11.7 min   |
+| `gemma4:26b` (1 × 15) | 87% (13/15) | 100% (15/15) | 30.4 → 28.9 min   |
+
+**Read this as "no regression", not as an improvement.** The fixtures'
+`package.json` has no `scripts` and the eval runs with the default window, so
+neither new behaviour was active in these tasks: the only prompt difference was
+the header wording. The before-failures were the usual flaky ones
+(`testfix-missing-await` timing out once on 12b; `testfix-off-by-one` and a
+`context-long-read` timeout at 480 s on 26b), and they passed this time by
+chance. The 12b wall-time drop is mostly that one 300 s timeout. A task whose
+fixture declares a test script is needed to measure the project-commands hint.
+
+`gemma4:26b` is the first larger preset measured: it passed everything once, but
+takes 2–6× longer per task than 12b on this machine (e.g. `testfix-two-modules`
+341 s vs 55 s), so 12b remains the better default here.
+
 ## 2026-11-14 — cheaper compression in small windows (`gemma4:12b`)
 
 Follow-up to the 2026-11-13 entry. Calls to the model were timed per role (a
@@ -241,5 +268,5 @@ honestly.
   (`Gemma4Assistant requires ctx_other to be set`), also outside Capricorn. All
   42 runs errored in the daemon before the model did anything; the runner now
   reports such runs as errored instead of as model failures.
-- `gemma4:e2b`, `gemma4:e4b`, `gemma4:26b`, `gemma4:31b`: not installed on the
-  test machine.
+- `gemma4:e2b`, `gemma4:31b`: not installed on the test machine. `gemma4:e4b` is
+  installed but does not load on Ollama 0.30.11.
