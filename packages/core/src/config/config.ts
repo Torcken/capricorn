@@ -306,7 +306,6 @@ export interface AgentOverride {
 
 export interface AgentSettings {
   overrides?: Record<string, AgentOverride>;
-  browser?: BrowserAgentCustomConfig;
 }
 
 export interface CustomTheme {
@@ -359,40 +358,6 @@ export interface CustomTheme {
   Gray?: string;
   DarkGray?: string;
   GradientColors?: string[];
-}
-
-/**
- * Browser agent custom configuration.
- * Used in agents.browser
- *
- * IMPORTANT: Keep in sync with the browser settings schema in
- * packages/cli/src/config/settingsSchema.ts (agents.browser.properties).
- */
-export interface BrowserAgentCustomConfig {
-  /**
-   * Session mode:
-   * - 'persistent': Launch Chrome with a persistent profile at ~/.cache/chrome-devtools-mcp/ (default)
-   * - 'isolated': Launch Chrome with a temporary profile, cleaned up after session
-   * - 'existing': Attach to an already-running Chrome instance (requires remote debugging
-   *   enabled at chrome://inspect/#remote-debugging)
-   */
-  sessionMode?: 'isolated' | 'persistent' | 'existing';
-  /** Run browser in headless mode. Default: false */
-  headless?: boolean;
-  /** Path to Chrome profile directory for session persistence. */
-  profilePath?: string;
-  /** Model for the visual agent's analyze_screenshot tool. When set, enables the tool. */
-  visualModel?: string;
-  /** List of allowed domains for the browser agent (e.g., ["github.com", "*.google.com"]). */
-  allowedDomains?: string[];
-  /** Disable user input on the browser window during automation. Default: true in non-headless mode */
-  disableUserInput?: boolean;
-  /** Maximum number of actions (tool calls) allowed per task. Default: 100 */
-  maxActionsPerTask?: number;
-  /** Whether to confirm sensitive actions (e.g., fill_form, evaluate_script). */
-  confirmSensitiveActions?: boolean;
-  /** Whether to block file uploads. */
-  blockFileUploads?: boolean;
 }
 
 /**
@@ -3645,44 +3610,15 @@ export class Config implements McpContext, AgentLoopContext {
   }
 
   /**
-   * Get browser agent configuration.
-   * Combines generic AgentOverride fields with browser-specific customConfig.
-   * This is the canonical way to access browser agent settings.
+   * Whether the user enabled the (removed) browser agent in settings.
+   *
+   * Capricorn: the browser agent and its `agents.browser` settings are gone;
+   * this only drives the "not available" notice in the agent registry.
    */
-  getBrowserAgentConfig(): {
-    enabled: boolean;
-    model?: string;
-    customConfig: BrowserAgentCustomConfig;
-  } {
-    const override = this.getAgentOverride('browser_agent');
-    const customConfig = this.getAgentsSettings()?.browser ?? {};
+  getBrowserAgentConfig(): { enabled: boolean } {
     return {
-      enabled: override?.enabled ?? false,
-      model: override?.modelConfig?.model,
-      customConfig: {
-        sessionMode: customConfig.sessionMode ?? 'persistent',
-        headless: customConfig.headless ?? false,
-        profilePath: customConfig.profilePath,
-        visualModel: customConfig.visualModel,
-        allowedDomains: customConfig.allowedDomains,
-        disableUserInput: customConfig.disableUserInput,
-        maxActionsPerTask: customConfig.maxActionsPerTask ?? 100,
-        confirmSensitiveActions: customConfig.confirmSensitiveActions,
-        blockFileUploads: customConfig.blockFileUploads,
-      },
+      enabled: this.getAgentOverride('browser_agent')?.enabled ?? false,
     };
-  }
-
-  /**
-   * Determines if user input should be disabled during browser automation.
-   * Based on the `disableUserInput` setting and `headless` mode.
-   */
-  shouldDisableBrowserUserInput(): boolean {
-    const browserConfig = this.getBrowserAgentConfig();
-    return (
-      browserConfig.customConfig?.disableUserInput !== false &&
-      !browserConfig.customConfig?.headless
-    );
   }
 
   async createToolRegistry(): Promise<ToolRegistry> {

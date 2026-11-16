@@ -13,6 +13,16 @@ All notable changes to Capricorn are documented here. The format follows
   has two or more checks. In the eval, gemma4:12b then ran the project's lint as
   well as its tests in 8 of 8 runs, up from 4 of 8.
 
+### Removed
+
+- `/extensions explore` no longer opens Gemini CLI's hosted extension gallery
+  (geminicli.com); it explains how to install an extension from a folder or a
+  git repository.
+- The removed browser agent's `agents.browser.*` settings (whose default
+  allowlist included `*.google.com`) are gone from the settings schema and
+  `capricorn config list`, and the unreachable fallback "upgrade" path no longer
+  links to the Gemini Code Assist page.
+
 ## [0.1.0-alpha.7] - 2026-11-16
 
 ### Changed

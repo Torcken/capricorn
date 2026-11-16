@@ -25,15 +25,16 @@ fully tested · **deferred** · **blocked**.
 | Container sandbox (`capricorn-sandbox:local`, Ollama bridge, network off)           | done (Linux: rootless Podman, Docker)  | `sandbox*.test.ts`, gated `e2e/sandbox.e2e.test.ts`               |
 | Container sandbox on Docker Desktop (macOS/Windows), runsc, LXC; macOS Seatbelt     | unverified                             | not run; see docs/SECURITY.md#sandbox                             |
 | README quickstart in a fresh clone                                                  | done (Linux)                           | clone → `npm ci` → build → bundle → doctor → `run`                |
-| Behavioural eval suite (15 tasks, outcome-based checkers)                           | done                                   | `evals/capricorn/`, `e2e/evals-*.e2e.test.ts`                     |
-| Prompt tuning from evals (`gemma4:12b`: 74% → 95%)                                  | in progress                            | `evals/capricorn/RESULTS.md`                                      |
+| Behavioural eval suite (17 tasks, outcome-based checkers)                           | done                                   | `evals/capricorn/`, `e2e/evals-*.e2e.test.ts`                     |
+| Prompt tuning from evals (`gemma4:12b`: 74% → 97–100%; `gemma4:26b` measured)       | done for known failures; ongoing       | `evals/capricorn/RESULTS.md`                                      |
 | Settings-reachable Google paths (voice, telemetry, MCP/agent auth) closed           | done                                   | unit tests per path                                               |
 | Hardware-aware onboarding (recommend, offer download, test load)                    | done (Linux/NVIDIA verified)           | `recommend.test.ts`, `preflight.test.ts`, pty e2e                 |
 | Context management for small windows (mid-task compression, scaled limits)          | done (8K/32K evals)                    | `evals/capricorn/RESULTS.md`, `chatCompressionService.test.ts`    |
 | Context window sized per machine (onboarding, `capricorn doctor`)                   | done (12B measured on CUDA)            | `contextSize.test.ts`, `preflight.test.ts`, `diagnostics.test.ts` |
 | Local web fetch (opt-in, allowlisted hosts, approval per fetch)                     | done                                   | `web-fetch.test.ts`, `networkPolicy.test.ts`                      |
 | Removal of Google network code (OAuth, Code Assist, Clearcut, GCP export) and deps  | done (see UPSTREAM.md for leftovers)   | docs/UPSTREAM.md                                                  |
-| npm publication                                                                     | blocked                                | name chosen: `capricorn-code` (free); needs maintainer npm login  |
+| npm publication (`capricorn-code`)                                                  | done (pre-releases, `0.1.0-alpha.*`)   | `npm view capricorn-code dist-tags`                               |
+| Startup time (`-p` 2.2 s → 1.0 s; `--version` 0.06 s)                               | done                                   | `relaunchSupervisor.test.ts`, CHANGELOG                           |
 
 ## Test results
 
@@ -116,6 +117,18 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   prettier pass; build and bundle succeed; e2e and `verify:offline` 71 passed, 3
   gated skips; package smoke test passes. The 3 A2A server test failures noted
   above went with the package.
+
+- **1.0 readiness audit (2026-11-16, `0.1.0-alpha.7` + fixes):** core 7870 and
+  cli 7260 unit tests pass with 0 failures, e2e 83 passed / 3 gated skips,
+  `verify:offline`, package smoke, lint, typecheck and prettier pass (Linux; CI
+  green on Linux and macOS). Fixed in the audit: `/extensions explore` opened
+  Gemini CLI's hosted gallery (geminicli.com); the unreachable fallback
+  "upgrade" path still linked to the Gemini Code Assist page; the removed
+  browser agent's `agents.browser.*` settings (default allowlist including
+  `*.google.com`) were still listed by `capricorn config list`. Still open for
+  1.0: real-model smoke with `gemma4:e4b` (blocked: Ollama 0.30.11 cannot load
+  it), a real-model run on macOS, GitHub private vulnerability reporting (off;
+  SECURITY.md relies on it), and publishing the final README.
 
 ## Known limitations
 

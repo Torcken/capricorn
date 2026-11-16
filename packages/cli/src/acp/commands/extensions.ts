@@ -64,10 +64,10 @@ export class ExploreExtensionsCommand implements Command {
     _context: CommandContext,
     _: string[],
   ): Promise<CommandExecutionResponse> {
-    const extensionsUrl = 'https://geminicli.com/extensions/';
+    // Capricorn: no hosted gallery (upstream pointed to geminicli.com).
     return {
       name: this.name,
-      data: `View or install available extensions at ${extensionsUrl}`,
+      data: 'Capricorn has no hosted extension gallery. Install an extension from a local folder or a git repository with `capricorn extensions install <source>`.',
     };
   }
 }

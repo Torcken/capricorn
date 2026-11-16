@@ -6,12 +6,7 @@
 
 import type { Config } from '../config/config.js';
 import { createSessionId } from '../utils/session.js';
-import {
-  openBrowserSecurely,
-  shouldLaunchBrowser,
-} from '../utils/secure-browser-launcher.js';
 import { debugLogger } from '../utils/debugLogger.js';
-import { getErrorMessage } from '../utils/errors.js';
 import type { FallbackIntent, FallbackRecommendation } from './types.js';
 import { classifyFailureKind } from '../availability/errorClassification.js';
 import {
@@ -20,8 +15,6 @@ import {
   resolvePolicyAction,
   applyAvailabilityTransition,
 } from '../availability/policyHelpers.js';
-
-export const UPGRADE_URL_PAGE = 'https://goo.gle/set-up-gemini-code-assist';
 
 export async function handleFallback(
   config: Config,
@@ -137,23 +130,6 @@ export async function handleFallback(
   }
 }
 
-async function handleUpgrade() {
-  if (!shouldLaunchBrowser()) {
-    debugLogger.log(
-      `Cannot open browser in this environment. Please visit: ${UPGRADE_URL_PAGE}`,
-    );
-    return;
-  }
-  try {
-    await openBrowserSecurely(UPGRADE_URL_PAGE);
-  } catch (error) {
-    debugLogger.warn(
-      'Failed to open browser automatically:',
-      getErrorMessage(error),
-    );
-  }
-}
-
 async function processIntent(
   config: Config,
   intent: FallbackIntent | null,
@@ -185,7 +161,8 @@ async function processIntent(
       return false;
 
     case 'upgrade':
-      await handleUpgrade();
+      // Capricorn: upstream opened the Gemini Code Assist upgrade page
+      // (goo.gle). There is no paid tier for a local model; just stop.
       return false;
 
     default:

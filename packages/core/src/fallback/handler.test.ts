@@ -254,9 +254,9 @@ describe('handleFallback', () => {
       ]);
     });
 
-    it('should launch upgrade flow and avoid fallback mode when handler returns "upgrade"', async () => {
+    // Capricorn: "upgrade" no longer opens the Gemini Code Assist page.
+    it('stops without opening a browser or fallback mode when handler returns "upgrade"', async () => {
       policyHandler.mockResolvedValue('upgrade');
-      vi.mocked(openBrowserSecurely).mockResolvedValue(undefined);
 
       const result = await handleFallback(
         policyConfig,
@@ -265,9 +265,7 @@ describe('handleFallback', () => {
       );
 
       expect(result).toBe(false);
-      expect(openBrowserSecurely).toHaveBeenCalledWith(
-        'https://goo.gle/set-up-gemini-code-assist',
-      );
+      expect(openBrowserSecurely).not.toHaveBeenCalled();
       expect(policyConfig.activateFallbackMode).not.toHaveBeenCalled();
     });
 

@@ -1818,87 +1818,18 @@ describe('Server Config (config.ts)', () => {
     });
   });
 
+  // Capricorn: the browser agent's custom settings were removed with the
+  // agent; only the enabled flag (for the notice) remains.
   describe('BrowserAgentConfig', () => {
-    it('should return default browser agent config when not provided', () => {
-      const config = new Config(baseParams);
-      const browserConfig = config.getBrowserAgentConfig();
-
-      expect(browserConfig.enabled).toBe(false);
-      expect(browserConfig.model).toBeUndefined();
-      expect(browserConfig.customConfig.sessionMode).toBe('persistent');
-      expect(browserConfig.customConfig.headless).toBe(false);
-      expect(browserConfig.customConfig.profilePath).toBeUndefined();
-      expect(browserConfig.customConfig.visualModel).toBeUndefined();
-    });
-
-    it('should return custom browser agent config from agents.overrides', () => {
-      const params: ConfigParameters = {
+    it('reports whether the removed browser agent was enabled', () => {
+      expect(new Config(baseParams).getBrowserAgentConfig()).toEqual({
+        enabled: false,
+      });
+      const enabled = new Config({
         ...baseParams,
-        agents: {
-          overrides: {
-            browser_agent: {
-              enabled: true,
-              modelConfig: { model: 'custom-model' },
-            },
-          },
-          browser: {
-            sessionMode: 'existing',
-            headless: true,
-            profilePath: '/path/to/profile',
-            visualModel: 'custom-visual-model',
-          },
-        },
-      };
-      const config = new Config(params);
-      const browserConfig = config.getBrowserAgentConfig();
-
-      expect(browserConfig.enabled).toBe(true);
-      expect(browserConfig.model).toBe('custom-model');
-      expect(browserConfig.customConfig.sessionMode).toBe('existing');
-      expect(browserConfig.customConfig.headless).toBe(true);
-      expect(browserConfig.customConfig.profilePath).toBe('/path/to/profile');
-      expect(browserConfig.customConfig.visualModel).toBe(
-        'custom-visual-model',
-      );
-      expect(browserConfig.customConfig.maxActionsPerTask).toBe(100); // default
-    });
-
-    it('should return custom maxActionsPerTask', () => {
-      const params: ConfigParameters = {
-        ...baseParams,
-        agents: {
-          browser: {
-            maxActionsPerTask: 50,
-          },
-        },
-      };
-      const config = new Config(params);
-      const browserConfig = config.getBrowserAgentConfig();
-
-      expect(browserConfig.customConfig.maxActionsPerTask).toBe(50);
-    });
-
-    it('should apply defaults for partial custom config', () => {
-      const params: ConfigParameters = {
-        ...baseParams,
-        agents: {
-          overrides: {
-            browser_agent: {
-              enabled: true,
-            },
-          },
-          browser: {
-            headless: true,
-          },
-        },
-      };
-      const config = new Config(params);
-      const browserConfig = config.getBrowserAgentConfig();
-
-      expect(browserConfig.enabled).toBe(true);
-      expect(browserConfig.customConfig.headless).toBe(true);
-      // Defaults for unspecified fields
-      expect(browserConfig.customConfig.sessionMode).toBe('persistent');
+        agents: { overrides: { browser_agent: { enabled: true } } },
+      });
+      expect(enabled.getBrowserAgentConfig()).toEqual({ enabled: true });
     });
   });
 

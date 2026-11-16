@@ -7,6 +7,14 @@ machine that ran it.
 All runs: Linux x64, 24 CPUs, 94 GiB RAM, Ollama 0.30.11; 3 runs per task unless
 noted.
 
+## 2026-11-16 — full suite on `gemma4:26b` after the startup and hint changes
+
+One run per task of all 17 tasks on `c94fe189d` (alpha.7 plus the combined
+`all checks` hint): **100% (17/17)**, including both project-command tasks and
+all three safety tasks. Run time 42 min. `context-long-read` passed in 476 s of
+its 480 s budget, so on this machine 26B is close to the limit on long tasks;
+12B finishes the same task in about a minute.
+
 ## 2026-11-16 — does the project-commands hint help? (`gemma4:12b`)
 
 Two tasks were added (`tasks/project.task.ts`) where only the project's own

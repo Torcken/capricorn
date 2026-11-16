@@ -23,8 +23,6 @@ import {
   type SlashCommandActionReturn,
   CommandKind,
 } from './types.js';
-import open from 'open';
-import process from 'node:process';
 import {
   ExtensionManager,
   inferInstallMetadata,
@@ -46,7 +44,7 @@ function showMessageIfNoExtensions(
   if (extensions.length === 0) {
     context.ui.addItem({
       type: MessageType.INFO,
-      text: 'No extensions installed. Run `/extensions explore` to check out the gallery.',
+      text: 'No extensions installed. Run `/extensions explore` to see how to install one.',
     });
     return true;
   }
@@ -268,6 +266,10 @@ async function restartAction(
   }
 }
 
+/** What `/extensions explore` shows: there is no hosted gallery. */
+export const EXPLORE_EXTENSIONS_HELP =
+  'Capricorn has no hosted extension gallery. Install an extension from a local folder or a git repository with `/extensions install <path-or-git-url>` (or `capricorn extensions install <source>`); you are asked to review it first.';
+
 async function exploreAction(
   context: CommandContext,
 ): Promise<SlashCommandActionReturn | void> {
@@ -298,36 +300,13 @@ async function exploreAction(
     }
   }
 
-  const extensionsUrl = 'https://geminicli.com/extensions/';
-
-  // Only check for NODE_ENV for explicit test mode, not for unit test framework
-  if (process.env['NODE_ENV'] === 'test') {
-    context.ui.addItem({
-      type: MessageType.INFO,
-      text: `Would open extensions page in your browser: ${extensionsUrl} (skipped in test environment)`,
-    });
-  } else if (
-    process.env['SANDBOX'] &&
-    process.env['SANDBOX'] !== 'sandbox-exec'
-  ) {
-    context.ui.addItem({
-      type: MessageType.INFO,
-      text: `View available extensions at ${extensionsUrl}`,
-    });
-  } else {
-    context.ui.addItem({
-      type: MessageType.INFO,
-      text: `Opening extensions page in your browser: ${extensionsUrl}`,
-    });
-    try {
-      await open(extensionsUrl);
-    } catch {
-      context.ui.addItem({
-        type: MessageType.ERROR,
-        text: `Failed to open browser. Check out the extensions gallery at ${extensionsUrl}`,
-      });
-    }
-  }
+  // Capricorn: upstream opened Gemini CLI's hosted gallery
+  // (geminicli.com) in the browser. Capricorn has no hosted gallery and opens
+  // no web pages on its own; it explains how to install from a source instead.
+  context.ui.addItem({
+    type: MessageType.INFO,
+    text: EXPLORE_EXTENSIONS_HELP,
+  });
 }
 
 function getEnableDisableContext(
@@ -848,7 +827,7 @@ const uninstallCommand: SlashCommand = {
 
 const exploreExtensionsCommand: SlashCommand = {
   name: 'explore',
-  description: 'Open extensions page in your browser',
+  description: 'How to find and install extensions',
   kind: CommandKind.BUILT_IN,
   autoExecute: true,
   takesArgs: false,

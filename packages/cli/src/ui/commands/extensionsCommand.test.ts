@@ -13,6 +13,7 @@ import {
   completeExtensions,
   completeExtensionsAndScopes,
   extensionsCommand,
+  EXPLORE_EXTENSIONS_HELP,
 } from './extensionsCommand.js';
 import {
   ConfigExtensionDialog,
@@ -202,7 +203,7 @@ describe('extensionsCommand', () => {
 
       expect(mockContext.ui.addItem).toHaveBeenCalledWith({
         type: MessageType.INFO,
-        text: 'No extensions installed. Run `/extensions explore` to check out the gallery.',
+        text: 'No extensions installed. Run `/extensions explore` to see how to install one.',
       });
     });
   });
@@ -290,7 +291,7 @@ describe('extensionsCommand', () => {
 
       expect(mockContext.ui.addItem).toHaveBeenCalledWith({
         type: MessageType.INFO,
-        text: 'No extensions installed. Run `/extensions explore` to check out the gallery.',
+        text: 'No extensions installed. Run `/extensions explore` to see how to install one.',
       });
     });
 
@@ -496,67 +497,19 @@ describe('extensionsCommand', () => {
       expect(mockContext.ui.removeComponent).toHaveBeenCalledTimes(2);
     });
 
-    it("should add an info message and call 'open' in a non-sandbox environment", async () => {
-      // Ensure no special environment variables that would affect behavior
+    // Capricorn: upstream opened geminicli.com in the browser; Capricorn has
+    // no hosted gallery and only explains how to install from a source.
+    it('explains how to install extensions and opens nothing', async () => {
       vi.stubEnv('NODE_ENV', '');
       vi.stubEnv('SANDBOX', '');
 
       await exploreAction(mockContext, '');
 
-      const extensionsUrl = 'https://geminicli.com/extensions/';
       expect(mockContext.ui.addItem).toHaveBeenCalledWith({
         type: MessageType.INFO,
-        text: `Opening extensions page in your browser: ${extensionsUrl}`,
+        text: EXPLORE_EXTENSIONS_HELP,
       });
-
-      expect(open).toHaveBeenCalledWith(extensionsUrl);
-    });
-
-    it('should only add an info message in a sandbox environment', async () => {
-      // Simulate a sandbox environment
-      vi.stubEnv('NODE_ENV', '');
-      vi.stubEnv('SANDBOX', 'gemini-sandbox');
-      const extensionsUrl = 'https://geminicli.com/extensions/';
-
-      await exploreAction(mockContext, '');
-
-      expect(mockContext.ui.addItem).toHaveBeenCalledWith({
-        type: MessageType.INFO,
-        text: `View available extensions at ${extensionsUrl}`,
-      });
-
-      // Ensure 'open' was not called in the sandbox
       expect(open).not.toHaveBeenCalled();
-    });
-
-    it('should add an info message and not call open in NODE_ENV test environment', async () => {
-      vi.stubEnv('NODE_ENV', 'test');
-      vi.stubEnv('SANDBOX', '');
-      const extensionsUrl = 'https://geminicli.com/extensions/';
-
-      await exploreAction(mockContext, '');
-
-      expect(mockContext.ui.addItem).toHaveBeenCalledWith({
-        type: MessageType.INFO,
-        text: `Would open extensions page in your browser: ${extensionsUrl} (skipped in test environment)`,
-      });
-
-      // Ensure 'open' was not called in test environment
-      expect(open).not.toHaveBeenCalled();
-    });
-
-    it('should handle errors when opening the browser', async () => {
-      vi.stubEnv('NODE_ENV', '');
-      const extensionsUrl = 'https://geminicli.com/extensions/';
-      const errorMessage = 'Failed to open browser';
-      vi.mocked(open).mockRejectedValue(new Error(errorMessage));
-
-      await exploreAction(mockContext, '');
-
-      expect(mockContext.ui.addItem).toHaveBeenCalledWith({
-        type: MessageType.ERROR,
-        text: `Failed to open browser. Check out the extensions gallery at ${extensionsUrl}`,
-      });
     });
   });
 
@@ -954,7 +907,7 @@ describe('extensionsCommand', () => {
 
       expect(mockContext.ui.addItem).toHaveBeenCalledWith({
         type: MessageType.INFO,
-        text: 'No extensions installed. Run `/extensions explore` to check out the gallery.',
+        text: 'No extensions installed. Run `/extensions explore` to see how to install one.',
       });
     });
 
