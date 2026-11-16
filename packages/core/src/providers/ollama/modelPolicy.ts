@@ -50,6 +50,25 @@ export interface GemmaPreset {
    * `/api/ps` once loaded. Marked approximate everywhere it is shown.
    */
   approxMemoryGiB: number;
+  /**
+   * Capricorn: memory profile computed from this tag's own Ollama metadata
+   * (verbose `/api/show` + file size, via the CLI's `memoryProfile()`), so a
+   * recommendation can estimate memory per context window *before* the
+   * model is downloaded. Absent when no copy was available to measure; the
+   * rough {@link approxMemoryGiB} is used then. `measuredDigest` is the model
+   * digest the numbers were taken from (default Q4_K_M quantization).
+   */
+  memoryProfile?: GemmaPresetMemoryProfile;
+}
+
+/** Same shape as the CLI's ModelMemoryProfile, plus where it came from. */
+export interface GemmaPresetMemoryProfile {
+  weightsBytes: number;
+  /** Bytes cached per context token (global attention layers). */
+  kvBytesPerToken: number;
+  /** Bytes independent of the window (sliding caches, compute buffers). */
+  fixedBytes: number;
+  measuredDigest: string;
 }
 
 /**
@@ -68,24 +87,48 @@ export const GEMMA4_PRESETS: readonly GemmaPreset[] = [
     label: 'Gemma 4 E4B',
     tier: 'lightweight',
     approxMemoryGiB: 7,
+    memoryProfile: {
+      weightsBytes: 6583656505,
+      kvBytesPerToken: 28672,
+      fixedBytes: 1110441984,
+      measuredDigest: 'dc35e8d9c606',
+    },
   },
   {
     tag: 'gemma4:12b',
     label: 'Gemma 4 12B',
     tier: 'standard',
     approxMemoryGiB: 11,
+    memoryProfile: {
+      weightsBytes: 8021618941,
+      kvBytesPerToken: 16384,
+      fixedBytes: 1409286144,
+      measuredDigest: '6114515d63c1',
+    },
   },
   {
     tag: 'gemma4:26b',
     label: 'Gemma 4 26B A4B',
     tier: 'advanced',
     approxMemoryGiB: 20,
+    memoryProfile: {
+      weightsBytes: 18731025629,
+      kvBytesPerToken: 20480,
+      fixedBytes: 2082817763,
+      measuredDigest: '001e5dafc3c7',
+    },
   },
   {
     tag: 'gemma4:31b',
     label: 'Gemma 4 31B',
     tier: 'high-capability',
     approxMemoryGiB: 24,
+    memoryProfile: {
+      weightsBytes: 20385458234,
+      kvBytesPerToken: 81920,
+      fixedBytes: 2877406623,
+      measuredDigest: '17ba34c06c80',
+    },
   },
 ];
 

@@ -6,7 +6,12 @@
 
 import { describe, expect, it } from 'vitest';
 import type { GpuInfo, HardwareProfile } from './hardware.js';
-import { describeHardware, placementFor, recommendModel } from './recommend.js';
+import {
+  describeFit,
+  describeHardware,
+  placementFor,
+  recommendModel,
+} from './recommend.js';
 
 const GIB = 1024 ** 3;
 
@@ -37,7 +42,10 @@ describe('recommendModel', () => {
     const r = recommendModel(machine(32, [nvidia('RTX 4070', 12)]));
     expect(r).toMatchObject({ tag: 'gemma4:12b', placement: 'gpu' });
     expect(r.hardware).toBe('32 GiB RAM, RTX 4070 (12 GiB)');
-    expect(r.reason).toContain('approximate');
+    // Capricorn: from the preset's measured metadata, at the window that
+    // would be suggested (64K fits on a 12 GiB card).
+    expect(r.reason).toContain('at a 64K window, from model metadata');
+    expect(r.numCtx).toBe(65_536);
   });
 
   it('falls back to E4B on a GPU too small for 12B (spec §4.1)', () => {
@@ -104,6 +112,35 @@ describe('describeHardware', () => {
   it('labels unified memory', () => {
     expect(describeHardware(machine(36, [apple(36)]))).toBe(
       '36 GiB RAM, Apple Silicon GPU (unified memory)',
+    );
+  });
+});
+
+describe('metadata-based estimates (Capricorn)', () => {
+  it('fits E4B on an 8 GiB GPU only with a small window, and says so', () => {
+    const r = recommendModel(machine(16, [nvidia('RTX 4060', 8)]));
+    expect(r).toMatchObject({ tag: 'gemma4:e4b', placement: 'gpu' });
+    expect(r.numCtx).toBe(8_192);
+    expect(r.reason).toContain('an 8K window');
+  });
+
+  it('keeps the rough size, labelled approximate, for presets without a profile', () => {
+    const fit = placementFor(
+      machine(16, [nvidia('RTX 2060', 6)]),
+      'gemma4:e2b',
+    );
+    expect(fit).toMatchObject({ placement: 'gpu', basis: 'approximate' });
+    expect(describeFit(fit!)).toBe('≈4 GiB, approximate');
+  });
+
+  it('reports metadata-based fits with their window', () => {
+    const fit = placementFor(
+      machine(32, [nvidia('RTX 4070', 12)]),
+      'gemma4:12b',
+    );
+    expect(fit).toMatchObject({ placement: 'gpu', basis: 'metadata' });
+    expect(describeFit(fit!)).toMatch(
+      /^≈\d+(\.\d)? GiB at a 64K window, from model metadata$/,
     );
   });
 });

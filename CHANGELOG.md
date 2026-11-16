@@ -14,6 +14,13 @@ All notable changes to Capricorn are documented here. The format follows
   `~/.capricorn/cache/compile` (Node >= 22.1). Measured against the mock daemon:
   `--version` 1.9 s → 0.05 s, `-p` 2.2 s → 1.3 s, `doctor` 2.7 s → 1.7 s.
 
+- The model recommendation (onboarding, `capricorn doctor`, `capricorn models`)
+  estimates memory before download from profiles measured on each preset's own
+  Ollama metadata (E4B, 12B, 26B, 31B), at the context window that would be
+  suggested on the machine, e.g. "≈9.9 GiB at a 64K window, from model
+  metadata". E2B keeps its rough size, labelled approximate. On an 8 GiB GPU
+  this recommends E4B with an 8K window.
+
 ### Fixed
 
 - `advanced.autoConfigureMemory` is read from `~/.capricorn/settings.json` (the

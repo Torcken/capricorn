@@ -36,7 +36,7 @@ import {
 } from '@capricorn/core';
 import type { CapricornRuntime } from './runtime.js';
 import { detectHardware, type HardwareProfile } from './hardware.js';
-import { placementFor, recommendModel } from './recommend.js';
+import { describeFit, placementFor, recommendModel } from './recommend.js';
 import { formatGiB } from './runtime.js';
 import {
   estimateMemoryBytes,
@@ -265,8 +265,8 @@ function checkHardware(
       message: `${rec.hardware}; ${recText}.`,
       remediation:
         fit.placement === 'cpu'
-          ? `${selected} needs ≈${fit.approxMemoryGiB} GiB (approximate), more than GPU memory: it will run partly on the CPU and answer slowly. Consider ${rec.tag}.`
-          : `${selected} needs ≈${fit.approxMemoryGiB} GiB (approximate), more than this machine has: it may fail to load. Consider ${rec.tag}.`,
+          ? `${selected} needs ${describeFit(fit)}, more than GPU memory: it will run partly on the CPU and answer slowly. Consider ${rec.tag}.`
+          : `${selected} needs ${describeFit(fit)}, more than this machine has: it may fail to load. Consider ${rec.tag}.`,
       data,
     };
   }
@@ -278,7 +278,7 @@ function checkHardware(
       message: `${rec.hardware}; ${recText}.`,
       remediation:
         fit?.placement === 'none'
-          ? `${selected} needs ≈${fit.approxMemoryGiB} GiB (approximate), more than this machine has: it may fail to load.${rec.tag ? ` Consider ${rec.tag}.` : ''}`
+          ? `${selected} needs ${describeFit(fit)}, more than this machine has: it may fail to load.${rec.tag ? ` Consider ${rec.tag}.` : ''}`
           : rec.reason,
       data,
     };
@@ -565,7 +565,9 @@ async function checkContextWindow(
   if (!profile || !hw) {
     if (preset)
       parts.push(
-        `≈${preset.approxMemoryGiB} GiB resident at 32K (approximate)`,
+        preset.memoryProfile
+          ? `≈${formatGiB(estimateMemoryBytes(preset.memoryProfile, 32_768))} resident at 32K (from the preset's model metadata)`
+          : `≈${preset.approxMemoryGiB} GiB resident at 32K (approximate)`,
       );
     return {
       id: 'models.context',

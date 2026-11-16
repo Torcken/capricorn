@@ -9,9 +9,10 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
 - **Hardware-aware onboarding:** model recommendation and first-run download are
   done (2026-11-13), and so is a `num_ctx` suggestion per machine computed from
   the model's own metadata (2026-11-15; onboarding and `capricorn doctor`).
-  Still to do: the same metadata-based estimate for the model recommendation
-  before download (it still uses the presets' approximations: 12B measured ≈9.2
-  GiB at 32K vs. the 11 GiB estimate), and measurements of the other presets.
+  Since 2026-11-16 the recommendation before download uses memory profiles
+  measured from each preset's own metadata (E4B, 12B, 26B, 31B) at the window
+  that would be suggested. Still to do: a profile for E2B (no copy measured yet;
+  it keeps a rough approximation).
 - **Local web fetch tool:** a `web_fetch` replacement that downloads a page
   locally (opt-in, allowlisted hosts, approval per request) instead of
   upstream's hosted URL-context path.

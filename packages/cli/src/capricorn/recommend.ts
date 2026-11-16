@@ -9,10 +9,13 @@
  * "start with gemma4:12b as a candidate default; if missing or unsuitable
  * for detected resources, offer … the smaller E4B").
  *
- * The memory figures are the presets' approximate resident sizes at a 32K
- * context; real usage depends on quantization, context and Ollama version,
- * so every message calls them approximate. A recommendation is only ever a
- * suggestion: nothing here pulls or selects a model.
+ * Memory per preset comes, when available, from a profile measured on that
+ * tag's own Ollama metadata (GEMMA4_PRESETS[].memoryProfile): the same
+ * estimate `capricorn doctor` makes for installed models, evaluated at the
+ * context window that would be suggested on this machine. Presets without a
+ * profile fall back to a rough size at 32K, labelled approximate. A
+ * recommendation is only ever a suggestion: nothing here pulls or selects a
+ * model.
  *
  * Rules, in order:
  * 1. The first of gemma4:12b → e4b → e2b that fits in GPU memory (largest
@@ -31,6 +34,7 @@ import {
   type GemmaPreset,
 } from '@capricorn/core';
 import type { HardwareProfile } from './hardware.js';
+import { formatTokens, suggestContext } from './contextSize.js';
 
 const GIB = 1024 ** 3;
 
@@ -56,6 +60,8 @@ export interface ModelRecommendation {
   /** Recommended preset tag; undefined when nothing fits. */
   tag?: string;
   approxMemoryGiB?: number;
+  /** Context window the memory figure is for (metadata-based presets). */
+  numCtx?: number;
   placement: Placement;
   /** One line describing the machine, e.g. "32 GiB RAM, NVIDIA RTX 4070 (12 GiB)". */
   hardware: string;
@@ -120,6 +126,52 @@ export function describeHardware(hw: HardwareProfile): string {
   return parts.join(', ');
 }
 
+/** Where a preset runs on a machine, and how much memory it needs there. */
+export interface PresetFit {
+  placement: Placement;
+  approxMemoryGiB: number;
+  /** Suggested context window (only for presets with a memory profile). */
+  numCtx?: number;
+  /** `metadata`: from the preset's measured profile; else a rough size. */
+  basis: 'metadata' | 'approximate';
+}
+
+/** Evaluates one preset on this machine. Pure. */
+export function fitPreset(hw: HardwareProfile, p: GemmaPreset): PresetFit {
+  if (p.memoryProfile) {
+    const s = suggestContext(p.memoryProfile, hw);
+    return {
+      placement: s.placement,
+      approxMemoryGiB: Math.round((s.estimateBytes / GIB) * 10) / 10,
+      numCtx: s.numCtx,
+      basis: 'metadata',
+    };
+  }
+  const placement: Placement =
+    p.approxMemoryGiB <= gpuBudgetGiB(hw)
+      ? 'gpu'
+      : p.approxMemoryGiB <= cpuBudgetGiB(hw)
+        ? 'cpu'
+        : 'none';
+  return {
+    placement,
+    approxMemoryGiB: p.approxMemoryGiB,
+    basis: 'approximate',
+  };
+}
+
+/** "an 8K", "an 80K", "a 16K": the article for a spoken window size. */
+function windowArticle(numCtx: number): string {
+  return /^8/.test(formatTokens(numCtx)) ? 'an' : 'a';
+}
+
+/** "≈9.9 GiB at a 64K window, from model metadata" or "≈4 GiB, approximate". */
+export function describeFit(f: PresetFit): string {
+  return f.basis === 'metadata' && f.numCtx
+    ? `≈${f.approxMemoryGiB} GiB at ${windowArticle(f.numCtx)} ${formatTokens(f.numCtx)} window, from model metadata`
+    : `≈${f.approxMemoryGiB} GiB, approximate`;
+}
+
 /**
  * Where a given preset would run on this machine; undefined for tags that
  * are not presets (custom tags have no known size).
@@ -127,39 +179,33 @@ export function describeHardware(hw: HardwareProfile): string {
 export function placementFor(
   hw: HardwareProfile,
   tag: string,
-): { placement: Placement; approxMemoryGiB: number } | undefined {
+): PresetFit | undefined {
   const p = GEMMA4_PRESETS.find((x) => x.tag === tag);
-  if (!p) return undefined;
-  const placement: Placement =
-    p.approxMemoryGiB <= gpuBudgetGiB(hw)
-      ? 'gpu'
-      : p.approxMemoryGiB <= cpuBudgetGiB(hw)
-        ? 'cpu'
-        : 'none';
-  return { placement, approxMemoryGiB: p.approxMemoryGiB };
+  return p ? fitPreset(hw, p) : undefined;
 }
 
 /** Recommends a Gemma 4 preset for this machine. Pure; never throws. */
 export function recommendModel(hw: HardwareProfile): ModelRecommendation {
   const hardware = describeHardware(hw);
-  const gpu = gpuBudgetGiB(hw);
-  const cpu = cpuBudgetGiB(hw);
   const def = preset(DEFAULT_GEMMA4_MODEL);
-  const approx = (p: GemmaPreset) => `≈${p.approxMemoryGiB} GiB, approximate`;
+  const fit = (p: GemmaPreset) => fitPreset(hw, p);
+  const defIndex = GEMMA4_PRESETS.indexOf(def);
 
-  const onGpu = PREFERRED.find((p) => p.approxMemoryGiB <= gpu);
+  const onGpu = PREFERRED.find((p) => fit(p).placement === 'gpu');
   if (onGpu) {
+    const f = fit(onGpu);
+    // Larger than the default (preset order is by size) and on the GPU too.
     const alsoFits = GEMMA4_PRESETS.filter(
-      (p) =>
-        p.approxMemoryGiB > def.approxMemoryGiB && p.approxMemoryGiB <= gpu,
+      (p, i) => i > defIndex && fit(p).placement === 'gpu',
     ).map((p) => p.tag);
     const reason =
       onGpu === def
-        ? `It fits in GPU memory (${approx(onGpu)}).`
-        : `The default ${def.tag} (${approx(def)}) does not fit in GPU memory; ${onGpu.tag} (${approx(onGpu)}) does.`;
+        ? `It fits in GPU memory (${describeFit(f)}).`
+        : `The default ${def.tag} (${describeFit(fit(def))}) does not fit in GPU memory; ${onGpu.tag} (${describeFit(f)}) does.`;
     return {
       tag: onGpu.tag,
-      approxMemoryGiB: onGpu.approxMemoryGiB,
+      approxMemoryGiB: f.approxMemoryGiB,
+      numCtx: f.numCtx,
       placement: 'gpu',
       hardware,
       reason: reason + experimentalNote(onGpu),
@@ -167,19 +213,21 @@ export function recommendModel(hw: HardwareProfile): ModelRecommendation {
     };
   }
 
-  const onCpu = CPU_PREFERRED.find((p) => p.approxMemoryGiB <= cpu);
+  const onCpu = CPU_PREFERRED.find((p) => fit(p).placement !== 'none');
   if (onCpu) {
+    const f = fit(onCpu);
     const bigger =
-      def.approxMemoryGiB <= cpu
+      fit(def).placement !== 'none'
         ? ` ${def.tag} also fits in RAM but would answer much more slowly.`
         : '';
     return {
       tag: onCpu.tag,
-      approxMemoryGiB: onCpu.approxMemoryGiB,
+      approxMemoryGiB: f.approxMemoryGiB,
+      numCtx: f.numCtx,
       placement: 'cpu',
       hardware,
       reason:
-        `No GPU with enough memory was found, so the model runs on the CPU: expect slow answers. ${onCpu.tag} (${approx(onCpu)}) is the fastest usable choice.` +
+        `No GPU with enough memory was found, so the model runs on the CPU: expect slow answers. ${onCpu.tag} (${describeFit(f)}) is the fastest usable choice.` +
         bigger +
         experimentalNote(onCpu),
       alsoFits: [],
@@ -190,7 +238,7 @@ export function recommendModel(hw: HardwareProfile): ModelRecommendation {
   return {
     placement: 'none',
     hardware,
-    reason: `Not enough memory: even ${smallest.tag} needs ${approx(smallest)} plus ${RAM_RESERVE_GIB} GiB for the system.`,
+    reason: `Not enough memory: even ${smallest.tag} needs ${describeFit(fit(smallest))} plus ${RAM_RESERVE_GIB} GiB for the system.`,
     alsoFits: [],
   };
 }

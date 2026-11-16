@@ -349,7 +349,7 @@ describe('runDiagnostics hardware check', () => {
     const hw = byId(report, 'runtime.hardware');
     expect(hw.status).toBe('warn');
     expect(hw.remediation).toMatch(
-      /gemma4:31b needs ≈24 GiB.*partly on the CPU/,
+      /gemma4:31b needs ≈24\.5 GiB at a 32K window, from model metadata.*partly on the CPU/,
     );
   });
 });
