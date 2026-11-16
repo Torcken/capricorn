@@ -35,7 +35,11 @@ import {
   type OllamaClient,
 } from '@capricorn/core';
 import type { CapricornRuntime } from './runtime.js';
-import { detectHardware, type HardwareProfile } from './hardware.js';
+import {
+  availableMemoryBytes,
+  detectHardware,
+  type HardwareProfile,
+} from './hardware.js';
 import { describeFit, placementFor, recommendModel } from './recommend.js';
 import { formatGiB } from './runtime.js';
 import {
@@ -107,7 +111,7 @@ export async function runDiagnostics(
   let models: DiscoveredModel[] = [];
 
   checks.push(checkNode());
-  checks.push(checkSystemMemory());
+  checks.push(checkSystemMemory(await availableMemoryBytes()));
   // Detected once: the hardware and context-window checks both use it.
   let hw: HardwareProfile | undefined = input.hardware;
   checks.push(
@@ -134,8 +138,13 @@ export async function runDiagnostics(
     } catch (e) {
       discoveryError = e;
     }
-    checks.push(checkInstalledModels(models, discoveryError));
-    checks.push(checkSelectedModel(models, input.runtime, discoveryError));
+    // The model to suggest when one must be pulled: the hardware
+    // recommendation, not a fixed tag that may not fit this machine.
+    const recommended = hw ? recommendModel(hw).tag : undefined;
+    checks.push(checkInstalledModels(models, discoveryError, recommended));
+    checks.push(
+      checkSelectedModel(models, input.runtime, discoveryError, recommended),
+    );
     checks.push(
       await safe('models.context', 'Context window', () =>
         checkContextWindow(
@@ -220,14 +229,13 @@ function checkNode(): DiagnosticCheck {
       };
 }
 
-function checkSystemMemory(): DiagnosticCheck {
+function checkSystemMemory(free: number): DiagnosticCheck {
   const total = os.totalmem();
-  const free = os.freemem();
   return {
     id: 'runtime.memory',
     title: 'System memory',
     status: total < 8 * 1024 ** 3 ? 'warn' : 'pass',
-    message: `${formatGiB(total)} total, ${formatGiB(free)} free (${os.platform()} ${os.arch()}, ${os.cpus().length} CPUs)`,
+    message: `${formatGiB(total)} total, ${formatGiB(free)} available (${os.platform()} ${os.arch()}, ${os.cpus().length} CPUs)`,
     remediation:
       total < 8 * 1024 ** 3
         ? 'Less than 8 GiB RAM: use gemma4:e2b or gemma4:e4b with a small ollama.numCtx.'
@@ -365,6 +373,7 @@ async function checkDaemon(
 function checkInstalledModels(
   models: DiscoveredModel[],
   error: unknown,
+  recommended?: string,
 ): DiagnosticCheck {
   if (error) {
     return {
@@ -382,7 +391,9 @@ function checkInstalledModels(
       title: 'Gemma 4 models',
       status: 'fail',
       message: `No verified Gemma 4 model is installed (${models.length} other model(s) found).`,
-      remediation: `Pull one, e.g. \`capricorn models pull gemma4:e4b\` (smaller) or \`capricorn models pull gemma4:12b\`.`,
+      remediation: recommended
+        ? `Pull the model recommended for this machine: \`capricorn models pull ${recommended}\`.`
+        : `Pull one, e.g. \`capricorn models pull gemma4:e4b\` (smaller) or \`capricorn models pull gemma4:12b\`.`,
     };
   }
   return {
@@ -400,6 +411,7 @@ function checkSelectedModel(
   models: DiscoveredModel[],
   runtime: CapricornRuntime,
   error: unknown,
+  recommended?: string,
 ): DiagnosticCheck {
   if (error) {
     return {
@@ -431,7 +443,13 @@ function checkSelectedModel(
     message: `${selection.reason}`,
     remediation: selection.alternatives.length
       ? `Use an installed model: \`capricorn models use ${selection.alternatives[0].model}\` (or pass --model).`
-      : `Pull it: \`capricorn models pull ${selection.requested}\`.`,
+      : // Only the built-in default was asked for: suggest what fits here
+        // rather than a model the hardware check just said may not load.
+        runtime.modelSource === 'default' &&
+          recommended &&
+          recommended !== selection.requested
+        ? `${selection.requested} is only the default. For this machine: \`capricorn models pull ${recommended}\`, then \`capricorn models use ${recommended}\`.`
+        : `Pull it: \`capricorn models pull ${selection.requested}\`.`,
     data: {
       requested: selection.requested,
       alternatives: selection.alternatives.map((a) => a.model),

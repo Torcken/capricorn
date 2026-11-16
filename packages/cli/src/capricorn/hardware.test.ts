@@ -6,7 +6,9 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  availableMemoryBytes,
   detectHardware,
+  parseVmStatAvailable,
   profileFromEnv,
   type HardwareProbes,
 } from './hardware.js';
@@ -142,5 +144,44 @@ describe('profileFromEnv (CAPRICORN_HARDWARE_PROFILE)', () => {
     expect(
       profileFromEnv('{"totalMemoryBytes": "8", "gpus": []}'),
     ).toBeUndefined();
+  });
+});
+
+describe('availableMemoryBytes', () => {
+  // Shortened real `vm_stat` output from an 8 GiB M1 (16 KiB pages).
+  const VM_STAT = `Mach Virtual Memory Statistics: (page size of 16384 bytes)
+Pages free:                                3000.
+Pages active:                            150000.
+Pages inactive:                          140000.
+Pages speculative:                         2000.
+Pages throttled:                              0.
+Pages wired down:                         90000.
+Pages purgeable:                           5000.
+`;
+
+  it('counts free, inactive, speculative and purgeable pages on macOS', async () => {
+    expect(parseVmStatAvailable(VM_STAT)).toBe(150_000 * 16384);
+    const bytes = await availableMemoryBytes(
+      { platform: () => 'darwin', run: async () => VM_STAT },
+      () => 50 * 1024 * 1024,
+    );
+    expect(bytes).toBe(150_000 * 16384);
+  });
+
+  it('falls back to os.freemem elsewhere or when vm_stat is unusable', async () => {
+    const freemem = () => 3 * GIB;
+    expect(
+      await availableMemoryBytes(
+        { platform: () => 'linux', run: async () => VM_STAT },
+        freemem,
+      ),
+    ).toBe(3 * GIB);
+    expect(
+      await availableMemoryBytes(
+        { platform: () => 'darwin', run: async () => undefined },
+        freemem,
+      ),
+    ).toBe(3 * GIB);
+    expect(parseVmStatAvailable('garbage')).toBeUndefined();
   });
 });

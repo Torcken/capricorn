@@ -209,3 +209,43 @@ async function probeHardware(probes: HardwareProbes): Promise<HardwareProfile> {
   }
   return { totalMemoryBytes, platform, arch, cpus: probes.cpus(), gpus };
 }
+
+/**
+ * Parses macOS `vm_stat` output into bytes the system can hand to a new
+ * process right away: free, inactive, speculative and purgeable pages.
+ * Returns undefined when the output is not recognised.
+ */
+export function parseVmStatAvailable(out: string): number | undefined {
+  const pageSize = /page size of (\d+) bytes/.exec(out)?.[1];
+  if (!pageSize) return undefined;
+  const pages = (label: string): number => {
+    const m = new RegExp(`^Pages ${label}:\\s+(\\d+)\\.?$`, 'm').exec(out);
+    return m ? Number(m[1]) : 0;
+  };
+  const total =
+    pages('free') +
+    pages('inactive') +
+    pages('speculative') +
+    pages('purgeable');
+  return total > 0 ? total * Number(pageSize) : undefined;
+}
+
+/**
+ * Memory available to start a model, for display.
+ *
+ * Why not `os.freemem()` everywhere: on macOS it counts only completely
+ * unused pages, so a Mac in normal use reports "0.0 GiB free" although
+ * gigabytes of inactive and purgeable memory are reclaimable at once (seen on
+ * an 8 GiB M1). There it is read from `vm_stat` (a local command) instead.
+ */
+export async function availableMemoryBytes(
+  probes: Pick<HardwareProbes, 'platform' | 'run'> = systemProbes,
+  freemem: () => number = () => os.freemem(),
+): Promise<number> {
+  if (probes.platform() === 'darwin') {
+    const out = await probes.run('vm_stat', []);
+    const parsed = out ? parseVmStatAvailable(out) : undefined;
+    if (parsed !== undefined) return parsed;
+  }
+  return freemem();
+}

@@ -73,6 +73,54 @@ describe('runDiagnostics', () => {
     expect(report.ok).toBe(false);
   });
 
+  // Seen on an 8 GiB MacBook Air M1: the hints suggested e4b/12b while the
+  // hardware check recommended e2b.
+  it('suggests the recommended model, not a fixed one, when none is installed', async () => {
+    await mock.close();
+    mock = await startMockOllama({
+      models: DEFAULT_MOCK_MODELS.filter((m) => m.name === 'qwen3:8b'),
+    });
+    const mac8: HardwareProfile = {
+      totalMemoryBytes: 8 * 1024 ** 3,
+      platform: 'darwin',
+      arch: 'arm64',
+      cpus: 8,
+      gpus: [
+        {
+          vendor: 'apple',
+          name: 'Apple Silicon GPU',
+          memoryBytes: 8 * 1024 ** 3,
+          unified: true,
+        },
+      ],
+    };
+    const report = await runDiagnostics({
+      runtime: runtime(),
+      client: new OllamaClient({ endpoint: mock.url }),
+      version: 'test',
+      cwd: process.cwd(),
+      hardware: mac8,
+    });
+    expect(byId(report, 'models.installed').remediation).toBe(
+      'Pull the model recommended for this machine: `capricorn models pull gemma4:e2b`.',
+    );
+    // gemma4:12b is only the default here, so it is not what to pull.
+    expect(byId(report, 'models.selected').remediation).toContain(
+      'capricorn models pull gemma4:e2b',
+    );
+    // An explicit choice is respected.
+    const explicit = await runDiagnostics({
+      runtime: { ...runtime(), modelSource: 'settings' },
+      client: new OllamaClient({ endpoint: mock.url }),
+      version: 'test',
+      cwd: process.cwd(),
+      hardware: mac8,
+    });
+    expect(byId(explicit, 'models.selected').remediation).toBe(
+      'Pull it: `capricorn models pull gemma4:12b`.',
+    );
+  });
+
   it('rejects a non-Gemma model even if requested explicitly', async () => {
     const report = await runDiagnostics({
       runtime: runtime('gemma4:fake'),

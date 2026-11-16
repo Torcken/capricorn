@@ -6,6 +6,16 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `capricorn doctor` on macOS showed "0.0 GiB free" on a Mac in normal use; it
+  now reports available memory from `vm_stat` (free, inactive, speculative and
+  purgeable pages).
+- When no Gemma 4 model is installed, or only the built-in default `gemma4:12b`
+  is selected and missing, `doctor` now suggests the model recommended for the
+  machine (e.g. `gemma4:e2b` on an 8 GiB Mac) instead of fixed tags that may not
+  fit.
+
 ## [0.1.0-alpha.8] - 2026-11-16
 
 ### Changed
