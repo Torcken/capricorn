@@ -6,6 +6,8 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.9] - 2026-11-16
+
 ### Fixed
 
 - `capricorn doctor` on macOS showed "0.0 GiB free" on a Mac in normal use; it

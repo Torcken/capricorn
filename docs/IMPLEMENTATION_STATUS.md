@@ -131,6 +131,16 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   private vulnerability reporting, which SECURITY.md relies on, was enabled
   right after the audit.
 
+- **First real macOS run (2026-11-16, `0.1.0-alpha.8`, MacBook Air M1, 8 GiB,
+  Ollama 0.40.16):** `npm install -g`, `doctor`, the hardware recommendation
+  (`gemma4:e2b` on the GPU) and `models pull` (verified from GGUF architecture
+  metadata) worked. Two bugs stopped the run before a prompt, both fixed in
+  `0.1.0-alpha.9`: the `/api/tags` prefilter rejected `gemma4:e2b` because
+  Ollama 0.40 reports an empty `family` there, and the default 32K window did
+  not fit (Ollama: "requires 6.9 GiB but only 4.8 GiB are available"; the
+  unified-memory budget assumed 6 GiB). A coding task on macOS is still to be
+  run.
+
 ## Known limitations
 
 - Headless runs offer only read-only tools unless `--approval-mode auto_edit` or
