@@ -6,6 +6,8 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.8] - 2026-11-16
+
 ### Changed
 
 - The project-commands hint in the session context ends with one combined

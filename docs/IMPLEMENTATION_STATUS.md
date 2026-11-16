@@ -127,8 +127,9 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   browser agent's `agents.browser.*` settings (default allowlist including
   `*.google.com`) were still listed by `capricorn config list`. Still open for
   1.0: real-model smoke with `gemma4:e4b` (blocked: Ollama 0.30.11 cannot load
-  it), a real-model run on macOS, GitHub private vulnerability reporting (off;
-  SECURITY.md relies on it), and publishing the final README.
+  it), a real-model run on macOS, and publishing the final README. GitHub
+  private vulnerability reporting, which SECURITY.md relies on, was enabled
+  right after the audit.
 
 ## Known limitations
 
