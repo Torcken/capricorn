@@ -144,6 +144,14 @@ isolation boundary.
   `react-devtools-core` uses it and it is not bundled (the bundle ships `ws`
   8.23.0); the remaining reports concern test and build tools (vitest, vite,
   postcss, …) that are not in the package.
+- **`@github/keytar` is deprecated but kept on purpose.** `npm install` warns
+  that this optional native module is no longer maintained. It stores MCP server
+  OAuth tokens and extension integrity records in the OS keychain (macOS
+  Keychain, Linux Secret Service, Windows Credential Manager). Without it,
+  Capricorn falls back to an AES-256-GCM file whose key is derived from the
+  hostname and user name, so anyone who can read your files can decrypt it.
+  Until a maintained keychain module or a properly keyed fallback replaces it,
+  the OS keychain is the safer default.
 - **No Google client code ships.** Capricorn uses only `@google/genai`'s _types_
   (erased at build time); the SDK's Gemini/Vertex clients and
   `google-auth-library` are not in the package, which the package smoke test
