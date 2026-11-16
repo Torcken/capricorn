@@ -2999,6 +2999,33 @@
       "default": {},
       "type": "object",
       "properties": {
+        "webFetch": {
+          "title": "Web Fetch",
+          "description": "Lets the model download web pages from the hosts listed here. Read from your user settings only; off by default.",
+          "markdownDescription": "Lets the model download web pages from the hosts listed here. Read from your user settings only; off by default.\n\n- Category: `Tools`\n- Requires restart: `yes`\n- Default: `{}`",
+          "default": {},
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "title": "Enable Web Fetch",
+              "description": "Register the web_fetch tool. Every fetch still asks for approval, and only hosts in allowedHosts can be reached.",
+              "markdownDescription": "Register the web_fetch tool. Every fetch still asks for approval, and only hosts in allowedHosts can be reached.\n\n- Category: `Tools`\n- Requires restart: `yes`\n- Default: `false`",
+              "default": false,
+              "type": "boolean"
+            },
+            "allowedHosts": {
+              "title": "Web Fetch Allowed Hosts",
+              "description": "Hosts web_fetch may download from, matched exactly (e.g. \"docs.python.org\"; subdomains are not included).",
+              "markdownDescription": "Hosts web_fetch may download from, matched exactly (e.g. \"docs.python.org\"; subdomains are not included).\n\n- Category: `Tools`\n- Requires restart: `yes`\n- Default: `[]`",
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
         "sandbox": {
           "title": "Sandbox",
           "description": "Legacy full-process sandbox execution environment. Set to a boolean to enable or disable the sandbox, provide a string path to a sandbox profile, or specify an explicit sandbox command (e.g., \"docker\", \"podman\", \"lxc\", \"windows-native\").",
@@ -3577,13 +3604,6 @@
           "title": "Model Steering",
           "description": "Enable model steering (user hints) to guide the model during tool execution.",
           "markdownDescription": "Enable model steering (user hints) to guide the model during tool execution.\n\n- Category: `Experimental`\n- Requires restart: `no`\n- Default: `false`",
-          "default": false,
-          "type": "boolean"
-        },
-        "directWebFetch": {
-          "title": "Direct Web Fetch",
-          "description": "Enable web fetch behavior that bypasses LLM summarization.",
-          "markdownDescription": "Enable web fetch behavior that bypasses LLM summarization.\n\n- Category: `Experimental`\n- Requires restart: `yes`\n- Default: `false`",
           "default": false,
           "type": "boolean"
         },

@@ -27,6 +27,20 @@ import type { LoadedSettings } from '../config/settings.js';
 const reported = new Set<string>();
 
 /**
+ * Hosts `web_fetch` may use, from user settings only (`tools.webFetch`).
+ * Empty when it is disabled, which keeps the tool unregistered.
+ */
+export function userWebFetchHosts(
+  loadedSettings: LoadedSettings | undefined,
+): string[] {
+  const webFetch = loadedSettings?.user.settings.tools?.webFetch;
+  if (webFetch?.enabled !== true) return [];
+  return (webFetch.allowedHosts ?? [])
+    .map((h) => h.trim())
+    .filter((h) => h.length > 0);
+}
+
+/**
  * Collects hosts the user explicitly opted into, from user settings only.
  */
 export function collectAllowedHosts(settings: LoadedSettings): string[] {
@@ -40,6 +54,12 @@ export function collectAllowedHosts(settings: LoadedSettings): string[] {
       process.env['OLLAMA_HOST'] ||
       user.ollama?.endpoint;
     const host = hostOf(endpoint);
+    if (host) hosts.add(host);
+  }
+
+  // Capricorn: hosts the user allowed for web_fetch (only when enabled).
+  for (const entry of userWebFetchHosts(settings)) {
+    const host = entry.includes('://') ? hostOf(entry) : entry;
     if (host) hosts.add(host);
   }
 

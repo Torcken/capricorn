@@ -4,6 +4,31 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/**
+ * @fileoverview `web_fetch`: downloads one URL on this machine and returns
+ * its text to the model.
+ *
+ * Capricorn: rewritten from upstream's tool, whose primary path handed the
+ * URL to Gemini's hosted URL-context service (and whose "fallback" asked the
+ * model to summarize). Only the direct download remains, and it is the first
+ * Capricorn feature that reaches the internet on purpose, so it is fenced in:
+ *
+ * - Off unless the user enables `tools.webFetch` in their *user* settings
+ *   with a non-empty `allowedHosts` (a project's settings cannot enable it);
+ *   the tool is not even registered otherwise (config.ts).
+ * - Only hosts in that list are fetched (exact host match). Redirects are
+ *   followed by hand and every hop is checked again, so an allowed host
+ *   cannot bounce the request elsewhere. The process-wide egress guard opens
+ *   exactly these hosts too (cli/src/capricorn/networkPolicy.ts), as a second
+ *   line of defence.
+ * - Private, loopback and link-local addresses are refused (DNS is resolved
+ *   first, see utils/fetch.ts), so a fetch cannot reach the LAN or Ollama.
+ * - Every fetch asks for approval (policy/policies/write.toml; denied in
+ *   non-interactive mode unless the policy allows it), and requests per host
+ *   are rate limited.
+ * - Content is size-limited and returned wrapped as untrusted data.
+ */
+
 import {
   type ToolConfirmationOutcome,
   BaseDeclarativeTool,
@@ -18,21 +43,11 @@ import {
 import type { MessageBus } from '../confirmation-bus/message-bus.js';
 import { ToolErrorType } from './tool-error.js';
 import { getErrorMessage } from '../utils/errors.js';
-import { getResponseText } from '../utils/partUtils.js';
 import { fetchWithTimeout, isPrivateIp } from '../utils/fetch.js';
 import { truncateString, wrapUntrusted } from '../utils/textUtils.js';
 import { convert } from 'html-to-text';
-import {
-  logWebFetchFallbackAttempt,
-  WebFetchFallbackAttemptEvent,
-  logNetworkRetryAttempt,
-  NetworkRetryAttemptEvent,
-} from '../telemetry/index.js';
-import { LlmRole } from '../telemetry/llmRole.js';
 import { WEB_FETCH_TOOL_NAME, WEB_FETCH_DISPLAY_NAME } from './tool-names.js';
 import { debugLogger } from '../utils/debugLogger.js';
-import { coreEvents } from '../utils/events.js';
-import { retryWithBackoff, getRetryErrorType } from '../utils/retry.js';
 import { WEB_FETCH_DEFINITION } from './definitions/coreTools.js';
 import { resolveToolDeclaration } from './definitions/resolver.js';
 import { LRUCache } from 'mnemonist';
@@ -40,7 +55,10 @@ import type { AgentLoopContext } from '../config/agent-loop-context.js';
 
 const URL_FETCH_TIMEOUT_MS = 10000;
 const MAX_CONTENT_LENGTH = 250000;
-const MAX_EXPERIMENTAL_FETCH_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FETCH_SIZE = 10 * 1024 * 1024; // 10MB
+/** Redirect hops followed (each one re-checked against the allowlist). */
+export const MAX_REDIRECTS = 5;
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const USER_AGENT =
   // Capricorn: identify as Capricorn, not as Google's Gemini CLI.
   'Mozilla/5.0 (compatible; Capricorn/1.0; +https://github.com/Torcken/capricorn)';
@@ -76,72 +94,51 @@ function checkRateLimit(url: string): {
     hostRequestHistory.set(hostname, history);
     return { allowed: true };
   } catch {
-    // If URL parsing fails, we fallback to allowed (should be caught by parsePrompt anyway)
-    return { allowed: true };
+    return { allowed: false };
   }
 }
 
+/** Clears the per-host rate limit history (tests only). */
+export function resetWebFetchRateLimitForTesting(): void {
+  hostRequestHistory.clear();
+}
+
 /**
- * Normalizes a URL by converting hostname to lowercase, removing trailing slashes,
- * and removing default ports.
+ * Lower-cases a host and drops a trailing dot, so `Example.COM.` and
+ * `example.com` compare equal. `URL` already converts IDNs to punycode.
  */
-export function normalizeUrl(urlStr: string): string {
+function normalizeHost(host: string): string {
+  return host.trim().toLowerCase().replace(/\.$/, '');
+}
+
+/**
+ * Whether `url` is an http(s) URL whose host is in `allowedHosts` (exact,
+ * case-insensitive match; no wildcards, so `example.com` does not allow
+ * `evil.example.com`). Entries may be bare hosts or full URLs.
+ */
+export function isUrlAllowedForWebFetch(
+  url: string,
+  allowedHosts: readonly string[],
+): boolean {
+  let parsed: URL;
   try {
-    const url = new URL(urlStr);
-    url.hostname = url.hostname.toLowerCase();
-    // Remove trailing slash if present in pathname (except for root '/')
-    if (url.pathname.endsWith('/') && url.pathname.length > 1) {
-      url.pathname = url.pathname.slice(0, -1);
-    }
-    // Remove default ports
-    if (
-      (url.protocol === 'http:' && url.port === '80') ||
-      (url.protocol === 'https:' && url.port === '443')
-    ) {
-      url.port = '';
-    }
-    return url.href;
+    parsed = new URL(url);
   } catch {
-    return urlStr;
+    return false;
   }
-}
-
-/**
- * Parses a prompt to extract valid URLs and identify malformed ones.
- */
-export function parsePrompt(text: string): {
-  validUrls: string[];
-  errors: string[];
-} {
-  const tokens = text.split(/\s+/);
-  const validUrls: string[] = [];
-  const errors: string[] = [];
-
-  for (const token of tokens) {
-    if (!token) continue;
-
-    // Heuristic to check if the url appears to contain URL-like chars.
-    if (token.includes('://')) {
-      try {
-        // Validate with new URL()
-        const url = new URL(token);
-
-        // Allowlist protocols
-        if (['http:', 'https:'].includes(url.protocol)) {
-          validUrls.push(url.href);
-        } else {
-          errors.push(
-            `Unsupported protocol in URL: "${token}". Only http and https are supported.`,
-          );
-        }
-      } catch {
-        // new URL() threw, so it's malformed according to WHATWG standard
-        errors.push(`Malformed URL detected: "${token}".`);
-      }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return false;
+  }
+  const host = normalizeHost(parsed.hostname);
+  return allowedHosts.some((entry) => {
+    let allowed = entry;
+    try {
+      allowed = entry.includes('://') ? new URL(entry).hostname : entry;
+    } catch {
+      return false;
     }
-  }
-
-  return { validUrls, errors };
+    return normalizeHost(allowed) === host;
+  });
 }
 
 /**
@@ -161,63 +158,12 @@ export function convertGithubUrlToRaw(urlStr: string): string {
   return urlStr;
 }
 
-// Interfaces for grounding metadata (similar to web-search.ts)
-interface GroundingChunkWeb {
-  uri?: string;
-  title?: string;
-}
-
-interface GroundingChunkItem {
-  web?: GroundingChunkWeb;
-}
-
-function isGroundingChunkItem(item: unknown): item is GroundingChunkItem {
-  return typeof item === 'object' && item !== null;
-}
-
-interface GroundingSupportSegment {
-  startIndex: number;
-  endIndex: number;
-  text?: string;
-}
-
-interface GroundingSupportItem {
-  segment?: GroundingSupportSegment;
-  groundingChunkIndices?: number[];
-}
-
-function isGroundingSupportItem(item: unknown): item is GroundingSupportItem {
-  return typeof item === 'object' && item !== null;
-}
-
-/**
- * Sanitizes text for safe embedding in XML tags.
- */
-function sanitizeXml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
 /**
  * Parameters for the WebFetch tool
  */
 export interface WebFetchToolParams {
-  /**
-   * The prompt containing URL(s) (up to 20) and instructions for processing their content.
-   */
-  prompt?: string;
-  /**
-   * Direct URL to fetch (experimental mode).
-   */
-  url?: string;
-}
-
-interface ErrorWithStatus extends Error {
-  status?: number;
+  /** The http(s) URL to fetch; its host must be allowed. */
+  url: string;
 }
 
 class WebFetchToolInvocation extends BaseToolInvocation<
@@ -238,325 +184,45 @@ class WebFetchToolInvocation extends BaseToolInvocation<
       _toolDisplayName,
       undefined,
       undefined,
-      true,
+      // Capricorn: false, so auto-edit mode does not skip the approval
+      // (upstream's `true` auto-approved fetches there). Every download is
+      // confirmed unless the user picks "allow" for the session or YOLO.
+      false,
       () => this.context.config.getApprovalMode(),
     );
   }
 
-  private handleRetry(attempt: number, error: unknown, delayMs: number): void {
-    const maxAttempts = this.context.config.getMaxAttempts();
-    const modelName = 'Web Fetch';
-    const errorType = getRetryErrorType(error);
-
-    coreEvents.emitRetryAttempt({
-      attempt,
-      maxAttempts,
-      delayMs,
-      error: errorType,
-      model: modelName,
-    });
-
-    logNetworkRetryAttempt(
-      this.context.config,
-      new NetworkRetryAttemptEvent(
-        attempt,
-        maxAttempts,
-        errorType,
-        delayMs,
-        modelName,
-      ),
-    );
+  private get allowedHosts(): readonly string[] {
+    return this.context.config.getWebFetchAllowedHosts();
   }
 
-  private async isBlockedHost(urlStr: string): Promise<boolean> {
-    try {
-      const url = new URL(urlStr);
-      const hostname = url.hostname.toLowerCase();
-      if (
-        hostname === 'localhost' ||
-        hostname === '127.0.0.1' ||
-        hostname.endsWith('.localhost') ||
-        hostname.endsWith('.local') ||
-        hostname.endsWith('.internal')
-      ) {
-        return true;
-      }
-      return await isPrivateIp(urlStr);
-    } catch {
-      return true;
-    }
+  /**
+   * The URL actually requested first: GitHub blob links become raw links
+   * when (and only when) raw.githubusercontent.com is allowed too.
+   */
+  private startUrl(): string {
+    const raw = convertGithubUrlToRaw(this.params.url);
+    return raw !== this.params.url &&
+      isUrlAllowedForWebFetch(raw, this.allowedHosts)
+      ? raw
+      : this.params.url;
   }
 
-  private async executeFallbackForUrl(
-    urlStr: string,
-    signal: AbortSignal,
-  ): Promise<string> {
-    const url = convertGithubUrlToRaw(urlStr);
-    if (await this.isBlockedHost(url)) {
-      debugLogger.warn(`[WebFetchTool] Blocked access to host: ${url}`);
-      throw new Error(
-        `Access to blocked or private host ${url} is not allowed.`,
-      );
-    }
-
-    const response = await retryWithBackoff(
-      async () => {
-        const res = await fetchWithTimeout(url, URL_FETCH_TIMEOUT_MS, {
-          signal,
-          headers: {
-            'User-Agent': USER_AGENT,
-          },
-        });
-        if (!res.ok) {
-          const error = new Error(
-            `Request failed with status code ${res.status} ${res.statusText}`,
-          );
-          (error as ErrorWithStatus).status = res.status;
-          throw error;
-        }
-        return res;
-      },
-      {
-        retryFetchErrors: this.context.config.getRetryFetchErrors(),
-        onRetry: (attempt, error, delayMs) =>
-          this.handleRetry(attempt, error, delayMs),
-        signal,
-      },
-    );
-
-    const bodyBuffer = await this.readResponseWithLimit(
-      response,
-      MAX_EXPERIMENTAL_FETCH_SIZE,
-    );
-    const rawContent = bodyBuffer.toString('utf8');
-    const contentType = response.headers.get('content-type') || '';
-    let textContent: string;
-
-    // Only use html-to-text if content type is HTML, or if no content type is provided (assume HTML)
-    if (contentType.toLowerCase().includes('text/html') || contentType === '') {
-      textContent = convert(rawContent, {
-        wordwrap: false,
-        selectors: [
-          { selector: 'a', options: { ignoreHref: true } },
-          { selector: 'img', format: 'skip' },
-        ],
-      });
-    } else {
-      // For other content types (text/plain, application/json, etc.), use raw text
-      textContent = rawContent;
-    }
-
-    if (!this.context.config.isContextManagementEnabled()) {
-      return truncateString(
-        textContent,
-        MAX_CONTENT_LENGTH,
-        TRUNCATION_WARNING,
-      );
-    }
-
-    return textContent;
-  }
-
-  private async filterAndValidateUrls(urls: string[]): Promise<{
-    toFetch: string[];
-    skipped: string[];
-  }> {
-    const uniqueUrls = [...new Set(urls.map(normalizeUrl))];
-    const toFetch: string[] = [];
-    const skipped: string[] = [];
-
-    for (const url of uniqueUrls) {
-      if (await this.isBlockedHost(url)) {
-        debugLogger.warn(
-          `[WebFetchTool] Skipped private or local host: ${url}`,
-        );
-        logWebFetchFallbackAttempt(
-          this.context.config,
-          new WebFetchFallbackAttemptEvent('private_ip_skipped'),
-        );
-        skipped.push(`[Blocked Host] ${url}`);
-        continue;
-      }
-      if (!checkRateLimit(url).allowed) {
-        debugLogger.warn(`[WebFetchTool] Rate limit exceeded for host: ${url}`);
-        skipped.push(`[Rate limit exceeded] ${url}`);
-        continue;
-      }
-      toFetch.push(url);
-    }
-    return { toFetch, skipped };
-  }
-
-  private async executeFallback(
-    urls: string[],
-    signal: AbortSignal,
-  ): Promise<ToolResult> {
-    const uniqueUrls = [...new Set(urls)];
-    const successes: Array<{ url: string; content: string }> = [];
-    const errors: Array<{ url: string; message: string }> = [];
-
-    for (const url of uniqueUrls) {
+  /** Why `url` may not be fetched, or undefined when it may. */
+  private async refusal(url: string): Promise<string | undefined> {
+    if (!isUrlAllowedForWebFetch(url, this.allowedHosts)) {
+      let host = url;
       try {
-        const content = await this.executeFallbackForUrl(url, signal);
-        successes.push({ url, content });
-      } catch (e) {
-        errors.push({ url, message: getErrorMessage(e) });
+        host = new URL(url).hostname;
+      } catch {
+        // keep the raw string
       }
+      return `${host} is not in tools.webFetch.allowedHosts (allowed: ${this.allowedHosts.join(', ')}).`;
     }
-
-    // Change 2: Short-circuit on total failure
-    if (successes.length === 0) {
-      const errorMessage = `All fallback fetch attempts failed: ${errors
-        .map((e) => `${e.url}: ${e.message}`)
-        .join(', ')}`;
-      debugLogger.error(`[WebFetchTool] ${errorMessage}`);
-      return {
-        llmContent: `Error: ${errorMessage}`,
-        returnDisplay: `Error: ${errorMessage}`,
-        error: {
-          message: errorMessage,
-          type: ToolErrorType.WEB_FETCH_FALLBACK_FAILED,
-        },
-      };
+    if (await isPrivateIp(url)) {
+      return `Access to blocked or private host ${url} is not allowed.`;
     }
-
-    const finalContentsByUrl = new Map<string, string>();
-    if (this.context.config.isContextManagementEnabled()) {
-      successes.forEach((success) =>
-        finalContentsByUrl.set(success.url, success.content),
-      );
-    } else {
-      // Smart Budget Allocation (Water-filling algorithm) for successes
-      const sortedSuccesses = [...successes].sort(
-        (a, b) => a.content.length - b.content.length,
-      );
-      let remainingBudget = MAX_CONTENT_LENGTH;
-      let remainingUrls = sortedSuccesses.length;
-      for (const success of sortedSuccesses) {
-        const fairShare = Math.floor(remainingBudget / remainingUrls);
-        const allocated = Math.min(success.content.length, fairShare);
-
-        const truncated = truncateString(
-          success.content,
-          allocated,
-          TRUNCATION_WARNING,
-        );
-
-        finalContentsByUrl.set(success.url, truncated);
-        remainingBudget -= truncated.length;
-        remainingUrls--;
-      }
-    }
-
-    const aggregatedContent = uniqueUrls
-      .map((url) => {
-        const content = finalContentsByUrl.get(url);
-        if (content !== undefined) {
-          return `<source url="${sanitizeXml(url)}">\n${sanitizeXml(content)}\n</source>`;
-        }
-        const error = errors.find((e) => e.url === url);
-        return `<source url="${sanitizeXml(url)}">\nError: ${sanitizeXml(error?.message || 'Unknown error')}\n</source>`;
-      })
-      .join('\n');
-
-    try {
-      const geminiClient = this.context.geminiClient;
-      const fallbackPrompt = `Follow the user's instructions below using the provided webpage content.
-
-<user_instructions>
-${sanitizeXml(this.params.prompt ?? '')}
-</user_instructions>
-
-I was unable to access the URL(s) directly using the primary fetch tool. Instead, I have fetched the raw content of the page(s). Please use the following content to answer the request. Do not attempt to access the URL(s) again.
-
-<content>
-${aggregatedContent}
-</content>
-`;
-      const result = await geminiClient.generateContent(
-        { model: 'web-fetch-fallback' },
-        [{ role: 'user', parts: [{ text: fallbackPrompt }] }],
-        signal,
-        LlmRole.UTILITY_TOOL,
-      );
-
-      debugLogger.debug(
-        `[WebFetchTool] Fallback response for prompt "${this.params.prompt?.substring(
-          0,
-          50,
-        )}...":`,
-        JSON.stringify(result, null, 2),
-      );
-
-      const resultText = getResponseText(result) || '';
-
-      debugLogger.debug(
-        `[WebFetchTool] Formatted fallback tool response for prompt "${this.params.prompt}":\n\n`,
-        resultText,
-      );
-
-      return {
-        llmContent: wrapUntrusted(resultText),
-        returnDisplay: `Content for ${urls.length} URL(s) processed using fallback fetch.`,
-      };
-    } catch (e) {
-      const errorMessage = `Error during fallback processing: ${getErrorMessage(e)}`;
-      debugLogger.error(`[WebFetchTool] Fallback failed: ${errorMessage}`);
-      return {
-        llmContent: `Error: ${errorMessage}`,
-        returnDisplay: `Error: ${errorMessage}`,
-        error: {
-          message: errorMessage,
-          type: ToolErrorType.WEB_FETCH_FALLBACK_FAILED,
-        },
-      };
-    }
-  }
-
-  getDescription(): string {
-    if (this.params.url) {
-      return `Fetching content from: ${this.params.url}`;
-    }
-    const prompt = this.params.prompt || '';
-    const displayPrompt =
-      prompt.length > 100 ? prompt.substring(0, 97) + '...' : prompt;
-    return `Processing URLs and instructions from prompt: "${displayPrompt}"`;
-  }
-
-  override getPolicyUpdateOptions(
-    _outcome: ToolConfirmationOutcome,
-  ): PolicyUpdateOptions | undefined {
-    return {};
-  }
-
-  protected override async getConfirmationDetails(
-    _abortSignal: AbortSignal,
-  ): Promise<ToolCallConfirmationDetails | false> {
-    let urls: string[] = [];
-    let prompt = this.params.prompt || '';
-
-    if (this.params.url) {
-      urls = [this.params.url];
-      prompt = `Fetch ${this.params.url}`;
-    } else if (this.params.prompt) {
-      const { validUrls } = parsePrompt(this.params.prompt);
-      urls = validUrls;
-    }
-
-    // Perform GitHub URL conversion here
-    urls = urls.map((url) => convertGithubUrlToRaw(url));
-
-    const confirmationDetails: ToolCallConfirmationDetails = {
-      type: 'info',
-      title: `Confirm Web Fetch`,
-      prompt,
-      urls,
-      onConfirm: async (_outcome: ToolConfirmationOutcome) => {
-        // Mode transitions (e.g. AUTO_EDIT) and policy updates are now
-        // handled centrally by the scheduler.
-      },
-    };
-    return confirmationDetails;
+    return undefined;
   }
 
   private async readResponseWithLimit(
@@ -593,310 +259,168 @@ ${aggregatedContent}
     return Buffer.concat(chunks);
   }
 
-  private async executeExperimental(signal: AbortSignal): Promise<ToolResult> {
-    if (!this.params.url) {
-      return {
-        llmContent: 'Error: No URL provided.',
-        returnDisplay: 'Error: No URL provided.',
-        error: {
-          message: 'No URL provided.',
-          type: ToolErrorType.INVALID_TOOL_PARAMS,
-        },
-      };
-    }
+  private error(message: string, type: ToolErrorType): ToolResult {
+    return {
+      llmContent: `Error: ${message}`,
+      returnDisplay: `Error: ${message}`,
+      error: { message, type },
+    };
+  }
 
-    let url: string;
-    try {
-      url = new URL(this.params.url).href;
-    } catch {
-      return {
-        llmContent: `Error: Invalid URL "${this.params.url}"`,
-        returnDisplay: `Error: Invalid URL "${this.params.url}"`,
-        error: {
-          message: `Invalid URL "${this.params.url}"`,
-          type: ToolErrorType.INVALID_TOOL_PARAMS,
-        },
-      };
-    }
+  getDescription(): string {
+    return `Fetch ${this.params.url}`;
+  }
 
-    // Convert GitHub blob URL to raw URL
-    url = convertGithubUrlToRaw(url);
+  override getPolicyUpdateOptions(
+    _outcome: ToolConfirmationOutcome,
+  ): PolicyUpdateOptions | undefined {
+    return {};
+  }
 
-    if (await this.isBlockedHost(url)) {
-      const errorMessage = `Access to blocked or private host ${url} is not allowed.`;
-      debugLogger.warn(
-        `[WebFetchTool] Blocked experimental fetch to host: ${url}`,
-      );
-      return {
-        llmContent: `Error: ${errorMessage}`,
-        returnDisplay: `Error: ${errorMessage}`,
-        error: {
-          message: errorMessage,
-          type: ToolErrorType.WEB_FETCH_PROCESSING_ERROR,
-        },
-      };
-    }
-
-    try {
-      const response = await retryWithBackoff(
-        async () => {
-          const res = await fetchWithTimeout(url, URL_FETCH_TIMEOUT_MS, {
-            signal,
-            headers: {
-              Accept:
-                'text/markdown, text/plain;q=0.9, application/json;q=0.9, text/html;q=0.8, application/pdf;q=0.7, video/*;q=0.7, */*;q=0.5',
-              'User-Agent': USER_AGENT,
-            },
-          });
-          return res;
-        },
-        {
-          retryFetchErrors: this.context.config.getRetryFetchErrors(),
-          onRetry: (attempt, error, delayMs) =>
-            this.handleRetry(attempt, error, delayMs),
-          signal,
-        },
-      );
-
-      const contentType = response.headers.get('content-type') || '';
-      const status = response.status;
-      const bodyBuffer = await this.readResponseWithLimit(
-        response,
-        MAX_EXPERIMENTAL_FETCH_SIZE,
-      );
-
-      if (status >= 400) {
-        let rawResponseText = bodyBuffer.toString('utf8');
-        if (!this.context.config.isContextManagementEnabled()) {
-          rawResponseText = truncateString(
-            rawResponseText,
-            10000,
-            '\n\n... [Error response truncated] ...',
-          );
-        }
-        const headers: Record<string, string> = {};
-        response.headers.forEach((value, key) => {
-          headers[key] = value;
-        });
-        const errorContent = `Request failed with status ${status}
-Headers: ${JSON.stringify(headers, null, 2)}
-Response: ${rawResponseText}`;
-        debugLogger.error(
-          `[WebFetchTool] Experimental fetch failed with status ${status} for ${url}`,
-        );
-        return {
-          llmContent: errorContent,
-          returnDisplay: `Failed to fetch ${url} (Status: ${status})`,
-        };
-      }
-
-      const lowContentType = contentType.toLowerCase();
-      if (
-        lowContentType.includes('text/markdown') ||
-        lowContentType.includes('text/plain') ||
-        lowContentType.includes('application/json')
-      ) {
-        let text = bodyBuffer.toString('utf8');
-        if (!this.context.config.isContextManagementEnabled()) {
-          text = truncateString(text, MAX_CONTENT_LENGTH, TRUNCATION_WARNING);
-        }
-        return {
-          llmContent: wrapUntrusted(text),
-          returnDisplay: `Fetched ${contentType} content from ${url}`,
-        };
-      }
-
-      if (lowContentType.includes('text/html')) {
-        const html = bodyBuffer.toString('utf8');
-        let textContent = convert(html, {
-          wordwrap: false,
-          selectors: [
-            { selector: 'a', options: { ignoreHref: false, baseUrl: url } },
-          ],
-        });
-        if (!this.context.config.isContextManagementEnabled()) {
-          textContent = truncateString(
-            textContent,
-            MAX_CONTENT_LENGTH,
-            TRUNCATION_WARNING,
-          );
-        }
-        return {
-          llmContent: wrapUntrusted(textContent),
-          returnDisplay: `Fetched and converted HTML content from ${url}`,
-        };
-      }
-
-      if (
-        lowContentType.startsWith('image/') ||
-        lowContentType.startsWith('video/') ||
-        lowContentType === 'application/pdf'
-      ) {
-        const base64Data = bodyBuffer.toString('base64');
-        return {
-          llmContent: {
-            inlineData: {
-              data: base64Data,
-              mimeType: contentType.split(';')[0],
-            },
-          },
-          returnDisplay: `Fetched ${contentType} from ${url}`,
-        };
-      }
-
-      // Fallback for unknown types - try as text
-      let text = bodyBuffer.toString('utf8');
-      if (!this.context.config.isContextManagementEnabled()) {
-        text = truncateString(text, MAX_CONTENT_LENGTH, TRUNCATION_WARNING);
-      }
-      return {
-        llmContent: wrapUntrusted(text),
-        returnDisplay: `Fetched ${contentType || 'unknown'} content from ${url}`,
-      };
-    } catch (e) {
-      const errorMessage = `Error during experimental fetch for ${url}: ${getErrorMessage(e)}`;
-      debugLogger.error(
-        `[WebFetchTool] Experimental fetch error: ${errorMessage}`,
-      );
-      return {
-        llmContent: `Error: ${errorMessage}`,
-        returnDisplay: `Error: ${errorMessage}`,
-        error: {
-          message: errorMessage,
-          type: ToolErrorType.WEB_FETCH_FALLBACK_FAILED,
-        },
-      };
-    }
+  protected override async getConfirmationDetails(
+    _abortSignal: AbortSignal,
+  ): Promise<ToolCallConfirmationDetails | false> {
+    const url = this.startUrl();
+    return {
+      type: 'info',
+      title: `Confirm Web Fetch`,
+      prompt: `Fetch ${url}`,
+      urls: [url],
+      onConfirm: async (_outcome: ToolConfirmationOutcome) => {
+        // Mode transitions and policy updates are handled by the scheduler.
+      },
+    };
   }
 
   async execute({ abortSignal: signal }: ExecuteOptions): Promise<ToolResult> {
-    if (this.context.config.getDirectWebFetch()) {
-      return this.executeExperimental(signal);
-    }
-    const userPrompt = this.params.prompt!;
-    const { validUrls } = parsePrompt(userPrompt);
-
-    const { toFetch, skipped } = await this.filterAndValidateUrls(validUrls);
-
-    // If everything was skipped, fail early
-    if (toFetch.length === 0 && skipped.length > 0) {
-      const errorMessage = `All requested URLs were skipped: ${skipped.join(', ')}`;
-      debugLogger.error(`[WebFetchTool] ${errorMessage}`);
-      return {
-        llmContent: `Error: ${errorMessage}`,
-        returnDisplay: `Error: ${errorMessage}`,
-        error: {
-          message: errorMessage,
-          type: ToolErrorType.WEB_FETCH_PROCESSING_ERROR,
-        },
-      };
+    let url = this.startUrl();
+    const rate = checkRateLimit(url);
+    if (!rate.allowed) {
+      const wait = Math.ceil((rate.waitTimeMs ?? RATE_LIMIT_WINDOW_MS) / 1000);
+      return this.error(
+        `Too many requests to this host; try again in ${wait} s.`,
+        ToolErrorType.WEB_FETCH_PROCESSING_ERROR,
+      );
     }
 
     try {
-      const geminiClient = this.context.geminiClient;
-      const sanitizedPrompt = `Follow the user's instructions to process the authorized URLs.
-
-<user_instructions>
-${sanitizeXml(userPrompt)}
-</user_instructions>
-
-<authorized_urls>
-${toFetch.join('\n')}
-</authorized_urls>
-`;
-      const response = await geminiClient.generateContent(
-        { model: 'web-fetch' },
-        [{ role: 'user', parts: [{ text: sanitizedPrompt }] }],
-        signal,
-        LlmRole.UTILITY_TOOL,
-      );
-
-      debugLogger.debug(
-        `[WebFetchTool] Full response for prompt "${userPrompt.substring(
-          0,
-          50,
-        )}...":`,
-        JSON.stringify(response, null, 2),
-      );
-
-      let responseText = getResponseText(response) || '';
-      const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
-
-      // Simple primary success check: we need some text or grounding data
-      if (!responseText.trim() && !groundingMetadata?.groundingChunks?.length) {
-        throw new Error('Primary fetch returned no content');
-      }
-
-      // 1. Apply Grounding Supports (Citations)
-      const groundingSupports = groundingMetadata?.groundingSupports?.filter(
-        isGroundingSupportItem,
-      );
-      if (groundingSupports && groundingSupports.length > 0) {
-        const insertions: Array<{ index: number; marker: string }> = [];
-        groundingSupports.forEach((support) => {
-          if (support.segment && support.groundingChunkIndices) {
-            const citationMarker = support.groundingChunkIndices
-              .map((chunkIndex: number) => `[${chunkIndex + 1}]`)
-              .join('');
-            insertions.push({
-              index: support.segment.endIndex,
-              marker: citationMarker,
-            });
-          }
+      let response: Response | undefined;
+      for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+        const refused = await this.refusal(url);
+        if (refused) {
+          debugLogger.warn(`[WebFetchTool] Refused ${url}: ${refused}`);
+          return this.error(refused, ToolErrorType.WEB_FETCH_PROCESSING_ERROR);
+        }
+        const res = await fetchWithTimeout(url, URL_FETCH_TIMEOUT_MS, {
+          signal,
+          // Followed by hand below so every hop is checked against the list.
+          redirect: 'manual',
+          headers: {
+            Accept:
+              'text/markdown, text/plain;q=0.9, application/json;q=0.9, text/html;q=0.8, application/pdf;q=0.7, */*;q=0.5',
+            'User-Agent': USER_AGENT,
+          },
         });
-
-        insertions.sort((a, b) => b.index - a.index);
-        const responseChars = responseText.split('');
-        insertions.forEach((insertion) => {
-          responseChars.splice(insertion.index, 0, insertion.marker);
-        });
-        responseText = responseChars.join('');
+        const location = res.headers.get('location');
+        if (REDIRECT_STATUSES.has(res.status) && location) {
+          await res.body?.cancel().catch(() => {});
+          url = new URL(location, url).href;
+          continue;
+        }
+        response = res;
+        break;
+      }
+      if (!response) {
+        return this.error(
+          `Too many redirects (more than ${MAX_REDIRECTS}).`,
+          ToolErrorType.WEB_FETCH_PROCESSING_ERROR,
+        );
       }
 
-      // 2. Append Source List
-      const sources =
-        groundingMetadata?.groundingChunks?.filter(isGroundingChunkItem);
-      if (sources && sources.length > 0) {
-        const sourceListFormatted: string[] = [];
-        sources.forEach((source, index) => {
-          const title = source.web?.title || 'Untitled';
-          const uri = source.web?.uri || 'Unknown URI';
-          sourceListFormatted.push(`[${index + 1}] ${title} (${uri})`);
-        });
-        responseText += `\n\nSources:\n${sourceListFormatted.join('\n')}`;
-      }
-
-      // 3. Prepend Warnings for skipped URLs
-      if (skipped.length > 0) {
-        responseText = `[Warning] The following URLs were skipped:\n${skipped.join('\n')}\n\n${responseText}`;
-      }
-
-      debugLogger.debug(
-        `[WebFetchTool] Formatted tool response for prompt "${userPrompt}":\n\n`,
-        responseText,
-      );
-
-      return {
-        llmContent: wrapUntrusted(responseText),
-        returnDisplay: `Content processed from prompt.`,
-      };
-    } catch (error: unknown) {
-      debugLogger.warn(
-        `[WebFetchTool] Primary fetch failed, falling back: ${getErrorMessage(error)}`,
-      );
-      logWebFetchFallbackAttempt(
-        this.context.config,
-        new WebFetchFallbackAttemptEvent('primary_failed'),
-      );
-      // Simple All-or-Nothing Fallback
-      return this.executeFallback(toFetch, signal);
+      return await this.toResult(url, response);
+    } catch (e) {
+      const errorMessage = `Error fetching ${url}: ${getErrorMessage(e)}`;
+      debugLogger.error(`[WebFetchTool] ${errorMessage}`);
+      return this.error(errorMessage, ToolErrorType.WEB_FETCH_FALLBACK_FAILED);
     }
+  }
+
+  /** Converts a final (non-redirect) response into the tool result. */
+  private async toResult(url: string, response: Response): Promise<ToolResult> {
+    const contentType = response.headers.get('content-type') || '';
+    const status = response.status;
+    const bodyBuffer = await this.readResponseWithLimit(
+      response,
+      MAX_FETCH_SIZE,
+    );
+    const limitText = (text: string) =>
+      this.context.config.isContextManagementEnabled()
+        ? text
+        : truncateString(text, MAX_CONTENT_LENGTH, TRUNCATION_WARNING);
+
+    if (status >= 400) {
+      const body = truncateString(
+        bodyBuffer.toString('utf8'),
+        10000,
+        '\n\n... [Error response truncated] ...',
+      );
+      return {
+        llmContent: wrapUntrusted(
+          `Request failed with status ${status}\nResponse: ${body}`,
+        ),
+        returnDisplay: `Failed to fetch ${url} (Status: ${status})`,
+      };
+    }
+
+    const lowContentType = contentType.toLowerCase();
+    if (lowContentType.includes('text/html')) {
+      const textContent = convert(bodyBuffer.toString('utf8'), {
+        wordwrap: false,
+        selectors: [
+          { selector: 'a', options: { ignoreHref: false, baseUrl: url } },
+        ],
+      });
+      return {
+        llmContent: wrapUntrusted(limitText(textContent)),
+        returnDisplay: `Fetched and converted HTML content from ${url}`,
+      };
+    }
+
+    if (
+      lowContentType.startsWith('image/') ||
+      lowContentType === 'application/pdf'
+    ) {
+      return {
+        llmContent: {
+          inlineData: {
+            data: bodyBuffer.toString('base64'),
+            mimeType: contentType.split(';')[0],
+          },
+        },
+        returnDisplay: `Fetched ${contentType} from ${url}`,
+      };
+    }
+
+    // Markdown, plain text, JSON and unknown types: as text.
+    return {
+      llmContent: wrapUntrusted(limitText(bodyBuffer.toString('utf8'))),
+      returnDisplay: `Fetched ${contentType || 'unknown'} content from ${url}`,
+    };
   }
 }
 
-/**
- * Implementation of the WebFetch tool logic
- */
+/** Parameter schema: a single URL. */
+const URL_PARAMETERS = {
+  type: 'object',
+  properties: {
+    url: {
+      type: 'string',
+      description: 'The http or https URL to fetch.',
+    },
+  },
+  required: ['url'],
+};
+
 export class WebFetchTool extends BaseDeclarativeTool<
   WebFetchToolParams,
   ToolResult
@@ -910,9 +434,9 @@ export class WebFetchTool extends BaseDeclarativeTool<
     super(
       WebFetchTool.Name,
       WEB_FETCH_DISPLAY_NAME,
-      WEB_FETCH_DEFINITION.base.description!,
+      describe(context),
       Kind.Fetch,
-      WEB_FETCH_DEFINITION.base.parametersJsonSchema,
+      URL_PARAMETERS,
       messageBus,
       true, // isOutputMarkdown
       false, // canUpdateOutput
@@ -922,32 +446,18 @@ export class WebFetchTool extends BaseDeclarativeTool<
   protected override validateToolParamValues(
     params: WebFetchToolParams,
   ): string | null {
-    if (this.context.config.getDirectWebFetch()) {
-      if (!params.url) {
-        return "The 'url' parameter is required.";
-      }
-      try {
-        new URL(params.url);
-      } catch {
-        return `Invalid URL: "${params.url}"`;
-      }
-      return null;
+    if (!params.url) {
+      return "The 'url' parameter is required.";
     }
-
-    if (!params.prompt || params.prompt.trim() === '') {
-      return "The 'prompt' parameter cannot be empty and must contain URL(s) and instructions.";
+    let parsed: URL;
+    try {
+      parsed = new URL(params.url);
+    } catch {
+      return `Invalid URL: "${params.url}"`;
     }
-
-    const { validUrls, errors } = parsePrompt(params.prompt);
-
-    if (errors.length > 0) {
-      return `Error(s) in prompt URLs:\n- ${errors.join('\n- ')}`;
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return 'Only http and https URLs can be fetched.';
     }
-
-    if (validUrls.length === 0) {
-      return "The 'prompt' must contain at least one valid URL (starting with http:// or https://).";
-    }
-
     return null;
   }
 
@@ -968,24 +478,21 @@ export class WebFetchTool extends BaseDeclarativeTool<
 
   override getSchema(modelId?: string) {
     const schema = resolveToolDeclaration(WEB_FETCH_DEFINITION, modelId);
-    if (this.context.config.getDirectWebFetch()) {
-      return {
-        ...schema,
-        description:
-          'Fetch content from a URL directly. Send multiple requests for this tool if multiple URL fetches are needed.',
-        parametersJsonSchema: {
-          type: 'object',
-          properties: {
-            url: {
-              type: 'string',
-              description:
-                'The URL to fetch. Must be a valid http or https URL.',
-            },
-          },
-          required: ['url'],
-        },
-      };
-    }
-    return schema;
+    return {
+      ...schema,
+      description: describe(this.context),
+      parametersJsonSchema: URL_PARAMETERS,
+    };
   }
+}
+
+/** Tool description, naming the hosts the model may fetch from. */
+function describe(context: AgentLoopContext): string {
+  const hosts = context.config.getWebFetchAllowedHosts();
+  return (
+    'Download one web page or file from an allowed host and return its text ' +
+    '(HTML is converted to text). One URL per call; the user approves each ' +
+    `fetch. Allowed hosts: ${hosts.length > 0 ? hosts.join(', ') : 'none'}. ` +
+    'Other hosts, and private or local addresses, are refused.'
+  );
 }

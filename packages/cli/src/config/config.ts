@@ -21,6 +21,7 @@ import {
   statusCommand,
 } from '../commands/capricorn.js';
 import { rewriteCapricornAliases } from '../capricorn/argAliases.js';
+import { userWebFetchHosts } from '../capricorn/networkPolicy.js';
 import { defer } from '../deferred.js';
 import {
   setGeminiMdFilename as setServerGeminiMdFilename,
@@ -1112,7 +1113,9 @@ export async function loadCliConfig(
     plan: settings.general?.plan?.enabled ?? true,
     voiceMode: settings.experimental?.voiceMode,
     tracker: settings.experimental?.taskTracker,
-    directWebFetch: settings.experimental?.directWebFetch,
+    // Capricorn: web_fetch exists only when the *user* settings enable it with
+    // at least one host; project/system settings cannot turn it on.
+    webFetchAllowedHosts: userWebFetchHosts(loadedSettings),
     planSettings: settings.general?.plan?.directory
       ? settings.general.plan
       : (extensionPlanSettings ?? settings.general?.plan),

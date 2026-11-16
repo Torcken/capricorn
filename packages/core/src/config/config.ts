@@ -46,6 +46,7 @@ import {
   resetModifiedBuildFiles,
 } from '../utils/untrustedContextTracker.js';
 import { WriteFileTool } from '../tools/write-file.js';
+import { WebFetchTool } from '../tools/web-fetch.js';
 import {
   setGeminiMdFilename,
   getCurrentGeminiMdFilename,
@@ -704,7 +705,12 @@ export interface ConfigParameters {
   env?: Record<string, string>;
   workspacePoliciesDir?: string;
   policyEngineConfig?: PolicyEngineConfig;
-  directWebFetch?: boolean;
+  /**
+   * Capricorn: hosts `web_fetch` may download from. Empty (the default) means
+   * the tool is not registered at all. Built from *user* settings only
+   * (`tools.webFetch`), never from project or system settings.
+   */
+  webFetchAllowedHosts?: readonly string[];
   policyUpdateConfirmationRequest?: PolicyUpdateConfirmationRequest;
   output?: OutputSettings;
   gemmaModelRouter?: GemmaModelRouterSettings;
@@ -883,7 +889,7 @@ export class Config implements McpContext, AgentLoopContext {
   readonly interactive: boolean;
   private readonly ptyInfo: string;
   private readonly trustedFolder: boolean | undefined;
-  private readonly directWebFetch: boolean;
+  private readonly webFetchAllowedHosts: readonly string[];
   private readonly useRipgrep: boolean;
   private readonly enableInteractiveShell: boolean;
   private readonly shellBackgroundCompletionBehavior:
@@ -1257,7 +1263,7 @@ export class Config implements McpContext, AgentLoopContext {
     this.interactive = params.interactive ?? false;
     this.ptyInfo = params.ptyInfo ?? 'child_process';
     this.trustedFolder = params.trustedFolder;
-    this.directWebFetch = params.directWebFetch ?? false;
+    this.webFetchAllowedHosts = [...(params.webFetchAllowedHosts ?? [])];
     this.useRipgrep = params.useRipgrep ?? true;
     this.useBackgroundColor = params.useBackgroundColor ?? true;
     this.useAlternateBuffer = params.useAlternateBuffer ?? false;
@@ -1960,6 +1966,11 @@ export class Config implements McpContext, AgentLoopContext {
   /** Capricorn: per-prompt wall-clock budget in ms (0 = unlimited). */
   getMaxPromptDurationMs(): number {
     return this.maxPromptDurationMs;
+  }
+
+  /** Hosts `web_fetch` may download from; empty when the tool is off. */
+  getWebFetchAllowedHosts(): readonly string[] {
+    return this.webFetchAllowedHosts;
   }
 
   getMaxSessionTurns(): number {
@@ -2826,10 +2837,6 @@ export class Config implements McpContext, AgentLoopContext {
 
   getApprovedPlanPath(): string | undefined {
     return this.approvedPlanPath;
-  }
-
-  getDirectWebFetch(): boolean {
-    return this.directWebFetch;
   }
 
   setApprovedPlanPath(path: string | undefined): void {
@@ -3760,10 +3767,14 @@ export class Config implements McpContext, AgentLoopContext {
     maybeRegister(WriteFileTool, () =>
       registry.registerTool(new WriteFileTool(this, this.messageBus)),
     );
-    // Capricorn: web_fetch is not registered. Its primary path delegates the
-    // fetch to Gemini's hosted URL-context tool; routed to a local Gemma model
-    // it would answer without ever retrieving the page (fabricated content),
-    // and any working fetch is an external network call. See docs/SECURITY.md.
+    // Capricorn: web_fetch downloads pages locally and only exists when the
+    // user allowed at least one host (tools.webFetch in user settings). The
+    // upstream hosted URL-context path was removed. See docs/SECURITY.md.
+    if (this.webFetchAllowedHosts.length > 0) {
+      maybeRegister(WebFetchTool, () =>
+        registry.registerTool(new WebFetchTool(this, this.messageBus)),
+      );
+    }
     maybeRegister(ReadMcpResourceTool, () =>
       registry.registerTool(new ReadMcpResourceTool(this, this.messageBus)),
     );

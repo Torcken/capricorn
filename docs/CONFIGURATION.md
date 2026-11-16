@@ -42,6 +42,7 @@ repository must not be able to change them:
 
 - `ollama.allowRemoteHost`
 - `security.network.allowedHosts`
+- `tools.webFetch` (`enabled`, `allowedHosts`)
 - remote MCP server hosts (a remote server declared in project settings is
   blocked until its host is in your user allowlist)
 
@@ -60,6 +61,8 @@ repository must not be able to change them:
 | `ollama.keepAlive`              | `10m`                    | How long Ollama keeps the model loaded after a request.                                                                                                                                                                                                                                    |
 | `ollama.requestTimeoutMs`       | `300000`                 | Max wait for the first byte (includes model load).                                                                                                                                                                                                                                         |
 | `security.network.allowedHosts` | `[]`                     | **User settings only.** External hosts Capricorn itself may contact, e.g. `["mcp.example.org", "*.corp.example"]`.                                                                                                                                                                         |
+| `tools.webFetch.enabled`        | `false`                  | **User settings only.** Register `web_fetch`, which downloads a page on this machine. Each fetch asks for approval.                                                                                                                                                                        |
+| `tools.webFetch.allowedHosts`   | `[]`                     | **User settings only.** Hosts `web_fetch` may download from, matched exactly (e.g. `["docs.python.org"]`; subdomains are not included). The network policy opens these hosts while web fetch is enabled.                                                                                   |
 | `experimental.enableAgents`     | `false`                  | Enable sub-agents (`invoke_agent`). Each sub-agent runs extra local inference.                                                                                                                                                                                                             |
 | `general.topicUpdateNarration`  | `false`                  | Structured progress updates via an extra tool.                                                                                                                                                                                                                                             |
 | `general.defaultApprovalMode`   | `default`                | `default`, `auto_edit` or `plan`. YOLO is only available via `--approval-mode yolo`.                                                                                                                                                                                                       |

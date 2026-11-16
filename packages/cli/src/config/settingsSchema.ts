@@ -1559,6 +1559,47 @@ const SETTINGS_SCHEMA = {
     description: 'Settings for built-in and custom tools.',
     showInDialog: false,
     properties: {
+      // Capricorn: local, allowlisted web downloads (cli/src/config/config.ts
+      // reads these from user settings only; see docs/SECURITY.md).
+      webFetch: {
+        type: 'object',
+        label: 'Web Fetch',
+        category: 'Tools',
+        requiresRestart: true,
+        default: {},
+        description: oneLine`
+          Lets the model download web pages from the hosts listed here.
+          Read from your user settings only; off by default.
+        `,
+        showInDialog: false,
+        properties: {
+          enabled: {
+            type: 'boolean',
+            label: 'Enable Web Fetch',
+            category: 'Tools',
+            requiresRestart: true,
+            default: false,
+            description: oneLine`
+              Register the web_fetch tool. Every fetch still asks for
+              approval, and only hosts in allowedHosts can be reached.
+            `,
+            showInDialog: false,
+          },
+          allowedHosts: {
+            type: 'array',
+            label: 'Web Fetch Allowed Hosts',
+            category: 'Tools',
+            requiresRestart: true,
+            default: [] as string[],
+            description: oneLine`
+              Hosts web_fetch may download from, matched exactly
+              (e.g. "docs.python.org"; subdomains are not included).
+            `,
+            showInDialog: false,
+            items: { type: 'string' },
+          },
+        },
+      },
       sandbox: {
         type: 'string',
         label: 'Sandbox',
@@ -2355,16 +2396,6 @@ const SETTINGS_SCHEMA = {
         default: false,
         description:
           'Enable model steering (user hints) to guide the model during tool execution.',
-        showInDialog: true,
-      },
-      directWebFetch: {
-        type: 'boolean',
-        label: 'Direct Web Fetch',
-        category: 'Experimental',
-        requiresRestart: true,
-        default: false,
-        description:
-          'Enable web fetch behavior that bypasses LLM summarization.',
         showInDialog: true,
       },
       dynamicModelConfiguration: {

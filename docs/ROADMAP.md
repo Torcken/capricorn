@@ -13,9 +13,6 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
   measured from each preset's own metadata (E4B, 12B, 26B, 31B) at the window
   that would be suggested. Still to do: a profile for E2B (no copy measured yet;
   it keeps a rough approximation).
-- **Local web fetch tool:** a `web_fetch` replacement that downloads a page
-  locally (opt-in, allowlisted hosts, approval per request) instead of
-  upstream's hosted URL-context path.
 - **Prompt tuning with the eval suite** (suite done, see `evals/capricorn/`):
   keep improving exploration (read the file that holds the answer) and
   project-convention matching; measure every installed Gemma 4 preset; publish

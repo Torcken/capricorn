@@ -2163,7 +2163,7 @@ describe('loadCliConfig useRipgrep', () => {
   });
 });
 
-describe('loadCliConfig directWebFetch', () => {
+describe('loadCliConfig web_fetch', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(os.homedir).mockReturnValue('/mock/home/user');
@@ -2176,24 +2176,14 @@ describe('loadCliConfig directWebFetch', () => {
     vi.restoreAllMocks();
   });
 
-  it('should be false by default when directWebFetch is not set in settings', async () => {
+  // Capricorn: web_fetch replaced directWebFetch; it is off unless the user
+  // settings enable it (see networkPolicy.test.ts for the user-only rule).
+  it('has no web_fetch hosts by default', async () => {
     process.argv = ['node', 'script.js'];
     const argv = await parseArguments(createTestMergedSettings());
     const settings = createTestMergedSettings();
     const config = await loadCliConfig(settings, 'test-session', argv);
-    expect(config.getDirectWebFetch()).toBe(false);
-  });
-
-  it('should be true when directWebFetch is set to true in settings', async () => {
-    process.argv = ['node', 'script.js'];
-    const argv = await parseArguments(createTestMergedSettings());
-    const settings = createTestMergedSettings({
-      experimental: {
-        directWebFetch: true,
-      },
-    });
-    const config = await loadCliConfig(settings, 'test-session', argv);
-    expect(config.getDirectWebFetch()).toBe(true);
+    expect(config.getWebFetchAllowedHosts()).toEqual([]);
   });
 });
 

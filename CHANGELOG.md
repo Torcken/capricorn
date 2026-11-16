@@ -6,6 +6,16 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `web_fetch` downloads one web page or file on this machine and returns its
+  text. Off by default: enable it in your user settings with
+  `"tools": { "webFetch": { "enabled": true, "allowedHosts": ["docs.python.org"] } }`.
+  Only listed hosts (exact match) are reached, redirects are re-checked, private
+  and local addresses are refused, and every fetch asks for approval (also in
+  auto-edit mode). Upstream's hosted URL-context path and the
+  `experimental.directWebFetch` setting are removed.
+
 ### Changed
 
 - Faster startup. The relaunch parent no longer loads the app bundle (its

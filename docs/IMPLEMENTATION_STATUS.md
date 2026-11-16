@@ -31,7 +31,7 @@ fully tested · **deferred** · **blocked**.
 | Hardware-aware onboarding (recommend, offer download, test load)                    | done (Linux/NVIDIA verified)           | `recommend.test.ts`, `preflight.test.ts`, pty e2e                 |
 | Context management for small windows (mid-task compression, scaled limits)          | done (8K/32K evals)                    | `evals/capricorn/RESULTS.md`, `chatCompressionService.test.ts`    |
 | Context window sized per machine (onboarding, `capricorn doctor`)                   | done (12B measured on CUDA)            | `contextSize.test.ts`, `preflight.test.ts`, `diagnostics.test.ts` |
-| Local web fetch                                                                     | deferred                               | docs/ROADMAP.md                                                   |
+| Local web fetch (opt-in, allowlisted hosts, approval per fetch)                     | done                                   | `web-fetch.test.ts`, `networkPolicy.test.ts`                      |
 | Removal of Google network code (OAuth, Code Assist, Clearcut, GCP export) and deps  | done (see UPSTREAM.md for leftovers)   | docs/UPSTREAM.md                                                  |
 | npm publication                                                                     | blocked                                | name chosen: `capricorn-code` (free); needs maintainer npm login  |
 
@@ -122,7 +122,8 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
 - Headless runs offer only read-only tools unless `--approval-mode auto_edit` or
   an allowlist is given.
 - Approved shell commands and local MCP processes are outside the egress guard.
-- `web_fetch` and web search are unavailable.
+- Web search is unavailable; `web_fetch` is off unless enabled in user settings
+  (`tools.webFetch`).
 - The upstream browser agent is removed (it would browse outside the network
   policy).
 - `npm audit` reports one high-severity advisory in bundled code (`extract-zip`,

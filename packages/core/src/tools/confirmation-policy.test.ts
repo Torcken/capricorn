@@ -9,7 +9,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EditTool } from './edit.js';
 import { WriteFileTool } from './write-file.js';
-import { WebFetchTool } from './web-fetch.js';
 import { ToolConfirmationOutcome } from './tools.js';
 import { ApprovalMode } from '../policy/types.js';
 import { MessageBusType } from '../confirmation-bus/types.js';
@@ -76,7 +75,6 @@ describe('Tool Confirmation Policy Updates', () => {
         isPathWithinWorkspace: () => true,
         getDirectories: () => [rootDir],
       }),
-      getDirectWebFetch: () => false,
       storage: {
         getProjectTempDir: () => path.join(os.tmpdir(), 'gemini-cli-temp'),
       },
@@ -126,14 +124,6 @@ describe('Tool Confirmation Policy Updates', () => {
       params: {
         file_path: path.join(rootDir, 'test.txt'),
         content: 'new content',
-      },
-    },
-    {
-      name: 'WebFetchTool',
-      create: (config: Config, bus: MessageBus) =>
-        new WebFetchTool(config, bus),
-      params: {
-        prompt: 'fetch https://example.com',
       },
     },
   ];
