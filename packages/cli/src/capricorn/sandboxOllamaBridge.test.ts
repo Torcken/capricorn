@@ -11,6 +11,7 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   doneFrame,
+  closedLoopbackUrl,
   startMockOllama,
   textFrame,
   type MockOllama,
@@ -150,7 +151,12 @@ describe('startOllamaBridge', () => {
   });
 
   it('answers 502 when the daemon is down', async () => {
-    await mock.close();
+    // A port nothing listens on, not the closed mock's: see closedLoopbackUrl.
+    await bridge.close();
+    bridge = await startOllamaBridge({
+      socketPath: path.join(dir, 'down.sock'),
+      upstreamBaseUrl: await closedLoopbackUrl(),
+    });
     const res = await request(bridge.socketPath, 'GET', '/api/version');
     expect(res.status).toBe(502);
     expect(res.text).toMatch(/Ollama unreachable/);

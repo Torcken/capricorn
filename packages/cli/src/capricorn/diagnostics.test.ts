@@ -12,6 +12,7 @@ import {
 } from '@capricorn/core';
 import {
   DEFAULT_MOCK_MODELS,
+  closedLoopbackUrl,
   startMockOllama,
   type MockOllama,
 } from '@capricorn/core/dist/src/providers/ollama/testing/mockOllamaServer.js';
@@ -133,10 +134,9 @@ describe('runDiagnostics', () => {
   });
 
   it('distinguishes a stopped daemon and skips model checks', async () => {
-    await mock.close();
     const report = await runDiagnostics({
       runtime: runtime(),
-      client: new OllamaClient({ endpoint: mock.url }),
+      client: new OllamaClient({ endpoint: await closedLoopbackUrl() }),
       version: 'test',
       cwd: process.cwd(),
     });
@@ -356,10 +356,12 @@ describe('runDiagnostics with loadModel (doctor --load)', () => {
   });
 
   it('skips the load when Ollama is not reachable', async () => {
-    await mock.close();
     const report = await runDiagnostics({
       runtime: runtime(),
-      client: new OllamaClient({ endpoint: mock.url, metadataTimeoutMs: 500 }),
+      client: new OllamaClient({
+        endpoint: await closedLoopbackUrl(),
+        metadataTimeoutMs: 500,
+      }),
       version: 'test',
       cwd: process.cwd(),
       loadModel: true,

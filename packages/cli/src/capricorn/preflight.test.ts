@@ -12,6 +12,7 @@ import {
 } from '@capricorn/core';
 import {
   DEFAULT_MOCK_MODELS,
+  closedLoopbackUrl,
   startMockOllama,
   type MockOllama,
 } from '@capricorn/core/dist/src/providers/ollama/testing/mockOllamaServer.js';
@@ -90,10 +91,9 @@ describe('runPreflight', () => {
 
   it('gives actionable advice when Ollama is down', async () => {
     const { config } = fakeConfig('gemma4:12b');
-    await mock.close();
     const r = await runPreflight(config, {
       interactive: false,
-      client: new OllamaClient({ endpoint: mock.url }),
+      client: new OllamaClient({ endpoint: await closedLoopbackUrl() }),
     });
     expect(r.ok).toBe(false);
     expect(r.ok === false && r.message).toMatch(

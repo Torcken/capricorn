@@ -411,3 +411,32 @@ export function doneFrame(
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
 }
+
+/** First port tried by {@link closedLoopbackUrl}. */
+const CLOSED_PORT_START = 20_000;
+/** Last port tried: below every OS's ephemeral range (Linux starts at 32768). */
+const CLOSED_PORT_END = 32_000;
+
+/**
+ * A loopback URL where nothing listens, for "daemon is down" tests.
+ *
+ * Why not `mock.close()` then `mock.url`: the freed port is ephemeral, and
+ * the OS may hand it at once to a mock started with `listen(0)` by another
+ * test file running in parallel; the "down" daemon then answers. Ports are
+ * picked below the ephemeral range (Linux 32768+, macOS/Windows 49152+),
+ * which `listen(0)` never assigns, and checked free by binding once.
+ */
+export async function closedLoopbackUrl(): Promise<string> {
+  const span = CLOSED_PORT_END - CLOSED_PORT_START;
+  const offset = Math.floor(Math.random() * span);
+  for (let i = 0; i < span; i++) {
+    const port = CLOSED_PORT_START + ((offset + i) % span);
+    const free = await new Promise<boolean>((resolve) => {
+      const probe = http.createServer();
+      probe.once('error', () => resolve(false));
+      probe.listen(port, '127.0.0.1', () => probe.close(() => resolve(true)));
+    });
+    if (free) return `http://127.0.0.1:${port}`;
+  }
+  throw new Error('No free loopback port found for a closed-port test.');
+}

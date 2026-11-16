@@ -9,6 +9,7 @@ import { OllamaClient } from './client.js';
 import { OllamaErrorKind } from './errors.js';
 import {
   doneFrame,
+  closedLoopbackUrl,
   startMockOllama,
   textFrame,
   toolCallFrame,
@@ -57,8 +58,7 @@ describe('OllamaClient metadata', () => {
   });
 
   it('reports connection refused when no daemon is listening', async () => {
-    await mock.close();
-    const dead = new OllamaClient({ endpoint: mock.url });
+    const dead = new OllamaClient({ endpoint: await closedLoopbackUrl() });
     await expect(dead.version()).rejects.toMatchObject({
       kind: OllamaErrorKind.CONNECTION_REFUSED,
     });
