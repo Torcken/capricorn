@@ -8,7 +8,6 @@
 .env
 .gemini/
 .idea
-.integration-tests/
 **/.vscode-test/
 *.iml
 *.tsbuildinfo
@@ -22,5 +21,4 @@ junit.xml
 Thumbs.db
 .pytest_cache
 **/SKILL.md
-packages/sdk/test-data/*.json
 *.mdx

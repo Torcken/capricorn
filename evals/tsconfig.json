@@ -7,7 +7,7 @@
       "@capricorn/cli": ["../packages/cli/index.ts"]
     }
   },
-  "include": ["**/*.ts", "../scripts/utils/tool-log-formatter.ts"],
+  "include": ["capricorn/**/*.ts"],
   "exclude": ["logs"],
   "references": [{ "path": "../packages/core" }, { "path": "../packages/cli" }]
 }

@@ -13,7 +13,6 @@ COPY package*.json ./
 COPY packages/cli/package*.json ./packages/cli/
 COPY packages/core/package*.json ./packages/core/
 COPY packages/devtools/package*.json ./packages/devtools/
-COPY packages/sdk/package*.json ./packages/sdk/
 COPY packages/test-utils/package*.json ./packages/test-utils/
 
 # Use npm ci for consistent, reliable builds (respects package-lock.json)

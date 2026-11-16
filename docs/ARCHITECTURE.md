@@ -6,11 +6,11 @@ esbuild bundle, `bundle/capricorn.js`.
 
 ## Packages
 
-| Package (internal name)                                    | Role                                                                       |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `packages/cli` (`@capricorn/cli`)                          | Argument parsing, subcommands, Ink/React TUI, headless mode, settings      |
-| `packages/core` (`@capricorn/core`)                        | Agent loop, tools, scheduler, policy, sessions, MCP, **Ollama provider**   |
-| `packages/test-utils`, `packages/sdk`, `packages/devtools` | Retained upstream packages (not part of the Capricorn product surface yet) |
+| Package (internal name)                    | Role                                                                              |
+| ------------------------------------------ | --------------------------------------------------------------------------------- |
+| `packages/cli` (`@capricorn/cli`)          | Argument parsing, subcommands, Ink/React TUI, headless mode, settings             |
+| `packages/core` (`@capricorn/core`)        | Agent loop, tools, scheduler, policy, sessions, MCP, **Ollama provider**          |
+| `packages/test-utils`, `packages/devtools` | Retained upstream packages: test helpers, and the debug console used by `--debug` |
 
 ## Responsibilities and where they live
 

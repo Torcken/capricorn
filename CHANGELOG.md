@@ -6,6 +6,15 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Removed
+
+- Upstream test infrastructure that no longer ran and was not in CI:
+  `integration-tests/`, `memory-tests/`, `perf-tests/`, the Gemini `evals/`
+  (with their `scripts/eval-*` tools) and the npm scripts for them. `e2e/`
+  against mock Ollama and `evals/capricorn/` cover the same ground.
+- The unused upstream SDK package (`packages/sdk`), `third_party/get-ripgrep`,
+  `.lycheeignore` and `scripts/test-windows-paths.js`.
+
 ## [0.1.0-alpha.9] - 2026-11-16
 
 ### Fixed

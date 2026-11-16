@@ -58,7 +58,6 @@ export default tseslint.config(
       'packages/**/dist/**',
       'bundle/**',
       'package/bundle/**',
-      '.integration-tests/**',
       '**/.vscode-test/**',
       'dist/**',
       // Capricorn: upstream ignored 'evals/**'; ignore its entries one level
@@ -276,18 +275,6 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/sdk/src/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          name: '@capricorn/sdk',
-          message: 'Please use relative imports within the @capricorn/sdk package.',
-        },
-      ],
-    },
-  },
-  {
     files: ['packages/*/src/**/*.test.{ts,tsx}'],
     plugins: {
       vitest,
@@ -390,25 +377,4 @@ export default tseslint.config(
   },
   // Prettier config must be last
   prettierConfig,
-  // extra settings for scripts that we run directly with node
-  {
-    files: ['./integration-tests/**/*.js'],
-    languageOptions: {
-      globals: {
-        ...globals.node,
-        process: 'readonly',
-        console: 'readonly',
-      },
-    },
-    rules: {
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          caughtErrors: 'all',
-        },
-      ],
-    },
-  },
 );

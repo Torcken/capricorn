@@ -115,9 +115,11 @@ filing a bug.
   `~/.capricorn` (upstream wrote to `~/.gemini`). Run the suites with a
   disposable `HOME` if this matters to you, e.g.
   `HOME=$(mktemp -d) npm run test:ci -w @capricorn/cli`.
-- The upstream `integration-tests/`, `evals/`, `memory-tests/` and `perf-tests/`
-  suites were written for hosted Gemini models and are not part of Capricorn's
-  quality gate yet.
+- The upstream `integration-tests/`, `memory-tests/`, `perf-tests/` and Gemini
+  `evals/` suites were removed on 2026-11-16: they were written for hosted
+  Gemini models, were not in CI, and no longer ran (31 of 70 integration tests
+  failed, several for removed Google features; the memory and perf suites
+  crashed). `e2e/` against mock Ollama and `evals/capricorn/` replace them.
 
 ## Coverage
 

@@ -94,10 +94,11 @@ The repository history starts with the unmodified upstream commit, so
 **Package names**
 
 - Internal workspaces use the `@capricorn` scope: `@capricorn/cli`,
-  `@capricorn/core`, `@capricorn/devtools`, `@capricorn/sdk` and
-  `@capricorn/test-utils` (upstream: `@google/gemini-cli*`). They stay private
-  and bundled; only `capricorn-code` is published. Links to upstream issues are
-  unchanged, because they name external things.
+  `@capricorn/core`, `@capricorn/devtools` and `@capricorn/test-utils`
+  (upstream: `@google/gemini-cli*`; the upstream SDK package was removed, as
+  nothing used it). They stay private and bundled; only `capricorn-code` is
+  published. Links to upstream issues are unchanged, because they name external
+  things.
 - The VS Code companion extension (`packages/vscode-ide-companion`) and the IDE
   integration it served are removed: the IDE client and installer, IDE context
   in prompts, IDE diff views for edits, IDE workspace trust, the sandbox IDE

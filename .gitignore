@@ -47,8 +47,6 @@ packages/*/coverage/
 packages/cli/src/generated/
 packages/core/src/generated/
 packages/devtools/src/_client-assets.ts
-.integration-tests/
-.perf-tests/
 packages/cli/download-ripgrep*/
 
 # GHA credentials
