@@ -26,7 +26,9 @@ import { CLI_ENTRY, createEnv, type E2EEnv } from './harness.js';
 
 let env: E2EEnv;
 /** The running TUI, killed after each test so cleanup can remove its cwd. */
-let running: { kill: () => void; done: () => boolean } | undefined;
+let running:
+  | { kill: () => void; done: () => boolean; exited: Promise<number> }
+  | undefined;
 
 beforeEach(async () => {
   env = await createEnv();
@@ -34,7 +36,16 @@ beforeEach(async () => {
 afterEach(async () => {
   // A TUI that failed to exit still holds the temp repo open, which makes
   // the directory removal fail on Windows (EBUSY).
-  if (running && !running.done()) running.kill();
+  if (running && !running.done()) {
+    running.kill();
+    // Wait for the exit: until then the relaunched child can still be
+    // writing session files into the temp home, and removing the directory
+    // fails with ENOTEMPTY (seen once in CI on Linux).
+    await Promise.race([
+      running.exited,
+      new Promise((r) => setTimeout(r, 5_000)),
+    ]);
+  }
   running = undefined;
   await env.cleanup();
 });
@@ -122,6 +133,7 @@ function spawnTui(args: string[] = [], extraEnv: Record<string, string> = {}) {
       }
     },
     done: () => exitCode !== undefined,
+    exited,
   };
   return { term, waitFor, exited, screen: () => plain(screen) };
 }
