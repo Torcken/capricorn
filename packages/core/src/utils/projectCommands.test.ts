@@ -9,6 +9,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import {
+  allChecksCommand,
   detectProjectCommands,
   formatProjectCommands,
 } from './projectCommands.js';
@@ -98,6 +99,29 @@ describe('detectProjectCommands', () => {
     expect(formatProjectCommands([dir, os.tmpdir()])).toContain(
       `Project commands in ${dir}`,
     );
+  });
+});
+
+describe('allChecksCommand', () => {
+  it('joins lint, typecheck and test, fastest first, without build', () => {
+    write(
+      'package.json',
+      JSON.stringify({
+        scripts: { test: 'vitest', build: 'tsc', lint: 'eslint .' },
+      }),
+    );
+    expect(allChecksCommand(detectProjectCommands(dir))).toBe(
+      'npm run lint && npm test',
+    );
+    expect(formatProjectCommands([dir])).toContain(
+      '  - all checks: `npm run lint && npm test`',
+    );
+  });
+
+  it('is omitted with a single check', () => {
+    write('package.json', JSON.stringify({ scripts: { test: 'vitest' } }));
+    expect(allChecksCommand(detectProjectCommands(dir))).toBeUndefined();
+    expect(formatProjectCommands([dir])).not.toContain('all checks');
   });
 });
 

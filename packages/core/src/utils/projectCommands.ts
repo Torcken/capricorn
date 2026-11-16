@@ -164,6 +164,32 @@ export function detectProjectCommands(dir: string): ProjectCommand[] {
   });
 }
 
+/** Checks joined into the "all checks" command, fastest first. */
+const CHECK_ORDER: readonly ProjectCommandPurpose[] = [
+  'lint',
+  'typecheck',
+  'test',
+];
+
+/**
+ * One command that runs every detected check (`lint && typecheck && test`),
+ * or undefined when fewer than two checks were found. Build is left out: it
+ * can be slow and is not a check of the change itself.
+ *
+ * Why: in the eval, gemma4:12b ran `npm test`, saw it pass and stopped, and
+ * neither a list of commands nor an instruction to run all of them changed
+ * that (evals/capricorn/RESULTS.md, 2026-11-16). A single command makes
+ * "run the checks" one step.
+ */
+export function allChecksCommand(
+  commands: readonly ProjectCommand[],
+): string | undefined {
+  const checks = CHECK_ORDER.map(
+    (purpose) => commands.find((c) => c.purpose === purpose)?.command,
+  ).filter((c): c is string => c !== undefined);
+  return checks.length >= 2 ? checks.join(' && ') : undefined;
+}
+
 /**
  * Session-context lines for the detected commands of each directory, or ''
  * when nothing is found. Multi-root workspaces name the directory.
@@ -177,6 +203,8 @@ export function formatProjectCommands(dirs: readonly string[]): string {
     const lines = commands.map(
       (c) => `  - ${c.purpose}: \`${c.command}\` (${c.source})`,
     );
+    const all = allChecksCommand(commands);
+    if (all) lines.push(`  - all checks: \`${all}\``);
     blocks.push(
       `- **Project commands${where}** (detected from project files; check them before relying on them):\n${lines.join('\n')}`,
     );

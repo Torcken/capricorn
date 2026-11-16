@@ -6,6 +6,13 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The project-commands hint in the session context ends with one combined
+  `all checks` command (for example `npm run lint && npm test`) when a project
+  has two or more checks. In the eval, gemma4:12b then ran the project's lint as
+  well as its tests in 8 of 8 runs, up from 4 of 8.
+
 ## [0.1.0-alpha.7] - 2026-11-16
 
 ### Changed

@@ -43,8 +43,20 @@ directly above the command list, scored **4/8** on `edit-project-checks` (3/3 on
 The failures were again `npm test` and stop (3 runs) plus one 300 s timeout
 after `npm test`; the system prompt's own "run the relevant tests, linter or
 type checker" does not change this either. 12B treats a passing `npm test` as
-done; making the full set of checks one step (e.g. a single suggested command)
-is a possible next experiment.
+done.
+
+Second follow-up: the hint now ends with one combined line,
+`all checks: npm run lint && npm test` (lint, typecheck and test when at least
+two are detected, fastest first; build left out). `edit-project-checks`:
+**8/8**, and in every run the model verified with exactly that command in one
+step (`testfix-project-script` 3/3). That is the first change that moved this
+task (4/8 plain list, 5/8 no hint, 4/8 stronger wording), so it is kept.
+
+The other two known 12B weaknesses were re-measured on the same build (8 runs
+each): `explore-config-port` 8/8 and `explore-find-caller` 8/8 (answering from a
+search hit without reading the file no longer reproduces), and
+`tooluse-create-module` 7/8 (the one failure wrote a test that does not pass;
+that session has no shell to run it). Neither needs a prompt change now.
 
 ## 2026-11-16 — repository context; first `gemma4:26b` runs
 
