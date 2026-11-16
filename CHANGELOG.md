@@ -6,6 +6,8 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.6] - 2026-11-16
+
 ### Added
 
 - The session context lists the project's own test, build, lint and typecheck

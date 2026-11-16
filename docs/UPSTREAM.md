@@ -55,7 +55,7 @@ The repository history starts with the unmodified upstream commit, so
 **Product surface**
 
 - Binary `capricorn`; root package `capricorn-code` (npm); version
-  `0.1.0-alpha.5`.
+  `0.1.0-alpha.6`.
 - Storage `~/.capricorn`, `.capricorn/`, `CAPRICORN.md`, `.capricornignore`,
   system settings under `/etc/capricorn` (and platform equivalents).
 - New subcommands: `doctor`, `status`, `models`, `config`, `init`, plus the
