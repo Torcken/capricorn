@@ -199,3 +199,51 @@ export function getSpawnConfig(
     env: newEnv,
   };
 }
+
+/** Capricorn subcommands that print a result and exit (no TUI, no restart). */
+const ONE_SHOT_COMMANDS: ReadonlySet<string> = new Set([
+  'run',
+  'doctor',
+  'status',
+  'models',
+]);
+
+/**
+ * Smallest default V8 heap with which a one-shot run skips the relaunch.
+ * Below it (e.g. small-RAM machines, where Node picks a small default) the
+ * child still gets the larger `--max-old-space-size` upstream computes.
+ */
+export const IN_PROCESS_MIN_HEAP_BYTES = 2 * 1024 * 1024 * 1024;
+
+/**
+ * Capricorn: whether this invocation can run in this process instead of
+ * spawning a child.
+ *
+ * Why: the relaunch exists for two things, a larger heap and the parent that
+ * restarts the TUI after a settings or trust change (`RELAUNCH_EXIT_CODE`).
+ * A headless prompt (`-p`/`--prompt`, `capricorn run`) or a one-shot command
+ * (`doctor`, `status`, `models`) uses neither, and history for a local Gemma
+ * context window (at most 256K tokens) is a few MB, so the default V8 heap is
+ * ample. Skipping the second Node process saves ~140 ms per run. Interactive
+ * sessions (including `-i`/`--prompt-interactive`) keep the relaunch.
+ *
+ * @param args - CLI arguments after the script path.
+ * @param heapLimitBytes - `v8.getHeapStatistics().heap_size_limit`.
+ */
+export function canRunInProcess(
+  args: readonly string[],
+  heapLimitBytes: number,
+): boolean {
+  if (heapLimitBytes < IN_PROCESS_MIN_HEAP_BYTES) return false;
+  const interactive = args.some(
+    (a) =>
+      a === '-i' ||
+      a === '--prompt-interactive' ||
+      a.startsWith('--prompt-interactive='),
+  );
+  if (interactive) return false;
+  const headlessPrompt = args.some(
+    (a) => a === '-p' || a === '--prompt' || a.startsWith('--prompt='),
+  );
+  return headlessPrompt || ONE_SHOT_COMMANDS.has(args[0] ?? '');
+}

@@ -20,7 +20,7 @@ import {
   type ShellType,
 } from '../utils/shell-utils.js';
 import { isBinary, truncateString } from '../utils/textUtils.js';
-import pkg from '@xterm/headless';
+import type pkg from '@xterm/headless';
 import { debugLogger } from '../utils/debugLogger.js';
 import { Storage } from '../config/storage.js';
 import {
@@ -45,7 +45,6 @@ import {
   type ExecutionOutputEvent,
   type ExecutionResult,
 } from './executionLifecycleService.js';
-const { Terminal } = pkg;
 
 const MAX_CHILD_PROCESS_BUFFER_SIZE = 16 * 1024 * 1024; // 16MB
 
@@ -1168,6 +1167,12 @@ export class ShellExecutionService {
     try {
       const cols = shellExecutionConfig.terminalWidth ?? 80;
       const rows = shellExecutionConfig.terminalHeight ?? 30;
+
+      // Capricorn: the headless terminal is loaded when the first PTY command
+      // runs instead of at startup (~12 ms on every launch otherwise). Loaded
+      // before the PTY is spawned, so no output can arrive before the
+      // terminal that records it exists.
+      const { Terminal } = (await import('@xterm/headless')).default;
 
       const prepared = await this.prepareExecution(
         commandToExecute,

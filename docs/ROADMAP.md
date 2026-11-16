@@ -36,9 +36,11 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
   shrinks in small windows.
 - **Startup time:** the relaunch parent no longer loads the bundle, `--version`
   answers without starting the app, and a private V8 compile cache is used
-  (2026-11-16: `-p` 2.2 s → 1.3 s against the mock daemon). Still to do: lazy
-  loading inside the app itself (most of the remaining time is loading ~16 MB of
-  bundled code).
+  (2026-11-16: `-p` 2.2 s → 1.3 s against the mock daemon). Since 2026-11-16
+  headless runs skip the relaunch and several heavy packages load on first use
+  (`-p` 1.3 s → 1.0 s). Still to do: most of the remaining time is evaluating
+  the ~13 MB of bundled code that every run imports; going further needs the
+  tool, policy and config layers split so a headless run loads less of it.
 
 ## After 1.0
 

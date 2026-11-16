@@ -6,6 +6,15 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Faster headless runs. `-p`/`--prompt`, `capricorn run`, `doctor`, `status` and
+  `models` now run in a single Node process instead of relaunching a child (when
+  Node's default heap is at least 2 GiB; interactive sessions still relaunch
+  with the larger heap), and telemetry, gRPC, the headless terminal, syntax
+  highlighting and `read-package-up` load only when first used. Against the mock
+  daemon: `-p` 1.28 s → 1.0 s, `doctor` 1.7 s → 0.94 s.
+
 ## [0.1.0-alpha.6] - 2026-11-16
 
 ### Added

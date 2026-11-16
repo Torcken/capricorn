@@ -41,3 +41,26 @@ describe('relaunch supervisor stays lightweight', () => {
     }
   });
 });
+
+describe('canRunInProcess', () => {
+  const GiB = 1024 * 1024 * 1024;
+  it('runs headless prompts and one-shot commands in process', async () => {
+    const { canRunInProcess } = await import('./relaunchSupervisor.js');
+    expect(canRunInProcess(['-p', 'hi'], 4 * GiB)).toBe(true);
+    expect(canRunInProcess(['--prompt=hi', '--model', 'x'], 4 * GiB)).toBe(
+      true,
+    );
+    expect(canRunInProcess(['run', 'fix it'], 4 * GiB)).toBe(true);
+    expect(canRunInProcess(['doctor', '--json'], 4 * GiB)).toBe(true);
+    expect(canRunInProcess(['models'], 4 * GiB)).toBe(true);
+  });
+
+  it('keeps the relaunch for interactive sessions and small heaps', async () => {
+    const { canRunInProcess } = await import('./relaunchSupervisor.js');
+    expect(canRunInProcess([], 4 * GiB)).toBe(false);
+    expect(canRunInProcess(['--model', 'gemma4:12b'], 4 * GiB)).toBe(false);
+    expect(canRunInProcess(['-i', 'start here'], 4 * GiB)).toBe(false);
+    expect(canRunInProcess(['-p', 'x', '-i', 'y'], 4 * GiB)).toBe(false);
+    expect(canRunInProcess(['-p', 'hi'], 1.5 * GiB)).toBe(false);
+  });
+});

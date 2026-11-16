@@ -12,30 +12,25 @@ import {
   metrics,
   propagation,
 } from '@opentelemetry/api';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
-import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-grpc';
-import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
-import { OTLPTraceExporter as OTLPTraceExporterHttp } from '@opentelemetry/exporter-trace-otlp-http';
-import { OTLPLogExporter as OTLPLogExporterHttp } from '@opentelemetry/exporter-logs-otlp-http';
-import { OTLPMetricExporter as OTLPMetricExporterHttp } from '@opentelemetry/exporter-metrics-otlp-http';
-import { CompressionAlgorithm } from '@opentelemetry/otlp-exporter-base';
-import { Metadata } from '@grpc/grpc-js';
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
-import { resourceFromAttributes } from '@opentelemetry/resources';
-import {
+// Capricorn: the SDK, exporters and gRPC are imported for their *types* only
+// and loaded with import() inside initializeTelemetry(). Telemetry is forced
+// off in Capricorn, and loading these packages at startup cost ~130 ms of
+// module evaluation on every launch (CPU profile, 2026-11-16).
+import type { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
+import type { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-grpc';
+import type { OTLPTraceExporter as OTLPTraceExporterHttp } from '@opentelemetry/exporter-trace-otlp-http';
+import type { OTLPLogExporter as OTLPLogExporterHttp } from '@opentelemetry/exporter-logs-otlp-http';
+import type { Metadata } from '@grpc/grpc-js';
+import type { NodeSDK } from '@opentelemetry/sdk-node';
+import type {
   BatchSpanProcessor,
   ConsoleSpanExporter,
 } from '@opentelemetry/sdk-trace-node';
-import {
+import type {
   BatchLogRecordProcessor,
   ConsoleLogRecordExporter,
 } from '@opentelemetry/sdk-logs';
-import {
-  ConsoleMetricExporter,
-  PeriodicExportingMetricReader,
-} from '@opentelemetry/sdk-metrics';
-import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
+import type { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 /**
  * Capricorn: the only credential field telemetry ever read (upstream used
  * google-auth-library's `JWTInput` for Google Cloud export, removed here).
@@ -47,11 +42,7 @@ import type { Config } from '../config/config.js';
 import { SERVICE_NAME } from './constants.js';
 import { initializeMetrics } from './metrics.js';
 import { ClearcutLogger } from './clearcut-logger/clearcut-logger.js';
-import {
-  FileLogExporter,
-  FileMetricExporter,
-  FileSpanExporter,
-} from './file-exporters.js';
+import type { FileLogExporter, FileSpanExporter } from './file-exporters.js';
 import { TelemetryTarget } from './index.js';
 import { debugLogger } from '../utils/debugLogger.js';
 import {
@@ -202,6 +193,50 @@ export async function initializeTelemetry(
     );
     return;
   }
+
+  const [
+    { OTLPTraceExporter, OTLPLogExporter, OTLPMetricExporter },
+    { OTLPTraceExporterHttp, OTLPLogExporterHttp, OTLPMetricExporterHttp },
+    { CompressionAlgorithm },
+    { Metadata },
+    { NodeSDK },
+    { SemanticResourceAttributes },
+    { resourceFromAttributes },
+    { BatchSpanProcessor, ConsoleSpanExporter },
+    { BatchLogRecordProcessor, ConsoleLogRecordExporter },
+    { ConsoleMetricExporter, PeriodicExportingMetricReader },
+    { HttpInstrumentation },
+    { FileLogExporter, FileMetricExporter, FileSpanExporter },
+  ] = await Promise.all([
+    Promise.all([
+      import('@opentelemetry/exporter-trace-otlp-grpc'),
+      import('@opentelemetry/exporter-logs-otlp-grpc'),
+      import('@opentelemetry/exporter-metrics-otlp-grpc'),
+    ]).then(([t, l, m]) => ({
+      OTLPTraceExporter: t.OTLPTraceExporter,
+      OTLPLogExporter: l.OTLPLogExporter,
+      OTLPMetricExporter: m.OTLPMetricExporter,
+    })),
+    Promise.all([
+      import('@opentelemetry/exporter-trace-otlp-http'),
+      import('@opentelemetry/exporter-logs-otlp-http'),
+      import('@opentelemetry/exporter-metrics-otlp-http'),
+    ]).then(([t, l, m]) => ({
+      OTLPTraceExporterHttp: t.OTLPTraceExporter,
+      OTLPLogExporterHttp: l.OTLPLogExporter,
+      OTLPMetricExporterHttp: m.OTLPMetricExporter,
+    })),
+    import('@opentelemetry/otlp-exporter-base'),
+    import('@grpc/grpc-js'),
+    import('@opentelemetry/sdk-node'),
+    import('@opentelemetry/semantic-conventions'),
+    import('@opentelemetry/resources'),
+    import('@opentelemetry/sdk-trace-node'),
+    import('@opentelemetry/sdk-logs'),
+    import('@opentelemetry/sdk-metrics'),
+    import('@opentelemetry/instrumentation-http'),
+    import('./file-exporters.js'),
+  ]);
 
   const resource = resourceFromAttributes({
     [SemanticResourceAttributes.SERVICE_NAME]: SERVICE_NAME,

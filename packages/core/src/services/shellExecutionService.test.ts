@@ -1075,7 +1075,13 @@ describe('ShellExecutionService', () => {
 
   describe('Binary Output', () => {
     it('should detect binary output and switch to progress events', async () => {
-      mockIsBinary.mockReturnValueOnce(true);
+      // Capricorn: keyed on the PNG signature instead of mockReturnValueOnce.
+      // The PTY path now awaits the lazily loaded xterm module, so output
+      // processing left over from the previous test can call isBinary first
+      // and consume a one-shot return value.
+      mockIsBinary.mockImplementation(
+        (buffer: Buffer) => buffer.length > 0 && buffer[0] === 0x89,
+      );
       const binaryChunk1 = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
       const binaryChunk2 = Buffer.from([0x0d, 0x0a, 0x1a, 0x0a]);
 

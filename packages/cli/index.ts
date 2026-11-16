@@ -15,6 +15,7 @@ import {
   getScriptArgs,
   setupSignalForwarding,
   handleChildProcessClose,
+  canRunInProcess,
 } from './src/utils/relaunchSupervisor.js';
 
 // --- Global Entry Point ---
@@ -111,6 +112,15 @@ async function enableCompileCache(): Promise<void> {
 async function run() {
   if (printVersionFastPath()) {
     return;
+  }
+  // Capricorn: headless prompts and one-shot commands run in this process
+  // (see canRunInProcess); they behave exactly like the relaunched child.
+  if (
+    !process.env['GEMINI_CLI_NO_RELAUNCH'] &&
+    !process.env['SANDBOX'] &&
+    canRunInProcess(getScriptArgs(), v8.getHeapStatistics().heap_size_limit)
+  ) {
+    process.env['GEMINI_CLI_NO_RELAUNCH'] = 'true';
   }
   if (!process.env['GEMINI_CLI_NO_RELAUNCH'] && !process.env['SANDBOX']) {
     // --- Lightweight Parent Process / Daemon ---

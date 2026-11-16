@@ -25,7 +25,13 @@ import { debugLogger } from '@capricorn/core';
 import type { LoadedSettings } from '../../config/settings.js';
 
 // Configure theming and parsing utilities.
-const lowlight = createLowlight(common);
+// Capricorn: created on first use. Registering the ~35 common grammars cost
+// ~20 ms on every launch, including headless runs that never highlight code.
+let lowlightInstance: ReturnType<typeof createLowlight> | undefined;
+function getLowlight(): ReturnType<typeof createLowlight> {
+  lowlightInstance ??= createLowlight(common);
+  return lowlightInstance;
+}
 
 function renderHastNode(
   node: Root | Element | HastText | RootContent,
@@ -101,9 +107,9 @@ function highlightAndRenderLine(
   try {
     const strippedLine = stripAnsi(line);
     const getHighlightedLine = () =>
-      !language || !lowlight.registered(language)
-        ? lowlight.highlightAuto(strippedLine)
-        : lowlight.highlight(language, strippedLine);
+      !language || !getLowlight().registered(language)
+        ? getLowlight().highlightAuto(strippedLine)
+        : getLowlight().highlight(language, strippedLine);
 
     const renderedNode = renderHastNode(getHighlightedLine(), theme, undefined);
 
