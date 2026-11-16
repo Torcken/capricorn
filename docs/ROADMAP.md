@@ -16,8 +16,9 @@ product plan is in [planning/PRODUCT_ROADMAP.md](planning/PRODUCT_ROADMAP.md).
 - **Prompt tuning with the eval suite** (suite done, see `evals/capricorn/`):
   keep improving exploration (read the file that holds the answer) and
   project-convention matching; measure every installed Gemma 4 preset (12B and
-  26B measured 2026-11-16); add a task that exercises the project-commands hint;
-  publish results in `evals/capricorn/RESULTS.md`.
+  26B measured 2026-11-16); make the model run all of a project's checks (the
+  project-commands hint alone did not, see RESULTS.md 2026-11-16); publish
+  results in `evals/capricorn/RESULTS.md`.
 - **Finish removing Google code:** the OAuth/Code Assist/Clearcut network code
   and Google auth/Cloud dependencies are gone (inert stand-ins remain, see
   docs/UPSTREAM.md), as are the upstream A2A server package and all bundled

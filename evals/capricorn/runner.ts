@@ -294,6 +294,11 @@ export async function runTaskOnce(
           USERPROFILE: home,
           CAPRICORN_OLLAMA_HOST: options.ollamaHost,
           GEMINI_CLI_NO_RELAUNCH: 'true',
+          // npm (run by the project-script tasks) must not phone home for
+          // update checks or funding notices from an eval run.
+          npm_config_update_notifier: 'false',
+          npm_config_fund: 'false',
+          npm_config_audit: 'false',
           NO_COLOR: '1',
           TERM: 'dumb',
           ...options.extraEnv,

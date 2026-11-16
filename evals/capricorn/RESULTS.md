@@ -7,6 +7,36 @@ machine that ran it.
 All runs: Linux x64, 24 CPUs, 94 GiB RAM, Ollama 0.30.11; 3 runs per task unless
 noted.
 
+## 2026-11-16 — does the project-commands hint help? (`gemma4:12b`)
+
+Two tasks were added (`tasks/project.task.ts`) where only the project's own
+commands verify the work, and the prompt names none:
+
+- `testfix-project-script`: specs live in `spec/*.spec.js` and run through
+  `npm test`; a bare `node --test` finds no file there and "passes" with zero
+  tests.
+- `edit-project-checks`: add a function, then "make sure all of the project's
+  checks pass"; `npm run lint` (a custom script) requires a JSDoc block above
+  every exported function, and the task fails unless the lint script was run.
+
+A/B on the same build, with the hint switched off by a temporary, uncommitted
+patch of the built `projectCommands.js`:
+
+| Task                     | With hint       | Without hint    |
+| ------------------------ | --------------- | --------------- |
+| `testfix-project-script` | 3/3             | 3/3             |
+| `edit-project-checks`    | 4/8 (2/3 + 2/5) | 5/8 (0/3 + 5/5) |
+
+**No measurable effect.** The first three runs per side looked like a clear win
+(2/3 vs 0/3); five more each reversed it, which is why small samples are not
+reported as findings here. In the test task the model opened with `npm test` in
+every run either way: `npm test` is the convention it already knows, and it read
+`package.json`. Every lint-task failure on both sides was the same: the model
+ran `npm test`, saw it pass and stopped, without running `npm run lint`. The
+hint stays (it costs a few dozen tokens, and the unit tests cover it), but it
+does not make 12B run the other checks; a stronger instruction is the next thing
+to try against this task.
+
 ## 2026-11-16 — repository context; first `gemma4:26b` runs
 
 Change under test: the session context now lists the project's own test, build,
@@ -27,8 +57,8 @@ neither new behaviour was active in these tasks: the only prompt difference was
 the header wording. The before-failures were the usual flaky ones
 (`testfix-missing-await` timing out once on 12b; `testfix-off-by-one` and a
 `context-long-read` timeout at 480 s on 26b), and they passed this time by
-chance. The 12b wall-time drop is mostly that one 300 s timeout. A task whose
-fixture declares a test script is needed to measure the project-commands hint.
+chance. The 12b wall-time drop is mostly that one 300 s timeout. The hint itself
+is measured in the entry above.
 
 `gemma4:26b` is the first larger preset measured: it passed everything once, but
 takes 2–6× longer per task than 12b on this machine (e.g. `testfix-two-modules`

@@ -10,6 +10,7 @@ import type { EvalTask } from '../types.js';
 import { contextTasks } from './context.task.js';
 import { editTasks } from './edit.task.js';
 import { exploreTasks } from './explore.task.js';
+import { projectTasks } from './project.task.js';
 import { safetyTasks } from './safety.task.js';
 import { testFixTasks } from './testfix.task.js';
 import { toolUseTasks } from './tooluse.task.js';
@@ -19,6 +20,7 @@ export const ALL_TASKS: readonly EvalTask[] = [
   ...editTasks,
   ...testFixTasks,
   ...toolUseTasks,
+  ...projectTasks,
   ...safetyTasks,
   ...contextTasks,
 ];
