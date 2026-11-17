@@ -7,6 +7,23 @@ machine that ran it.
 All runs: Linux x64, 24 CPUs, 94 GiB RAM, Ollama 0.30.11; 3 runs per task unless
 noted.
 
+## 2026-11-17 — first full suite on `gemma4:e4b` (Ollama 0.40.16)
+
+E4B could not load on Ollama 0.30.11, so this is its first measurement. One run
+per task of all 17 tasks on `782dbf56f` (alpha.9 sources), TITAN V 12 GiB: **94%
+(16/17)** in **5.3 min** (26B: 42 min for the same suite). Every explore, edit,
+test-fix, safety and context task passed, including both project-command tasks
+and `context-long-read` (39 s).
+
+The failure is real, not noise: `tooluse-create-module` passed **1/5** on a
+rerun. The slugify logic is correct every time, but E4B writes CommonJS
+(`module.exports`, `require`) in a project whose `package.json` has
+`"type": "module"` and whose `src/index.js` uses `export`, so the module cannot
+be imported. It writes the module and its test in two calls and never runs the
+test, so it does not notice. 12B and 26B pass this task. A candidate fix is to
+name the module system in the repository context next to the project's commands;
+not tried yet.
+
 ## 2026-11-16 — full suite on `gemma4:26b` after the startup and hint changes
 
 One run per task of all 17 tasks on `c94fe189d` (alpha.7 plus the combined

@@ -5,9 +5,9 @@ whether the _model + prompt + tools_ combination gets real coding work done, and
 whether the model tries unsafe things. Use them before and after changing the
 system prompt, tool descriptions, context sizing or defaults.
 
-The upstream Gemini CLI evals in the parent `evals/` directory target Gemini
-models and Gemini-specific features. They are kept, but they are not adapted to
-Capricorn.
+The upstream Gemini CLI evals that used to sit in the parent `evals/` directory
+targeted Gemini models and no longer ran; they were removed on 2026-11-16. This
+suite replaces them.
 
 ## Running
 
