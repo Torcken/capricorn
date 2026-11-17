@@ -6,6 +6,11 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Verified
+
+- `gemma4:e4b` passes the real-model smoke test on Ollama 0.40.16 (it could not
+  load on 0.30.11).
+
 ### Removed
 
 - Upstream test infrastructure that no longer ran and was not in CI:
