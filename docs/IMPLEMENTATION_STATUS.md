@@ -131,6 +131,12 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   private vulnerability reporting, which SECURITY.md relies on, was enabled
   right after the audit.
 
+- **`gemma4:e4b` real-model smoke (2026-11-17, `0.1.0-alpha.9` sources, Linux
+  x64, TITAN V 12 GiB, Ollama 0.40.16):** 2/2 passed. It read, fixed and tested
+  a real bug (21 s) and declined an unapproved destructive action (5 s).
+  `doctor --load` loaded it at num_ctx 32768, 100% on the GPU. This closes the
+  E4B item that was blocked on Ollama 0.30.11.
+
 - **First real macOS run (2026-11-16, `0.1.0-alpha.8`, MacBook Air M1, 8 GiB,
   Ollama 0.40.16):** `npm install -g`, `doctor`, the hardware recommendation
   (`gemma4:e2b` on the GPU) and `models pull` (verified from GGUF architecture
@@ -153,10 +159,11 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
 - `npm audit` reports one high-severity advisory in bundled code (`extract-zip`,
   mitigated by the ZIP pre-check); see docs/SECURITY.md "Known limits".
 - `gemma4:e4b` (also `gemma4:latest`) fails to load on Ollama 0.30.11
-  (`Gemma4Assistant requires ctx_other to be set`), at any context size. The
-  onboarding still recommends E4B for GPUs under ≈11 GiB; its test load reports
-  the failure right after the download. AMD and Apple GPU detection are
-  unit-tested only.
+  (`Gemma4Assistant requires ctx_other to be set`), at any context size; it
+  loads and passes the real-model smoke test on Ollama 0.40.16 (2026-11-17).
+  Onboarding reports the 0.30.11 failure right after the download and suggests
+  updating Ollama. AMD GPU detection is unit-tested only; Apple Silicon was seen
+  on a real 8 GiB MacBook Air M1.
 - Some retained upstream unit tests write to the real `~/.capricorn`.
 - Upstream integration/eval/perf suites are not part of the quality gate.
 - Internal packages use the `@capricorn/*` scope (private, bundled).
