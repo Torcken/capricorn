@@ -6,6 +6,12 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The session context names the project's module system when `package.json`
+  declares `"type"`, so small models write `import`/`export` in ES-module
+  projects (E4B wrote CommonJS there; see `evals/capricorn/RESULTS.md`).
+
 ### Verified
 
 - `gemma4:e4b` passes the real-model smoke test on Ollama 0.40.16 (it could not

@@ -65,16 +65,21 @@ function packageManager(dir: string): string {
   return 'npm';
 }
 
-function fromPackageJson(dir: string): ProjectCommand[] {
+/** The parsed root `package.json` of `dir`, or undefined. */
+function readPackageJson(dir: string): Record<string, unknown> | undefined {
   const text = readSmall(path.join(dir, 'package.json'));
-  if (!text) return [];
-  let parsed: unknown;
+  if (!text) return undefined;
   try {
-    parsed = JSON.parse(text);
+    const parsed: unknown = JSON.parse(text);
+    return isRecord(parsed) ? parsed : undefined;
   } catch {
-    return [];
+    return undefined;
   }
-  if (!isRecord(parsed) || !isRecord(parsed['scripts'])) return [];
+}
+
+function fromPackageJson(dir: string): ProjectCommand[] {
+  const parsed = readPackageJson(dir);
+  if (!parsed || !isRecord(parsed['scripts'])) return [];
   const s = parsed['scripts'];
   const pm = packageManager(dir);
   const out: ProjectCommand[] = [];
@@ -164,6 +169,33 @@ export function detectProjectCommands(dir: string): ProjectCommand[] {
   });
 }
 
+/** How Node treats `.js` files in a package. */
+export type ModuleSystem = 'esm' | 'commonjs';
+
+/**
+ * The module system a package declares in its root `package.json`
+ * (`"type": "module"` or `"commonjs"`), or undefined when it declares none.
+ *
+ * Why: in the eval, gemma4:e4b wrote a new module with `module.exports` and
+ * `require` in a `"type": "module"` package, so it could not be imported
+ * (`tooluse-create-module` passed 1/5; evals/capricorn/RESULTS.md,
+ * 2026-11-17). Only an explicit `"type"` is reported: without one, Node
+ * treats `.js` as CommonJS, but many TypeScript and bundler projects still
+ * write `import`, so a guess could mislead.
+ */
+export function detectModuleSystem(dir: string): ModuleSystem | undefined {
+  const type = readPackageJson(dir)?.['type'];
+  if (type === 'module') return 'esm';
+  if (type === 'commonjs') return 'commonjs';
+  return undefined;
+}
+
+const MODULE_SYSTEM_TEXT: Record<ModuleSystem, string> = {
+  esm: 'ES modules (`"type": "module"` in package.json): `.js` files use `import`/`export`, not `require`/`module.exports`.',
+  commonjs:
+    'CommonJS (`"type": "commonjs"` in package.json): `.js` files use `require`/`module.exports`; ES modules need `.mjs`.',
+};
+
 /** Checks joined into the "all checks" command, fastest first. */
 const CHECK_ORDER: readonly ProjectCommandPurpose[] = [
   'lint',
@@ -191,23 +223,31 @@ export function allChecksCommand(
 }
 
 /**
- * Session-context lines for the detected commands of each directory, or ''
- * when nothing is found. Multi-root workspaces name the directory.
+ * Session-context lines for the detected commands and declared module system
+ * of each directory, or '' when nothing is found. Multi-root workspaces name
+ * the directory.
  */
 export function formatProjectCommands(dirs: readonly string[]): string {
   const blocks: string[] = [];
   for (const dir of dirs) {
-    const commands = detectProjectCommands(dir);
-    if (commands.length === 0) continue;
     const where = dirs.length > 1 ? ` in ${dir}` : '';
-    const lines = commands.map(
-      (c) => `  - ${c.purpose}: \`${c.command}\` (${c.source})`,
-    );
-    const all = allChecksCommand(commands);
-    if (all) lines.push(`  - all checks: \`${all}\``);
-    blocks.push(
-      `- **Project commands${where}** (detected from project files; check them before relying on them):\n${lines.join('\n')}`,
-    );
+    const commands = detectProjectCommands(dir);
+    if (commands.length > 0) {
+      const lines = commands.map(
+        (c) => `  - ${c.purpose}: \`${c.command}\` (${c.source})`,
+      );
+      const all = allChecksCommand(commands);
+      if (all) lines.push(`  - all checks: \`${all}\``);
+      blocks.push(
+        `- **Project commands${where}** (detected from project files; check them before relying on them):\n${lines.join('\n')}`,
+      );
+    }
+    const moduleSystem = detectModuleSystem(dir);
+    if (moduleSystem) {
+      blocks.push(
+        `- **Module system${where}:** ${MODULE_SYSTEM_TEXT[moduleSystem]}`,
+      );
+    }
   }
   return blocks.join('\n');
 }

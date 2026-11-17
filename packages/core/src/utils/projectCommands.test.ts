@@ -10,6 +10,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import {
   allChecksCommand,
+  detectModuleSystem,
   detectProjectCommands,
   formatProjectCommands,
 } from './projectCommands.js';
@@ -122,6 +123,41 @@ describe('allChecksCommand', () => {
     write('package.json', JSON.stringify({ scripts: { test: 'vitest' } }));
     expect(allChecksCommand(detectProjectCommands(dir))).toBeUndefined();
     expect(formatProjectCommands([dir])).not.toContain('all checks');
+  });
+});
+
+describe('detectModuleSystem', () => {
+  it('reports only an explicit package.json "type"', () => {
+    expect(detectModuleSystem(dir)).toBeUndefined();
+    write('package.json', JSON.stringify({ name: 'x' }));
+    expect(detectModuleSystem(dir)).toBeUndefined();
+    write('package.json', JSON.stringify({ type: 'module' }));
+    expect(detectModuleSystem(dir)).toBe('esm');
+    write('package.json', JSON.stringify({ type: 'commonjs' }));
+    expect(detectModuleSystem(dir)).toBe('commonjs');
+    write('package.json', '{ broken');
+    expect(detectModuleSystem(dir)).toBeUndefined();
+  });
+
+  // The eval fixture for tooluse-create-module: "type": "module", no scripts.
+  it('is named in the context even when no command is detected', () => {
+    write('package.json', JSON.stringify({ name: 'f', type: 'module' }));
+    expect(formatProjectCommands([dir])).toBe(
+      '- **Module system:** ES modules (`"type": "module"` in package.json): `.js` files use `import`/`export`, not `require`/`module.exports`.',
+    );
+  });
+
+  it('follows the commands, naming the directory in multi-root', () => {
+    write(
+      'package.json',
+      JSON.stringify({ type: 'commonjs', scripts: { test: 'vitest' } }),
+    );
+    const text = formatProjectCommands([dir]);
+    expect(text.split('\n')).toHaveLength(3);
+    expect(text).toMatch(/npm test[\s\S]*\*\*Module system:\*\* CommonJS/);
+    expect(formatProjectCommands([dir, os.tmpdir()])).toContain(
+      `Module system in ${dir}:`,
+    );
   });
 });
 

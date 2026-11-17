@@ -7,6 +7,25 @@ machine that ran it.
 All runs: Linux x64, 24 CPUs, 94 GiB RAM, Ollama 0.30.11; 3 runs per task unless
 noted.
 
+## 2026-11-17 — module-system hint (`gemma4:e4b`, `gemma4:12b`)
+
+The repository context now names the module system when `package.json` declares
+one, even without scripts: "ES modules (`"type": "module"` in package.json):
+`.js` files use `import`/`export`, not `require`/`module.exports`."
+
+`tooluse-create-module` on E4B: **1/7 → 3/10** (before: runs on `782dbf56f`;
+after: the same build plus the hint). The hint did what it targets: every run
+that wrote files used `import`/`export` (7/7 inspected, every implementation met
+the spec), where E4B had written CommonJS almost every time. The remaining
+failures are a different habit: E4B does not run the test it writes (it tells
+the user to run `node --test`), so one test with
+`import { assert } from 'node:assert'` failed unnoticed, and one run wrote the
+code in its answer without any tool call.
+
+No regression in the full suites with the hint: E4B **94% (16/17)**, the same
+task failing; 12B **100% (17/17)**. Both runs took about 5 minutes on Ollama
+0.40.16.
+
 ## 2026-11-17 — first full suite on `gemma4:e4b` (Ollama 0.40.16)
 
 E4B could not load on Ollama 0.30.11, so this is its first measurement. One run
