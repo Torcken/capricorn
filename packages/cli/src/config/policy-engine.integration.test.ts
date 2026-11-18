@@ -340,9 +340,11 @@ describe('Policy Engine Integration Tests', () => {
       expect(
         (await engine.check({ name: 'read_file' }, undefined)).decision,
       ).toBe(PolicyDecision.ALLOW);
+      // Capricorn: google_web_search (a hosted Gemini tool) is not registered
+      // and has no allow rule; plan mode denies it like any unknown tool.
       expect(
         (await engine.check({ name: 'google_web_search' }, undefined)).decision,
-      ).toBe(PolicyDecision.ALLOW);
+      ).toBe(PolicyDecision.DENY);
       expect(
         (await engine.check({ name: 'list_directory' }, undefined)).decision,
       ).toBe(PolicyDecision.ALLOW);

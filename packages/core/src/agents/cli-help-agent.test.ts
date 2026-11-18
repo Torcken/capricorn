@@ -22,7 +22,9 @@ describe('CliHelpAgent', () => {
     expect(localAgent.name).toBe('cli_help');
     expect(localAgent.kind).toBe('local');
     expect(localAgent.displayName).toBe('CLI Help Agent');
-    expect(localAgent.description).toContain('Gemini CLI');
+    // Capricorn: the help agent describes Capricorn, not Gemini CLI.
+    expect(localAgent.description).toContain('Capricorn');
+    expect(localAgent.description).not.toContain('Gemini');
   });
 
   it('should have correctly configured inputs and outputs', () => {

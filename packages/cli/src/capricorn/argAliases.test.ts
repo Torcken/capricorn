@@ -35,6 +35,36 @@ describe('rewriteCapricornAliases', () => {
       ['sessions', 'delete', 'abc', '--yes'],
       ['--delete-session', 'abc'],
     ],
+    // Global options before the alias are kept.
+    [
+      ['--debug', 'run', 'fix it'],
+      ['--debug', '--prompt', 'fix it'],
+    ],
+    [
+      ['-m', 'gemma4:e4b', 'sessions', 'list'],
+      ['-m', 'gemma4:e4b', '--list-sessions'],
+    ],
+    [
+      ['--model=gemma4:e4b', '--skip-trust', 'run', 'fix it'],
+      ['--model=gemma4:e4b', '--skip-trust', '--prompt', 'fix it'],
+    ],
+    // An option value or a prompt is never treated as an alias.
+    [
+      ['-m', 'run'],
+      ['-m', 'run'],
+    ],
+    [
+      ['-p', 'go', 'run'],
+      ['-p', 'go', 'run'],
+    ],
+    [
+      ['--unknown-flag', 'run', 'x'],
+      ['--unknown-flag', 'run', 'x'],
+    ],
+    [
+      ['--', 'run', 'x'],
+      ['--', 'run', 'x'],
+    ],
   ])('%j -> %j', (input, expected) => {
     expect(rewriteCapricornAliases(input).argv).toEqual(expected);
   });

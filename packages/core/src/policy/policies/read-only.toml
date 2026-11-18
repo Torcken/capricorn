@@ -33,7 +33,8 @@ toolName = [
   "grep_search",
   "list_directory",
   "read_file",
-  "google_web_search",
+  # Capricorn: google_web_search removed; Capricorn does not register that
+  # hosted Gemini tool, so its rule only showed up as noise in /policies.
   "codebase_investigator",
   "cli_help",
   "get_internal_docs",
