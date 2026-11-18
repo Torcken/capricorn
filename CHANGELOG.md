@@ -6,6 +6,11 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Removed
+
+- The unused `systeminformation` dependency of `@capricorn/core` (nothing
+  imported it; `npm audit` reported a high-severity advisory for it).
+
 ## [0.1.0-alpha.10] - 2026-11-18
 
 ### Added

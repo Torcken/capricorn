@@ -125,13 +125,8 @@ import { UserAccountManager } from '../utils/userAccountManager.js';
 import { InstallationManager } from '../utils/installationManager.js';
 import { AgentTerminateMode } from '../agents/types.js';
 
-vi.mock('systeminformation', () => ({
-  default: {
-    graphics: vi.fn().mockResolvedValue({
-      controllers: [{ model: 'Mock GPU' }],
-    }),
-  },
-}));
+// Capricorn: the systeminformation mock was removed with the dependency (the
+// upstream code that read GPU details from it is gone).
 
 describe('loggers', () => {
   const mockLogger = {

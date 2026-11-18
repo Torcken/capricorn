@@ -142,14 +142,14 @@ isolation boundary.
   release); Capricorn's pre-check above covers both of its symlink advisories.
   `npm audit --omit=dev` also lists a `ws` 7 copy, but only
   `react-devtools-core` uses it and it is not bundled (the bundle ships `ws`
-  8.23.0). Two high-severity reports added since alpha.9 are not in the bundle
-  either: `systeminformation` 5.25.11 (Windows command injection) is declared by
-  `@capricorn/core` but imported nowhere, and `ip-address` 10.2.0 (SSRF parsing
-  issues) is used only by the MCP SDK's server-side rate limiter
-  (`express-rate-limit`), which Capricorn never runs (audit of 2026-11-18). The
-  remaining reports, including the two critical ones (vitest, tinypool), concern
-  test and build tools (vitest, vite, postcss, nanoid, …) that are not in the
-  package.
+  8.23.0). `ip-address` 10.2.0 (high, SSRF parsing issues; reported after
+  alpha.9) is not in the bundle either: only the MCP SDK's server-side rate
+  limiter (`express-rate-limit`) uses it, and Capricorn never runs it.
+  `systeminformation` (high, Windows command injection) was declared by
+  `@capricorn/core` but imported nowhere; it was removed after alpha.10 (audit
+  of 2026-11-18). The remaining reports, including the two critical ones
+  (vitest, tinypool), concern test and build tools (vitest, vite, postcss,
+  nanoid, …) that are not in the package.
 - **`@github/keytar` is deprecated but kept on purpose.** `npm install` warns
   that this optional native module is no longer maintained. It stores MCP server
   OAuth tokens and extension integrity records in the OS keychain (macOS
