@@ -23,9 +23,9 @@
     <text x="90" y="274" fill="#ffffff" textLength="810" lengthAdjust="spacingAndGlyphs">: desc2                                                                                   </text>
     <text x="0" y="291" fill="#ffffff" textLength="900" lengthAdjust="spacingAndGlyphs">    (Source: /mock/temp/dir/skill2/SKILL.md) (1 items in directory)                                 </text>
     <text x="0" y="342" fill="#cdcd00" textLength="891" lengthAdjust="spacingAndGlyphs">The extension you are about to install may have been created by a third-party developer and sourced</text>
-    <text x="0" y="359" fill="#cdcd00" textLength="882" lengthAdjust="spacingAndGlyphs">from a public repository. Google does not vet, endorse, or guarantee the functionality or security</text>
-    <text x="0" y="376" fill="#cdcd00" textLength="846" lengthAdjust="spacingAndGlyphs">of extensions. Please carefully inspect any extension and its source code before installing to</text>
-    <text x="0" y="393" fill="#cdcd00" textLength="630" lengthAdjust="spacingAndGlyphs">understand the permissions it requires and the actions it may perform.</text>
+    <text x="0" y="359" fill="#cdcd00" textLength="828" lengthAdjust="spacingAndGlyphs">from a public repository. Capricorn does not vet, endorse, or guarantee the functionality or</text>
+    <text x="0" y="376" fill="#cdcd00" textLength="900" lengthAdjust="spacingAndGlyphs">security of extensions. Please carefully inspect any extension and its source code before installing</text>
+    <text x="0" y="393" fill="#cdcd00" textLength="657" lengthAdjust="spacingAndGlyphs">to understand the permissions it requires and the actions it may perform.</text>
     <text x="0" y="427" fill="#cdcd00" textLength="882" lengthAdjust="spacingAndGlyphs">Agent skills inject specialized instructions and domain-specific knowledge into the agent&apos;s system</text>
     <text x="0" y="444" fill="#cdcd00" textLength="891" lengthAdjust="spacingAndGlyphs">prompt. This can change how the agent interprets your requests and interacts with your environment.</text>
     <text x="0" y="461" fill="#cdcd00" textLength="864" lengthAdjust="spacingAndGlyphs">Review the skill definitions at the location(s) provided below to ensure they meet your security</text>

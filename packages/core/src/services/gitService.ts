@@ -62,6 +62,26 @@ const SHADOW_REPO_GIT_OPTIONS: Partial<SimpleGitOptions> = {
   unsafe: SHADOW_REPO_UNSAFE_OPTIONS,
 };
 
+/**
+ * Opens the shadow repository with `env` applied.
+ *
+ * Capricorn: simple-git 4.0.2 added an environment guard that rejects any
+ * `GIT_*` variable passed through `.env()` unless it is listed in
+ * `allowEnvironment`, so checkpointing failed at startup ("Use of
+ * GIT_TERMINAL_PROMPT is blocked by the environment guard"). Only the keys
+ * this service sets itself are allowed; ambient `GIT_*` variables from the
+ * user's environment are still dropped by the guard.
+ */
+function shadowGit(
+  baseDir: string,
+  env: Record<string, string | undefined>,
+): SimpleGit {
+  return simpleGit(baseDir, {
+    ...SHADOW_REPO_GIT_OPTIONS,
+    allowEnvironment: Object.keys(env),
+  }).env(env);
+}
+
 export class GitService {
   private projectRoot: string;
   private storage: Storage;
@@ -146,7 +166,7 @@ export class GitService {
 
     const shadowRepoEnv = this.getShadowRepoEnv(repoDir);
     await fs.writeFile(shadowRepoEnv.GIT_CONFIG_SYSTEM, '');
-    const repo = simpleGit(repoDir, SHADOW_REPO_GIT_OPTIONS).env(shadowRepoEnv);
+    const repo = shadowGit(repoDir, shadowRepoEnv);
     let isRepoDefined = false;
     try {
       isRepoDefined = await repo.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
@@ -183,7 +203,7 @@ export class GitService {
 
   private get shadowGitRepository(): SimpleGit {
     const repoDir = this.getHistoryDir();
-    return simpleGit(this.projectRoot, SHADOW_REPO_GIT_OPTIONS).env({
+    return shadowGit(this.projectRoot, {
       ...this.getShadowRepoEnv(repoDir),
       GIT_DIR: path.join(repoDir, '.git'),
       GIT_WORK_TREE: this.projectRoot,

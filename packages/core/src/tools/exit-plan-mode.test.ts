@@ -380,7 +380,9 @@ Ask the user for specific feedback on how to improve the plan.`,
   });
 
   describe('getAllowApprovalMode (internal)', () => {
-    it('should return YOLO when config.isInteractive() is false', async () => {
+    // Capricorn: upstream returned YOLO here, which let a headless plan-mode
+    // run edit files and run commands without approval.
+    it('never escalates to YOLO when config.isInteractive() is false', async () => {
       mockConfig.isInteractive = vi.fn().mockReturnValue(false);
       const planRelativePath = createPlanFile('test.md', '# Content');
       const invocation = tool.build({ plan_filename: planRelativePath });
@@ -390,9 +392,9 @@ Ask the user for specific feedback on how to improve the plan.`,
         abortSignal: new AbortController().signal,
       });
 
-      expect(result.llmContent).toContain('YOLO mode');
+      expect(result.llmContent).not.toContain('YOLO mode');
       expect(mockConfig.setApprovalMode).toHaveBeenCalledWith(
-        ApprovalMode.YOLO,
+        ApprovalMode.DEFAULT,
       );
     });
 

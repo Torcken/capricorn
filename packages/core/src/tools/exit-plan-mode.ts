@@ -256,15 +256,16 @@ Ask the user for specific feedback on how to improve the plan.`,
 
   /**
    * Determines the approval mode to switch to when plan mode is exited via a policy ALLOW.
-   * In non-interactive environments, this defaults to YOLO to allow automated execution.
+   *
+   * Capricorn: always DEFAULT. Upstream returned YOLO in non-interactive runs
+   * so a headless plan could implement itself; that let the model turn a
+   * read-only `--approval-mode plan` run into one that edits files and runs
+   * shell commands without any approval (seen with gemma4:e4b). The default
+   * plan policy now denies exit_plan_mode in headless runs; if a user policy
+   * allows it anyway, DEFAULT keeps approvals on, and a headless run denies
+   * whatever would need one.
    */
   private getAllowApprovalMode(): ApprovalMode {
-    if (!this.config.isInteractive()) {
-      // For non-interactive environment requires minimal user action, exit as YOLO mode for plan implementation.
-      return ApprovalMode.YOLO;
-    }
-    // By default, YOLO mode in interactive environment cannot enter/exit plan mode.
-    // Always exit plan mode and move to default approval mode if exit_plan_mode tool is configured with allow decision.
     return ApprovalMode.DEFAULT;
   }
 }

@@ -57,12 +57,16 @@ priority = 70
 modes = ["plan"]
 interactive = true
 
+# Capricorn: upstream allowed exit_plan_mode in headless runs and then
+# switched to YOLO, so a read-only `--approval-mode plan` run could edit files
+# and run commands without approval. Headless plan mode stays read-only.
 [[rule]]
 toolName = "exit_plan_mode"
-decision = "allow"
+decision = "deny"
 priority = 70
 modes = ["plan"]
 interactive = false
+denyMessage = "Plan Mode is read-only in a non-interactive run and cannot be exited. Do not modify files: finish by presenting the plan. To implement it, the user runs Capricorn again with another approval mode (e.g. --approval-mode auto_edit)."
 
 [[rule]]
 toolName = "exit_plan_mode"

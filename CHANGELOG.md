@@ -6,6 +6,26 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- A headless `--approval-mode plan` run was not read-only: the model could call
+  `exit_plan_mode`, which switched to YOLO in non-interactive runs, and then
+  edit files and run shell commands without approval (seen with `gemma4:e4b`).
+  The default policy now denies `exit_plan_mode` in headless runs, and leaving
+  plan mode never switches to YOLO.
+
+### Fixed
+
+- Turning on checkpointing (`general.checkpointing.enabled`, used by `/restore`)
+  broke startup: simple-git 4.0.2's environment guard rejected the git variables
+  of the snapshot repository. They are now allowed explicitly; a new test runs
+  real git.
+- `capricorn mcp enable` and `disable` reported every configured server as "not
+  found" and exited `0` on errors.
+- Leftover upstream wording: the extension install notice ("Google does not
+  vet…"), the folder-trust dialog ("allows Gemini to…") and `/mcp list`, which
+  pointed to a `/docs` command that does not exist.
+
 ### Changed
 
 - The session context names the project's module system when `package.json`

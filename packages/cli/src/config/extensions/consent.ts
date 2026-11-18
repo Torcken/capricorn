@@ -18,8 +18,10 @@ import type { ConfirmationRequest } from '../../ui/types.js';
 import { escapeAnsiCtrlCodes } from '../../ui/utils/textUtils.js';
 import type { ExtensionConfig } from '../extension.js';
 
+// Capricorn: upstream said "Google does not vet…"; nobody vets extensions
+// for Capricorn either, and Google has no role in it.
 export const INSTALL_WARNING_MESSAGE = chalk.yellow(
-  'The extension you are about to install may have been created by a third-party developer and sourced from a public repository. Google does not vet, endorse, or guarantee the functionality or security of extensions. Please carefully inspect any extension and its source code before installing to understand the permissions it requires and the actions it may perform.',
+  'The extension you are about to install may have been created by a third-party developer and sourced from a public repository. Capricorn does not vet, endorse, or guarantee the functionality or security of extensions. Please carefully inspect any extension and its source code before installing to understand the permissions it requires and the actions it may perform.',
 );
 
 export const SKILLS_WARNING_MESSAGE = chalk.yellow(

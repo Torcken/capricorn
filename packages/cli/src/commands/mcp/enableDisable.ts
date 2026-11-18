@@ -32,13 +32,17 @@ async function handleEnable(args: Args): Promise<void> {
   // Check settings blocks
   const settings = loadSettings();
 
-  // Get all servers including extensions
-  const servers = await getMcpServersFromConfig();
+  // Get all servers including extensions.
+  // Capricorn: the helper returns { mcpServers, blockedServerNames }; upstream
+  // read the keys of that wrapper, so every real server was "not found".
+  const { mcpServers: servers } = await getMcpServersFromConfig();
   const normalizedServerNames = Object.keys(servers).map(normalizeServerId);
   if (!normalizedServerNames.includes(name)) {
     debugLogger.log(
       `${RED}Error:${RESET} Server '${args.name}' not found. Use 'capricorn mcp' to see available servers.`,
     );
+    // Capricorn: a failed command exits non-zero (upstream exited 0).
+    process.exitCode = 1;
     return;
   }
 
@@ -75,13 +79,17 @@ async function handleDisable(args: Args): Promise<void> {
   const manager = McpServerEnablementManager.getInstance();
   const name = normalizeServerId(args.name);
 
-  // Get all servers including extensions
-  const servers = await getMcpServersFromConfig();
+  // Get all servers including extensions.
+  // Capricorn: the helper returns { mcpServers, blockedServerNames }; upstream
+  // read the keys of that wrapper, so every real server was "not found".
+  const { mcpServers: servers } = await getMcpServersFromConfig();
   const normalizedServerNames = Object.keys(servers).map(normalizeServerId);
   if (!normalizedServerNames.includes(name)) {
     debugLogger.log(
       `${RED}Error:${RESET} Server '${args.name}' not found. Use 'capricorn mcp' to see available servers.`,
     );
+    // Capricorn: a failed command exits non-zero (upstream exited 0).
+    process.exitCode = 1;
     return;
   }
 
@@ -113,7 +121,7 @@ export const enableCommand: CommandModule<object, Args> = {
       }),
   handler: async (argv) => {
     await handleEnable(argv as Args);
-    await exitCli();
+    await exitCli(process.exitCode === 1 ? 1 : 0);
   },
 };
 
@@ -134,6 +142,6 @@ export const disableCommand: CommandModule<object, Args> = {
       }),
   handler: async (argv) => {
     await handleDisable(argv as Args);
-    await exitCli();
+    await exitCli(process.exitCode === 1 ? 1 : 0);
   },
 };

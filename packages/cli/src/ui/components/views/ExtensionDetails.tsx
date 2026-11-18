@@ -271,8 +271,8 @@ export function ExtensionDetails({
           <Text color={theme.text.primary}>
             The extension you are about to install may have been created by a
             third-party developer and sourced{'\n'}
-            from a public repository. Google does not vet, endorse, or guarantee
-            the functionality or security{'\n'}
+            from a public repository. Capricorn does not vet, endorse, or
+            guarantee the functionality or security{'\n'}
             of extensions. Please carefully inspect any extension and its source
             code before installing to{'\n'}
             understand the permissions it requires and the actions it may

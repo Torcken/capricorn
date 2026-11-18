@@ -58,12 +58,11 @@ export const McpStatus: React.FC<McpStatusProps> = ({
     return (
       <Box flexDirection="column">
         <Text>No MCP servers configured.</Text>
+        {/* Capricorn: upstream pointed to a /docs command that does not
+            exist here; name the command that adds a server instead. */}
         <Text>
-          Please view MCP documentation in your browser:{' '}
-          <Text color={theme.text.link}>
-            docs/CONFIGURATION.md (MCP servers)
-          </Text>{' '}
-          or use the cli /docs command
+          Add one with <Text color={theme.text.link}>capricorn mcp add</Text>;
+          see docs/CONFIGURATION.md (MCP servers).
         </Text>
       </Box>
     );
