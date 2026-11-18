@@ -137,6 +137,15 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   `doctor --load` loaded it at num_ctx 32768, 100% on the GPU. This closes the
   E4B item that was blocked on Ollama 0.30.11.
 
+- **Command audit (2026-11-18, `0.1.0-alpha.10`):** every terminal command,
+  option and slash command was run by hand with `gemma4:e4b` (slash commands in
+  the real interactive UI through a pseudo-terminal) and documented in
+  `CAPRICORN_COMMAND.MD`. It found and fixed: headless plan mode switching to
+  YOLO through `exit_plan_mode` (security), checkpointing breaking startup
+  (simple-git 4.0.2 environment guard), `mcp enable/disable` never finding a
+  server, `run`/`sessions` working only as the first argument, and leftover
+  Google/Gemini wording.
+
 - **First real macOS run (2026-11-16, `0.1.0-alpha.8`, MacBook Air M1, 8 GiB,
   Ollama 0.40.16):** `npm install -g`, `doctor`, the hardware recommendation
   (`gemma4:e2b` on the GPU) and `models pull` (verified from GGUF architecture

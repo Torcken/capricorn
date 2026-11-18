@@ -6,6 +6,14 @@ All notable changes to Capricorn are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-alpha.10] - 2026-11-18
+
+### Added
+
+- `CAPRICORN_COMMAND.MD`: every terminal command, option and slash command, with
+  what it does and whether it was tested by hand, unit-tested, is off by
+  default, limited or not implemented.
+
 ### Security
 
 - A headless `--approval-mode plan` run was not read-only: the model could call
@@ -25,6 +33,12 @@ All notable changes to Capricorn are documented here. The format follows
 - Leftover upstream wording: the extension install notice ("Google does not
   vet…"), the folder-trust dialog ("allows Gemini to…") and `/mcp list`, which
   pointed to a `/docs` command that does not exist.
+- `capricorn run …` and `capricorn sessions …` were only recognized as the first
+  argument; global options may now come first
+  (`capricorn --debug run "<task>"`).
+- The CLI help agent (`/agents`) described itself as an expert on Gemini CLI.
+- `/policies list` showed a rule for `google_web_search`, a hosted Gemini tool
+  Capricorn does not register.
 
 ### Changed
 
