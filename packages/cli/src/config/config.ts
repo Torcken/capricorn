@@ -57,6 +57,7 @@ import {
   type HookEventName,
   type OutputFormat,
   detectIdeFromEnv,
+  writeToStderr,
 } from '@capricorn/core';
 import {
   type Settings,
@@ -176,7 +177,9 @@ export async function parseArguments(
   // Capricorn: map `run`/`sessions` spellings onto upstream flags first.
   const aliasRewrite = rewriteCapricornAliases(hideBin(process.argv));
   if (aliasRewrite.error) {
-    process.stderr.write(`${aliasRewrite.error}\n`);
+    // Capricorn: stdio is patched before arguments are parsed, so
+    // process.stderr.write would swallow the usage message.
+    writeToStderr(`${aliasRewrite.error}\n`);
     process.exit(2);
   }
   const rawArgv = aliasRewrite.argv;

@@ -521,6 +521,18 @@ describe('sessions', () => {
     const last = chatMessages(env.mock, env.mock.chatRequests().length - 1);
     expect(JSON.stringify(last)).toContain('PINEAPPLE');
   });
+
+  it('accepts global options before the alias', async () => {
+    const list = await env.run(['--skip-trust', 'sessions', 'list']);
+    expect(list.code).toBe(0);
+    expect(list.stdout).toMatch(/sessions/i);
+  });
+
+  it('prints alias usage errors (stdio is already patched then)', async () => {
+    const result = await env.run(['--skip-trust', 'run']);
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain('Usage: capricorn run --prompt');
+  });
 });
 
 describe('cited-but-unopened files check', () => {

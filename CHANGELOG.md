@@ -36,6 +36,9 @@ All notable changes to Capricorn are documented here. The format follows
 - `capricorn run …` and `capricorn sessions …` were only recognized as the first
   argument; global options may now come first
   (`capricorn --debug run "<task>"`).
+- `capricorn run` without a task and an unknown `capricorn sessions` command
+  exited with code 2 but printed nothing: the usage message went to the
+  already-patched stderr.
 - The CLI help agent (`/agents`) described itself as an expert on Gemini CLI.
 - `/policies list` showed a rule for `google_web_search`, a hosted Gemini tool
   Capricorn does not register.
