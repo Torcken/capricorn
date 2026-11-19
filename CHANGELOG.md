@@ -10,6 +10,17 @@ All notable changes to Capricorn are documented here. The format follows
 
 - The unused `systeminformation` dependency of `@capricorn/core` (nothing
   imported it; `npm audit` reported a high-severity advisory for it).
+- The `node-domexception` override (to the `empty` package), inherited from
+  upstream: it was never applied in the lockfile, and an empty module would
+  break `fetch-blob`'s `new DOMException(...)` error path.
+
+### Fixed
+
+- `npm sbom` failed with `ESBOMPROBLEMS` on three dependency mismatches
+  inherited from upstream: `clipboardy` is now pinned to 5.2.1 (the version
+  releases shipped), the `node-domexception` override is gone, and
+  `@inquirer/core` (a test-only dependency of `msw`) gets the wrap-ansi 6.2.0 it
+  requires instead of the global 9.0.2 override. The bundle is unchanged.
 
 ## [0.1.0-alpha.10] - 2026-11-18
 
