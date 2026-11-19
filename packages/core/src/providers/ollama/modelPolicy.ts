@@ -80,7 +80,12 @@ export const GEMMA4_PRESETS: readonly GemmaPreset[] = [
     tag: 'gemma4:e2b',
     label: 'Gemma 4 E2B',
     tier: 'experimental',
-    approxMemoryGiB: 4,
+    // Capricorn: was 4, which made 8 GiB Macs look suitable. On a MacBook Air
+    // M1 (8 GiB), Ollama 0.40.16 refused this tag with "model requires 6.9 GiB
+    // but only 4.8 GiB are available" at an 8K window as well as at 32K, so
+    // the weights alone need about 7 GiB. No copy has been measured for a
+    // memory profile yet.
+    approxMemoryGiB: 7,
   },
   {
     tag: 'gemma4:e4b',

@@ -40,7 +40,13 @@ import {
   detectHardware,
   type HardwareProfile,
 } from './hardware.js';
-import { describeFit, placementFor, recommendModel } from './recommend.js';
+import {
+  describeFit,
+  fitPreset,
+  notEnoughMemoryAdvice,
+  placementFor,
+  recommendModel,
+} from './recommend.js';
 import { formatGiB } from './runtime.js';
 import {
   CONTEXT_CANDIDATES,
@@ -534,7 +540,7 @@ async function checkModelLoad(
         fits !== undefined
           ? `It loads with a window of ${formatTokens(fits)} tokens: \`capricorn config set ollama.numCtx ${fits}\`.`
           : isMemoryError(error)
-            ? 'Not enough memory even at an 8K window: close other apps or choose a smaller model with `capricorn models use <tag>`.'
+            ? `Not enough memory even at an 8K window. ${notEnoughMemoryAdvice(tag)}`
             : 'Update Ollama (newer Gemma 4 builds may need a newer daemon), lower `ollama.numCtx`, or choose a smaller model with `capricorn models use <tag>`.',
       data: { model: tag, numCtx, ...(fits !== undefined ? { fits } : {}) },
     };
@@ -601,21 +607,38 @@ async function checkContextWindow(
       )
     : undefined;
   if (!profile || !hw) {
+    // Capricorn: no estimate from the installed model's metadata (Ollama's
+    // nvfp4 builds on macOS lack the per-layer fields): fall back to the
+    // preset, at the allocated window when it has a measured profile. The
+    // old text always quoted 32K, even next to "8,192 tokens allocated".
     if (preset)
       parts.push(
         preset.memoryProfile
-          ? `≈${formatGiB(estimateMemoryBytes(preset.memoryProfile, 32_768))} resident at 32K (from the preset's model metadata)`
-          : `≈${preset.approxMemoryGiB} GiB resident at 32K (approximate)`,
+          ? `≈${formatGiB(estimateMemoryBytes(preset.memoryProfile, effective))} at this window (from the preset's model metadata)`
+          : `≈${preset.approxMemoryGiB} GiB resident (approximate)`,
       );
+    // Without this, doctor said "ready" on an 8 GiB Mac where Ollama then
+    // refused gemma4:e2b at every window.
+    const tooBig =
+      preset && hw && !preset.memoryProfile
+        ? fitPreset(hw, preset).placement === 'none'
+        : false;
     return {
       id: 'models.context',
       title: 'Context window',
-      status: overMax ? 'warn' : 'pass',
+      status: overMax || tooBig ? 'warn' : 'pass',
       message: parts.join('; '),
-      remediation: overMax
-        ? `ollama.numCtx exceeds the model maximum; ${max} will be used.`
-        : undefined,
-      data: { numCtx, effective, modelMax: max },
+      remediation: tooBig
+        ? `It probably does not fit in this machine's memory. ${notEnoughMemoryAdvice(selection.model.model)} \`capricorn doctor --load\` asks Ollama to be sure.`
+        : overMax
+          ? `ollama.numCtx exceeds the model maximum; ${max} will be used.`
+          : undefined,
+      data: {
+        numCtx,
+        effective,
+        modelMax: max,
+        ...(tooBig ? { fits: false } : {}),
+      },
     };
   }
 

@@ -34,15 +34,24 @@ A model is usable when **all** of these hold:
 
 | Tag          | Class                        | Approx. resident memory (Q4, 32K ctx) |
 | ------------ | ---------------------------- | ------------------------------------- |
-| `gemma4:e2b` | experimental                 | ~4 GiB                                |
+| `gemma4:e2b` | experimental                 | ~7 GiB (even at 8K ctx)               |
 | `gemma4:e4b` | lightweight                  | ~7 GiB                                |
 | `gemma4:12b` | standard (candidate default) | ~11 GiB                               |
 | `gemma4:26b` | advanced (26B A4B)           | ~20 GiB                               |
 | `gemma4:31b` | high capability              | ~24 GiB                               |
 
 These figures are rough planning numbers, not measurements of your system;
-`capricorn status` shows real usage once a model is loaded. Availability of each
-tag depends on the Ollama registry at the time you pull.
+`capricorn status` shows real usage once a model is loaded.
+
+**Minimum hardware.** Even the smallest preset, `gemma4:e2b`, needs about 7 GiB
+that the model can use: Ollama 0.40.16 asked for 6.9 GiB at an 8K window on a
+MacBook Air M1. A Mac lets the GPU use about two thirds of its RAM (minus 0.5
+GiB for Ollama), so **Macs with 8 GB of RAM cannot run any Gemma 4 model**; 12
+GB is the minimum and 16 GB or more is recommended. On other machines, a GPU
+with 8 GB or more, or about 9 GB of free RAM for (slow) CPU inference, is
+needed. `capricorn doctor` warns when the selected model does not fit, and
+`capricorn doctor --load` asks Ollama to be sure. Availability of each tag
+depends on the Ollama registry at the time you pull.
 
 If the configured model is not installed, Capricorn does **not** switch
 silently: interactively it asks whether to use an installed alternative;

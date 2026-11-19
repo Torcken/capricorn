@@ -10,6 +10,7 @@ import {
   describeFit,
   describeHardware,
   gpuBudgetGiB,
+  notEnoughMemoryAdvice,
   placementFor,
   recommendModel,
 } from './recommend.js';
@@ -73,11 +74,15 @@ describe('recommendModel', () => {
     // 12B at an 8K window (≈8.9 GiB from its measured profile).
     expect(recommendModel(machine(16, [apple(16)])).tag).toBe('gemma4:12b');
     // 8 GiB Mac: 2/3 × 8 − 0.5 ≈ 4.8 GiB, the figure Ollama 0.40.16 itself
-    // reported on a MacBook Air M1, so only E2B (≈4 GiB) fits.
+    // reported on a MacBook Air M1. Capricorn: even E2B needs ≈7 GiB there
+    // (Ollama: "requires 6.9 GiB"), so nothing is recommended.
     expect(gpuBudgetGiB(machine(8, [apple(8)]))).toBeCloseTo(4.83, 2);
     const small = recommendModel(machine(8, [apple(8)]));
-    expect(small).toMatchObject({ tag: 'gemma4:e2b', placement: 'gpu' });
-    expect(small.reason).toContain('experimental');
+    expect(small.tag).toBeUndefined();
+    expect(small.placement).toBe('none');
+    expect(small.reason).toContain('gemma4:e2b');
+    // A 12 GiB Mac (≈7.5 GiB for the GPU) gets a model on the GPU again.
+    expect(recommendModel(machine(12, [apple(12)])).placement).toBe('gpu');
     // Above 36 GiB Metal allows 3/4 of RAM.
     expect(gpuBudgetGiB(machine(64, [apple(64)]))).toBeCloseTo(47.5, 2);
   });
@@ -90,8 +95,11 @@ describe('recommendModel', () => {
     expect(r.hardware).toBe('32 GiB RAM, no supported GPU found');
   });
 
-  it('falls back to E2B on a common 8 GB CPU-only laptop', () => {
-    expect(recommendModel(machine(8)).tag).toBe('gemma4:e2b');
+  // Capricorn: E2B needs ≈7 GiB, more than an 8 GB machine keeps free after
+  // the system reserve; 9 GiB of RAM is enough for CPU inference.
+  it('falls back to E2B on a CPU-only machine with 9 GiB', () => {
+    expect(recommendModel(machine(8)).tag).toBeUndefined();
+    expect(recommendModel(machine(9)).tag).toBe('gemma4:e2b');
   });
 
   it('recommends nothing when even E2B does not fit', () => {
@@ -135,8 +143,9 @@ describe('metadata-based estimates (Capricorn)', () => {
       machine(16, [nvidia('RTX 2060', 6)]),
       'gemma4:e2b',
     );
-    expect(fit).toMatchObject({ placement: 'gpu', basis: 'approximate' });
-    expect(describeFit(fit!)).toBe('≈4 GiB, approximate');
+    // Capricorn: E2B (≈7 GiB) no longer fits a 6 GiB card.
+    expect(fit).toMatchObject({ placement: 'cpu', basis: 'approximate' });
+    expect(describeFit(fit!)).toBe('≈7 GiB, approximate');
   });
 
   it('reports metadata-based fits with their window', () => {
@@ -147,6 +156,20 @@ describe('metadata-based estimates (Capricorn)', () => {
     expect(fit).toMatchObject({ placement: 'gpu', basis: 'metadata' });
     expect(describeFit(fit!)).toMatch(
       /^≈\d+(\.\d)? GiB at a 64K window, from model metadata$/,
+    );
+  });
+});
+
+describe('notEnoughMemoryAdvice (Capricorn)', () => {
+  it('says the machine is too small when even the smallest model failed', () => {
+    const advice = notEnoughMemoryAdvice('gemma4:e2b');
+    expect(advice).toContain('smallest Gemma 4 model');
+    expect(advice).toContain('12 GB of RAM or more');
+    expect(advice).not.toContain('smaller model');
+  });
+  it('suggests a smaller model otherwise', () => {
+    expect(notEnoughMemoryAdvice('gemma4:12b')).toContain(
+      'capricorn models use <tag>',
     );
   });
 });

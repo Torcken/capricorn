@@ -81,8 +81,10 @@ describe('runDiagnostics', () => {
     mock = await startMockOllama({
       models: DEFAULT_MOCK_MODELS.filter((m) => m.name === 'qwen3:8b'),
     });
+    // Capricorn: a 12 GiB Mac (E4B fits at 8K); an 8 GiB one gets no
+    // recommendation since E2B was found to need ≈7 GiB.
     const mac8: HardwareProfile = {
-      totalMemoryBytes: 8 * 1024 ** 3,
+      totalMemoryBytes: 12 * 1024 ** 3,
       platform: 'darwin',
       arch: 'arm64',
       cpus: 8,
@@ -90,7 +92,7 @@ describe('runDiagnostics', () => {
         {
           vendor: 'apple',
           name: 'Apple Silicon GPU',
-          memoryBytes: 8 * 1024 ** 3,
+          memoryBytes: 12 * 1024 ** 3,
           unified: true,
         },
       ],
@@ -103,11 +105,11 @@ describe('runDiagnostics', () => {
       hardware: mac8,
     });
     expect(byId(report, 'models.installed').remediation).toBe(
-      'Pull the model recommended for this machine: `capricorn models pull gemma4:e2b`.',
+      'Pull the model recommended for this machine: `capricorn models pull gemma4:e4b`.',
     );
     // gemma4:12b is only the default here, so it is not what to pull.
     expect(byId(report, 'models.selected').remediation).toContain(
-      'capricorn models pull gemma4:e2b',
+      'capricorn models pull gemma4:e4b',
     );
     // An explicit choice is respected.
     const explicit = await runDiagnostics({
@@ -163,6 +165,53 @@ describe('runDiagnostics', () => {
     });
     expect(byId(report, 'ollama.endpoint').status).toBe('fail');
     expect(report.ok).toBe(false);
+  });
+
+  // Capricorn: an 8 GiB MacBook Air M1 reported "ready" with gemma4:e2b, then
+  // Ollama refused it at every window. Without per-layer metadata (nvfp4
+  // builds), the preset size is checked against the machine.
+  it('warns when the selected model cannot fit in this machine', async () => {
+    await mock.close();
+    mock = await startMockOllama({
+      models: [
+        {
+          name: 'gemma4:e2b',
+          family: 'gemma4',
+          capabilities: ['completion', 'tools'],
+          contextLength: 131072,
+          parameterSize: '5.1B',
+          quantization: 'nvfp4',
+          size: 7_000_000_000,
+        },
+      ],
+    });
+    const mac8 = {
+      totalMemoryBytes: 8 * 1024 ** 3,
+      platform: 'darwin',
+      arch: 'arm64',
+      cpus: 8,
+      gpus: [
+        {
+          vendor: 'apple',
+          name: 'Apple Silicon GPU',
+          memoryBytes: 8 * 1024 ** 3,
+          unified: true,
+        },
+      ],
+    } as HardwareProfile;
+    const report = await runDiagnostics({
+      runtime: { ...runtime('gemma4:e2b', 8192), modelSource: 'settings' },
+      client: new OllamaClient({ endpoint: mock.url }),
+      version: 'test',
+      cwd: process.cwd(),
+      hardware: mac8,
+    });
+    const check = byId(report, 'models.context');
+    expect(check.status).toBe('warn');
+    expect(check.message).toContain('≈7 GiB resident (approximate)');
+    expect(check.message).not.toContain('32K');
+    expect(check.remediation).toContain('smallest Gemma 4 model');
+    expect(check.remediation).toContain('capricorn doctor --load');
   });
 
   it('caps the context window at the model maximum and warns', async () => {

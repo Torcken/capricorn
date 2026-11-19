@@ -34,8 +34,13 @@ import {
   type Config,
 } from '@capricorn/core';
 import { detectHardware, type HardwareProfile } from './hardware.js';
-import { findLoadableContext, pullAndVerify, testLoad } from './modelPull.js';
-import { recommendModel } from './recommend.js';
+import {
+  findLoadableContext,
+  isMemoryError,
+  pullAndVerify,
+  testLoad,
+} from './modelPull.js';
+import { notEnoughMemoryAdvice, recommendModel } from './recommend.js';
 import { formatGiB } from './runtime.js';
 import {
   CONTEXT_CANDIDATES,
@@ -270,8 +275,11 @@ async function firstRun(
         exitCode: 1,
         message:
           `Downloaded ${rec.tag}, but Ollama could not load it (num_ctx ${numCtx}): ${found.error}\n` +
-          '→ Update Ollama (newer Gemma 4 builds may need a newer daemon), lower `ollama.numCtx`, ' +
-          'or try another model: `capricorn models list` shows the presets.',
+          // Capricorn: a memory error at every window has a precise answer.
+          (found.error && isMemoryError(found.error)
+            ? `→ ${notEnoughMemoryAdvice(rec.tag)}`
+            : '→ Update Ollama (newer Gemma 4 builds may need a newer daemon), lower `ollama.numCtx`, ' +
+              'or try another model: `capricorn models list` shows the presets.'),
       };
     }
     if (found.numCtx !== numCtx) {

@@ -260,6 +260,19 @@ export function recommendModel(hw: HardwareProfile): ModelRecommendation {
   };
 }
 
+/**
+ * Advice after Ollama refused to load `tag` for lack of memory even at the
+ * smallest window. For the smallest preset there is no smaller model to
+ * suggest, so it says plainly that the machine is too small (an 8 GiB Mac
+ * cannot run any Gemma 4 model with Ollama 0.40).
+ */
+export function notEnoughMemoryAdvice(tag: string): string {
+  const smallest = PREFERRED[PREFERRED.length - 1];
+  return tag === smallest.tag
+    ? `${tag} is the smallest Gemma 4 model, so this machine does not have enough memory for Capricorn: it needs about ${smallest.approxMemoryGiB} GiB that the GPU (or, much slower, the CPU) can use. On a Mac that means 12 GB of RAM or more; see docs/OLLAMA.md.`
+    : 'Close other apps or choose a smaller model with `capricorn models use <tag>` (`capricorn models list` shows what fits).';
+}
+
 function experimentalNote(p: GemmaPreset): string {
   return p.tier === 'experimental'
     ? ` ${p.tag} is experimental: expect less reliable tool use.`

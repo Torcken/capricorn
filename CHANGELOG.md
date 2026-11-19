@@ -16,6 +16,15 @@ All notable changes to Capricorn are documented here. The format follows
 
 ### Fixed
 
+- 8 GiB Macs were told they could run `gemma4:e2b`: `doctor` said "ready", then
+  Ollama refused the model ("requires 6.9 GiB but only 4.8 GiB are available")
+  at every window. E2B's memory figure is now ≈7 GiB instead of 4, so such
+  machines get no recommendation; `doctor` warns when the selected model cannot
+  fit even when the model's metadata allows no estimate (Ollama's nvfp4 builds),
+  and a load that fails at every window says the machine is too small when the
+  model is already the smallest. 8 GB Macs are documented as unsupported.
+- `doctor`'s context-window line quoted the memory at 32K next to a smaller
+  allocated window.
 - `npm sbom` failed with `ESBOMPROBLEMS` on three dependency mismatches
   inherited from upstream: `clipboardy` is now pinned to 5.2.1 (the version
   releases shipped), the `node-domexception` override is gone, and

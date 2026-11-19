@@ -41,9 +41,15 @@ model or a lower `ollama.numCtx` (see below).
 
 ## Out of memory / "model requires more system memory"
 
-- Use a smaller model (`gemma4:e4b`).
+Ollama 0.40 reports this as "model requires X GiB but only Y GiB are available".
+
+- Use a smaller model (`gemma4:e4b`, then `gemma4:e2b`).
 - Reduce the context: `capricorn config set ollama.numCtx 16384`.
 - Close other models: `ollama ps`, `ollama stop <model>`.
+
+If even `gemma4:e2b` fails at an 8K window, the machine is too small for Gemma 4
+with Ollama: this is the case on every Mac with 8 GB of RAM (see
+[Minimum hardware](OLLAMA.md#presets)).
 
 These errors are not retried automatically — retrying cannot fix them.
 

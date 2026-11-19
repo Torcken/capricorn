@@ -156,6 +156,18 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   unified-memory budget assumed 6 GiB). A coding task on macOS is still to be
   run.
 
+- **8 GiB Macs cannot run Gemma 4 (2026-11-19, `0.1.0-alpha.10`, same MacBook
+  Air M1):** `doctor` passed with `gemma4:e2b` (nvfp4 build) at an 8K window,
+  but the first prompt failed: "model requires 6.9 GiB but only 4.8 GiB are
+  available", the same figure as at 32K, so the window is not the problem. The
+  E2B preset said ≈4 GiB, which made the recommendation and `doctor` wrong.
+  Fixed after alpha.10: E2B is now ≈7 GiB (8 GiB machines get no
+  recommendation), `doctor` warns when the selected model cannot fit even
+  without metadata to estimate from, and a failed load says the machine is too
+  small instead of suggesting a smaller model. The nvfp4 build's metadata lacks
+  what Capricorn's per-window estimate needs; a coding task on macOS still needs
+  a Mac with 12 GB or more.
+
 ## Known limitations
 
 - Headless runs offer only read-only tools unless `--approval-mode auto_edit` or
@@ -172,7 +184,10 @@ Measured on Linux x64, Node 22.22.2, Ollama 0.30.11.
   loads and passes the real-model smoke test on Ollama 0.40.16 (2026-11-17).
   Onboarding reports the 0.30.11 failure right after the download and suggests
   updating Ollama. AMD GPU detection is unit-tested only; Apple Silicon was seen
-  on a real 8 GiB MacBook Air M1.
+  on a real 8 GiB MacBook Air M1, which is too small to run any Gemma 4 model.
+- Memory estimates for Macs come from the Linux (GGUF Q4_K_M) builds; Ollama's
+  macOS (nvfp4) builds may need more, and their metadata does not allow a
+  per-window estimate (`doctor` then uses the preset's rough size).
 - Some retained upstream unit tests write to the real `~/.capricorn`.
 - Upstream integration/eval/perf suites are not part of the quality gate.
 - Internal packages use the `@capricorn/*` scope (private, bundled).
